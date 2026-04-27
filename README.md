@@ -62,9 +62,11 @@ chmod +x naiveproxy.sh && sudo bash naiveproxy.sh
 ```
 [1/5] 🔄  Обновление системы
          apt upgrade + unattended-upgrades (security patches ежедневно)
+         → можно пропустить если уже обновлено: нажми n
 
-[2/5] 🔒  SSH Hardening
+[2/5] 🔒  SSH Hardening                                    [ОПЦИОНАЛЬНО]
          ED25519 ключ · новый sudo-пользователь · смена порта · Fail2Ban
+         → пропусти если SSH уже настроен или не нужно: нажми n
 
 [3/5] 📦  Сборка Caddy
          xcaddy + klzgrad/forwardproxy@naive  ~5-10 минут
@@ -187,7 +189,25 @@ sudo bash naiveproxy.sh remove         # Удалить всё
 sudo bash naiveproxy.sh ssh-hardening
 ```
 
-Запускается автоматически при первой установке. Делает 5 шагов:
+При первой установке скрипт **спрашивает** хочешь ли ты выполнить этот шаг:
+
+```
+Выполнить SSH Hardening? [Y/n]:
+```
+
+> 💡 **Можно пропустить** если:
+> - SSH уже настроен: ключ есть, порт сменён, root запрещён
+> - Используешь управляемый VPS с защищённым доступом
+> - Просто не хочешь сейчас — можно запустить отдельно в любой момент
+>
+> Просто нажми `n` и скрипт перейдёт к установке NaiveProxy.
+
+Запустить отдельно в любое время:
+```bash
+sudo bash naiveproxy.sh ssh-hardening
+```
+
+Делает 5 шагов:
 
 **① Новый sudo-пользователь**
 ```
@@ -435,12 +455,45 @@ curl -v --proxy "https://USER:PASS@YOUR_DOMAIN:443" https://ifconfig.me
 └── backups/Caddyfile.YYYYMMDD_HHMMSS      ← бэкапы
 /etc/fail2ban/jail.local
 /etc/apt/apt.conf.d/50unattended-upgrades
-/var/www/html/index.html                   ← камуфляжная страница
+/var/www/html/index.html                   ← камуфляжная страница ← МЕНЯЙ ПОД СЕБЯ
 /var/log/caddy/access.log
 /var/log/caddy/naive.log
 /etc/systemd/system/caddy.service
 /usr/local/bin/naiveproxy.sh               ← скрипт (для cron)
 ```
+
+### 🎭 Камуфляжная страница — замени под себя
+
+По умолчанию скрипт устанавливает IT-блог **DevStack** как заглушку — выглядит как реальный технический сайт для сканеров и DPI.
+
+**Путь к файлу на сервере:**
+```
+/var/www/html/index.html
+```
+
+**Хочешь свою страницу? Просто замени файл:**
+```bash
+# Вариант 1 — загрузить свой HTML
+scp my_site.html user@YOUR_IP:/var/www/html/index.html
+
+# Вариант 2 — отредактировать прямо на сервере
+nano /var/www/html/index.html
+
+# Вариант 3 — скопировать целый сайт
+scp -r my_site/* user@YOUR_IP:/var/www/html/
+```
+
+**Требования к странице-камуфляжу:**
+- Должна выглядеть как живой настоящий сайт (не пустая страница)
+- Желательно иметь несколько ссылок и текстовый контент
+- HTTPS работает автоматически — сертификат уже есть
+
+**Переустановить стандартный DevStack:**
+```bash
+sudo bash naiveproxy.sh camouflage
+```
+
+> 💡 Хорошие варианты для камуфляжа: корпоративный сайт, портфолио, блог, новостной сайт, лендинг. Главное — чтобы страница выглядела реально при открытии в браузере.
 
 ---
 
