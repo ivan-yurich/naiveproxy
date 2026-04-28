@@ -15,7 +15,7 @@ Caddy 2 · NaiveProxy · Let's Encrypt · Telegram · SSH Hardening · Self-Upda
 
 ---
 
-[![Version](https://img.shields.io/badge/version-3.6.0-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivanstudiya-cpu/naiveproxy/releases)
+[![Version](https://img.shields.io/badge/version-3.7.0-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivanstudiya-cpu/naiveproxy/releases)
 [![ShellCheck](https://img.shields.io/badge/ShellCheck-passing-3FB950?style=for-the-badge&logo=gnu-bash&logoColor=white)](https://www.shellcheck.net)
 [![Bash](https://img.shields.io/badge/Bash-5.0+-4EAA25?style=for-the-badge&logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-20.04%2B-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://ubuntu.com)
@@ -85,9 +85,34 @@ chmod +x naiveproxy.sh && sudo bash naiveproxy.sh
 
 ---
 
-## 🆕 Что нового в v3.6.0
+## 🆕 Что нового в v3.7.0
 
-### 🔴 Критический фикс — сборка Caddy
+### 🔴 Критический фикс v3.7.0 — порядок в Caddyfile
+
+**Проблема во всех версиях до v3.7.0:**
+
+NekoBox, Hiddify и другие клиенты не могли подключиться.
+В логах был `status:0` и пустой `user_id`.
+
+**Причина:** неправильный порядок домена и порта в Caddyfile:
+
+```
+# НЕПРАВИЛЬНО — клиенты не подключаются:
+vip-it.tech:443 {
+  ...
+}
+
+# ПРАВИЛЬНО — работает:
+:443, vip-it.tech {
+  ...
+}
+```
+
+Согласно официальному README klzgrad/naiveproxy: **`:443` должен быть первым**.
+
+---
+
+### 🔴 Критический фикс v3.6.0 — сборка Caddy
 
 **Проблема в v3.5.0 и ниже:**
 
@@ -213,7 +238,7 @@ ALPN: server accepted http/1.1   ← должно быть h2!
 
 ```
 ──────────────────────────────────────────────────────
-   NaiveProxy Manager v3.6.0
+   NaiveProxy Manager v3.7.0
    Статус: ● работает  │  Домен: proxy.example.com
    Telegram: подключён  │  Юзеров: 3  │  SSH: 52847
 ──────────────────────────────────────────────────────
@@ -469,14 +494,22 @@ v2rayNG не поддерживает NaiveProxy. Используй **NekoBox**
 ## 📜 Changelog
 
 <details>
-<summary><b>v3.6.0</b> — Critical Build Fix ← ТЕКУЩАЯ</summary>
+<summary><b>v3.7.0</b> — Caddyfile Critical Fix ← ТЕКУЩАЯ</summary>
+
+- 🔴 **Критический фикс:** Caddyfile — правильный порядок `:443, domain` вместо `domain:443`
+- 🔴 Без этого фикса NekoBox и все клиенты не могли подключиться
+- ✅ Подтверждено: NekoBox Android + naive.exe Windows работают
+- ✅ Соответствует официальному README klzgrad/naiveproxy
+
+</details>
+
+<details>
+<summary><b>v3.6.0</b> — Critical Build Fix</summary>
 
 - 🔴 **Критический фикс:** build_caddy — git clone `klzgrad/forwardproxy@naive` напрямую
 - 🔴 **Критический фикс:** автоопределение совместимой версии Caddy из go.mod
-- 🔴 **Критический фикс:** Caddyfile — явное `protocols h1 h2 h3`
 - ✅ Проверка naive padding в бинарнике
 - ✅ Автоустановка git
-- ✅ Очистка временных файлов сборки
 
 </details>
 
