@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-#   NaiveProxy Manager v3.8.0 — by ivanstudiya-cpu
+#   NaiveProxy Manager v3.9.0 — by ivanstudiya-cpu
 #   Стек: Caddy 2 + klzgrad/forwardproxy@naive
 #   ОС: Ubuntu 20.04 / 22.04 / 24.04
 #   GitHub: https://github.com/ivanstudiya-cpu/naiveproxy
@@ -8,7 +8,7 @@
 
 set -euo pipefail
 
-VERSION="3.8.0"
+VERSION="3.9.0"
 LANG_UI="${NAIVEPROXY_LANG:-ru}"  # ru или en — export NAIVEPROXY_LANG=en
 GITHUB_RAW="https://raw.githubusercontent.com/ivanstudiya-cpu/naiveproxy/main/naiveproxy.sh"
 GITHUB_API="https://api.github.com/repos/ivanstudiya-cpu/naiveproxy/releases/latest"
@@ -1846,6 +1846,372 @@ check_update_available() {
     ) &
 }
 
+
+# ─── ДИАГНОСТИКА СИСТЕМЫ ──────────────────────────────────────
+cmd_diagnose() {
+    load_config 2>/dev/null || true
+
+    local pass=0 warn=0 fail=0
+    local report=""
+
+    # Хелперы вывода
+    _ok()   { echo -e "  ${GREEN}✅ $1${RESET}";   report+="✅ $1\n"; ((pass++)); }
+    _warn() { echo -e "  ${YELLOW}⚠️  $1${RESET}"; report+="⚠️  $1\n"; ((warn++)); }
+    _fail() { echo -e "  ${RED}❌ $1${RESET}";    report+="❌ $1\n"; ((fail++)); }
+    _info() { echo -e "  ${CYAN}ℹ️  $1${RESET}"; }
+    _sep()  { echo -e "  ${DIM}──────────────────────────────────────${RESET}"; }
+
+    hr
+    echo -e "${BOLD}  🔍 Диагностика NaiveProxy Manager v${VERSION}${RESET}"
+    echo -e "  $(date '+%Y-%m-%d %H:%M:%S') · $(hostname)"
+    hr
+    echo
+
+    # ── БЛОК 1: CADDY ─────────────────────────────────────────
+    echo -e "  ${BOLD}[1/7] Caddy${RESET}"
+    _sep
+
+    # Caddy существует
+    if [[ -f "${CADDY_BIN}" ]]; then
+        local caddy_ver
+        caddy_ver=$("${CADDY_BIN}" version 2>/dev/null | head -1 || echo "неизвестно")
+        _ok "Caddy найден: ${caddy_ver}"
+    else
+        _fail "Caddy не найден: ${CADDY_BIN}"
+    fi
+
+    # Caddy запущен
+    if systemctl is-active caddy &>/dev/null; then
+        local uptime_caddy
+        uptime_caddy=$(systemctl show caddy --property=ActiveEnterTimestamp             | cut -d= -f2 | xargs -I{} date -d "{}" '+%Y-%m-%d %H:%M' 2>/dev/null || echo "н/д")
+        _ok "Caddy запущен (с ${uptime_caddy})"
+    else
+        _fail "Caddy НЕ запущен! Запусти: systemctl start caddy"
+    fi
+
+    # Naive padding в бинарнике
+    if command -v strings &>/dev/null && [[ -f "${CADDY_BIN}" ]]; then
+        if strings "${CADDY_BIN}" 2>/dev/null | grep -q "^Padding$"; then
+            _ok "Naive padding модуль подтверждён"
+        else
+            _fail "Naive padding НЕ найден в Caddy — пересобери: sudo bash naiveproxy.sh update"
+        fi
+    else
+        _warn "strings недоступен — установи: apt install binutils"
+    fi
+
+    # forward_proxy модуль
+    if "${CADDY_BIN}" list-modules 2>/dev/null | grep -q "forward_proxy"; then
+        _ok "Модуль forward_proxy загружен"
+    else
+        _fail "Модуль forward_proxy НЕ найден"
+    fi
+
+    echo
+
+    # ── БЛОК 2: CADDYFILE ─────────────────────────────────────
+    echo -e "  ${BOLD}[2/7] Конфигурация${RESET}"
+    _sep
+
+    if [[ -f "${CADDYFILE}" ]]; then
+        _ok "Caddyfile найден: ${CADDYFILE}"
+
+        # Правильный порядок :443, domain
+        if grep -q "^:443," "${CADDYFILE}"; then
+            _ok "Caddyfile: правильный формат ':443, domain'"
+        elif grep -qE "^\S+:443" "${CADDYFILE}"; then
+            _fail "Caddyfile: НЕПРАВИЛЬНЫЙ формат 'domain:443' — исправь на ':443, domain'"
+        fi
+
+        # order forward_proxy
+        if grep -q "order forward_proxy before file_server" "${CADDYFILE}"; then
+            _ok "Caddyfile: order forward_proxy — OK"
+        else
+            _warn "Caddyfile: отсутствует 'order forward_proxy before file_server'"
+        fi
+
+        # probe_resistance
+        if grep -q "probe_resistance" "${CADDYFILE}"; then
+            _ok "probe_resistance включён"
+        else
+            _warn "probe_resistance отключён — сервер видим для сканеров"
+        fi
+
+        # Пользователи
+        local user_count=0
+        [[ -f "${USERS_FILE}" ]] && user_count=$(grep -c "." "${USERS_FILE}" 2>/dev/null || echo 0)
+        if [[ ${user_count} -gt 0 ]]; then
+            _ok "Пользователей: ${user_count}"
+        else
+            _fail "Нет пользователей! Добавь: sudo bash naiveproxy.sh users"
+        fi
+
+        # Caddy validate
+        if "${CADDY_BIN}" validate --config "${CADDYFILE}" &>/dev/null; then
+            _ok "Caddyfile валиден (caddy validate passed)"
+        else
+            _fail "Ошибка в Caddyfile! Проверь: caddy validate --config ${CADDYFILE}"
+        fi
+    else
+        _fail "Caddyfile не найден: ${CADDYFILE}"
+    fi
+
+    echo
+
+    # ── БЛОК 3: TLS / СЕТЬ ────────────────────────────────────
+    echo -e "  ${BOLD}[3/7] TLS и сеть${RESET}"
+    _sep
+
+    local domain="${DOMAIN:-}"
+
+    if [[ -z "${domain}" ]]; then
+        _warn "Домен не настроен — пропускаю сетевые проверки"
+    else
+        _info "Домен: ${domain}"
+
+        # DNS → IP
+        local dns_ip server_ip
+        dns_ip=$(dig +short "${domain}" 2>/dev/null | grep -E '^[0-9]+\.' | head -1 || echo "")
+        server_ip=$(curl -s4 --max-time 5 https://ifconfig.me 2>/dev/null                  || curl -s4 --max-time 5 https://api.ipify.org 2>/dev/null || echo "")
+
+        if [[ -z "${dns_ip}" ]]; then
+            _fail "DNS не резолвится для ${domain}"
+        elif [[ "${dns_ip}" == "${server_ip}" ]]; then
+            _ok "DNS: ${domain} → ${dns_ip} (совпадает с IP сервера)"
+        else
+            _fail "DNS: ${domain} → ${dns_ip} НЕ совпадает с IP сервера ${server_ip}"
+        fi
+
+        # Порт 80
+        if ss -tlnp | grep -q ":80 "; then
+            _ok "Порт 80 слушается (ACME)"
+        else
+            _warn "Порт 80 не слушается — Let's Encrypt может не работать"
+        fi
+
+        # Порт 443
+        if ss -tlnp | grep -q ":443 "; then
+            _ok "Порт 443 слушается"
+        else
+            _fail "Порт 443 не слушается!"
+        fi
+
+        # ALPN h2
+        local alpn
+        alpn=$(echo | timeout 5 openssl s_client             -connect "${domain}:443" -alpn h2 2>/dev/null             | grep "ALPN protocol" | awk '{print $3}' || echo "")
+        if [[ "${alpn}" == "h2" ]]; then
+            _ok "ALPN: h2 ✓ (HTTP/2 работает)"
+        else
+            _fail "ALPN: НЕ h2 (получено: '${alpn}') — проверь Caddyfile"
+        fi
+
+        # TLS сертификат
+        local cert_days=0
+        local cert_info
+        cert_info=$(echo | timeout 5 openssl s_client             -connect "${domain}:443" -servername "${domain}" 2>/dev/null             | openssl x509 -noout -dates 2>/dev/null || echo "")
+        if [[ -n "${cert_info}" ]]; then
+            local not_after expire_ts now_ts
+            not_after=$(echo "${cert_info}" | grep "notAfter" | cut -d= -f2)
+            expire_ts=$(date -d "${not_after}" +%s 2>/dev/null || echo 0)
+            now_ts=$(date +%s)
+            cert_days=$(( (expire_ts - now_ts) / 86400 ))
+            if [[ ${cert_days} -gt 30 ]]; then
+                _ok "TLS сертификат действителен ещё ${cert_days} дней"
+            elif [[ ${cert_days} -gt 7 ]]; then
+                _warn "TLS сертификат истекает через ${cert_days} дней"
+            else
+                _fail "TLS сертификат истекает через ${cert_days} дней! Срочно!"
+            fi
+        else
+            _fail "Не удалось получить TLS сертификат для ${domain}"
+        fi
+    fi
+
+    echo
+
+    # ── БЛОК 4: FIREWALL ──────────────────────────────────────
+    echo -e "  ${BOLD}[4/7] Firewall${RESET}"
+    _sep
+
+    # UFW
+    if command -v ufw &>/dev/null; then
+        if ufw status | grep -q "Status: active"; then
+            _ok "UFW активен"
+            # Проверяем нужные порты
+            for port in "80/tcp" "443/tcp" "443/udp"; do
+                if ufw status | grep -q "${port}"; then
+                    _ok "UFW: порт ${port} открыт"
+                else
+                    _warn "UFW: порт ${port} НЕ открыт"
+                fi
+            done
+        else
+            _fail "UFW неактивен! Включи: ufw enable"
+        fi
+    else
+        _warn "UFW не установлен"
+    fi
+
+    # Fail2Ban
+    if systemctl is-active fail2ban &>/dev/null; then
+        local banned_count
+        banned_count=$(fail2ban-client status sshd 2>/dev/null             | grep "Currently banned" | awk '{print $NF}' || echo "0")
+        _ok "Fail2Ban активен (сейчас забанено SSH: ${banned_count})"
+    else
+        _warn "Fail2Ban не запущен — SSH не защищён от брутфорса"
+    fi
+
+    echo
+
+    # ── БЛОК 5: РЕСУРСЫ ───────────────────────────────────────
+    echo -e "  ${BOLD}[5/7] Ресурсы системы${RESET}"
+    _sep
+
+    # RAM
+    local ram_used ram_total ram_pct
+    ram_used=$(free -m | awk '/Mem:/{print $3}')
+    ram_total=$(free -m | awk '/Mem:/{print $2}')
+    ram_pct=$(( ram_used * 100 / ram_total ))
+    if [[ ${ram_pct} -lt 80 ]]; then
+        _ok "RAM: ${ram_used}/${ram_total} MB (${ram_pct}%)"
+    elif [[ ${ram_pct} -lt 95 ]]; then
+        _warn "RAM: ${ram_used}/${ram_total} MB (${ram_pct}%) — высокое потребление"
+    else
+        _fail "RAM: ${ram_used}/${ram_total} MB (${ram_pct}%) — критически мало!"
+    fi
+
+    # Диск
+    local disk_used disk_total disk_pct
+    disk_pct=$(df / | awk 'NR==2{print $5}' | tr -d '%')
+    disk_used=$(df -h / | awk 'NR==2{print $3}')
+    disk_total=$(df -h / | awk 'NR==2{print $2}')
+    if [[ ${disk_pct} -lt 80 ]]; then
+        _ok "Диск: ${disk_used}/${disk_total} (${disk_pct}%)"
+    elif [[ ${disk_pct} -lt 95 ]]; then
+        _warn "Диск: ${disk_used}/${disk_total} (${disk_pct}%) — мало места"
+    else
+        _fail "Диск: ${disk_used}/${disk_total} (${disk_pct}%) — критически мало!"
+    fi
+
+    # Load average
+    local load
+    load=$(uptime | awk -F'load average:' '{print $2}' | awk '{print $1}' | tr -d ',')
+    local cpus
+    cpus=$(nproc)
+    local load_pct
+    load_pct=$(echo "${load} ${cpus}" | awk '{printf "%d", ($1/$2)*100}')
+    if [[ ${load_pct} -lt 80 ]]; then
+        _ok "Нагрузка CPU: ${load} (${load_pct}% от ${cpus} ядер)"
+    else
+        _warn "Нагрузка CPU: ${load} (${load_pct}%) — высокая"
+    fi
+
+    echo
+
+    # ── БЛОК 6: ЛОГИ ──────────────────────────────────────────
+    echo -e "  ${BOLD}[6/7] Анализ логов${RESET}"
+    _sep
+
+    local log_errors=0
+    if [[ -f "${LOG_DIR}/access.log" ]]; then
+        # Считаем ошибки за последние 100 строк
+        log_errors=$(tail -100 "${LOG_DIR}/access.log" 2>/dev/null             | python3 -c "
+import sys,json
+errs=0
+for line in sys.stdin:
+    try:
+        d=json.loads(line)
+        if d.get('status',200) >= 500: errs+=1
+    except: pass
+print(errs)
+" 2>/dev/null || echo "0")
+
+        local connect_count
+        connect_count=$(tail -100 "${LOG_DIR}/access.log" 2>/dev/null             | grep -c '"CONNECT"' || echo "0")
+
+        if [[ ${log_errors} -eq 0 ]]; then
+            _ok "Логи: нет серверных ошибок (последние 100 запросов)"
+        else
+            _warn "Логи: ${log_errors} ошибок в последних 100 запросах"
+        fi
+        _info "CONNECT туннелей в последних 100 записях: ${connect_count}"
+    else
+        _warn "Лог файл не найден: ${LOG_DIR}/access.log"
+    fi
+
+    # Ошибки Caddy в journald
+    local caddy_errors
+    caddy_errors=$(journalctl -u caddy -n 50 --no-pager 2>/dev/null         | grep -ci "error\|panic\|fatal" || echo "0")
+    if [[ ${caddy_errors} -eq 0 ]]; then
+        _ok "journald: нет критических ошибок Caddy"
+    else
+        _warn "journald: найдено ${caddy_errors} строк с ошибками — проверь: journalctl -u caddy -n 50"
+    fi
+
+    echo
+
+    # ── БЛОК 7: ВЕРСИЯ И ОБНОВЛЕНИЯ ───────────────────────────
+    echo -e "  ${BOLD}[7/7] Версия и обновления${RESET}"
+    _sep
+
+    _info "Текущая версия скрипта: v${VERSION}"
+
+    local latest_ver
+    latest_ver=$(curl -s --max-time 8 "${GITHUB_RAW}" 2>/dev/null         | grep '^VERSION=' | grep -oP '"\K[^"]+' || echo "")
+
+    if [[ -n "${latest_ver}" ]]; then
+        if [[ "${latest_ver}" == "${VERSION}" ]]; then
+            _ok "Скрипт актуален: v${VERSION}"
+        else
+            _warn "Доступно обновление: v${VERSION} → v${latest_ver} (меню → 14)"
+        fi
+    else
+        _warn "Не удалось проверить обновления"
+    fi
+
+    # SSH Hardening выполнен?
+    if [[ -f "${SSH_HARDENING_DONE}" ]]; then
+        local ssh_port_saved
+        ssh_port_saved=$(grep SSH_PORT "${SSH_HARDENING_DONE}" 2>/dev/null | cut -d= -f2 || echo "н/д")
+        _ok "SSH Hardening выполнен (порт: ${ssh_port_saved})"
+    else
+        _warn "SSH Hardening не выполнен — рекомендуется: меню → 12"
+    fi
+
+    # ── ИТОГ ──────────────────────────────────────────────────
+    echo
+    hr
+    echo -e "  ${BOLD}📊 ИТОГ ДИАГНОСТИКИ${RESET}"
+    hr
+    echo -e "  ${GREEN}✅ Пройдено:  ${pass}${RESET}"
+    echo -e "  ${YELLOW}⚠️  Внимание: ${warn}${RESET}"
+    echo -e "  ${RED}❌ Проблемы: ${fail}${RESET}"
+    echo
+
+    if [[ ${fail} -eq 0 && ${warn} -eq 0 ]]; then
+        echo -e "  ${GREEN}${BOLD}🎉 Всё работает отлично!${RESET}"
+    elif [[ ${fail} -eq 0 ]]; then
+        echo -e "  ${YELLOW}${BOLD}⚠️  Есть предупреждения — рекомендуется проверить${RESET}"
+    else
+        echo -e "  ${RED}${BOLD}❌ Найдены проблемы — требуется вмешательство${RESET}"
+    fi
+
+    hr
+
+    # Отправляем отчёт в Telegram если настроен
+    echo -ne "\n${YELLOW}Отправить отчёт в Telegram? [y/N]: ${RESET}"
+    read -r ans
+    if [[ "${ans,,}" == "y" ]]; then
+        tg_send "🔍 <b>Диагностика NaiveProxy</b>
+🖥 Сервер: <code>$(hostname)</code>
+🕐 $(date '+%Y-%m-%d %H:%M:%S')
+
+${report}
+✅ Пройдено: ${pass}  ⚠️ Внимание: ${warn}  ❌ Проблемы: ${fail}"
+        ok "Отчёт отправлен в Telegram"
+    fi
+}
+
 # ─── СТАТУС ──────────────────────────────────────────────────
 cmd_status() {
     hr
@@ -1969,6 +2335,7 @@ show_menu() {
     echo -e "   ${BOLD}9)${RESET}  Обновить Caddy"
     echo -e "   ${BOLD}10)${RESET} Логи"
     echo -e "   ${BOLD}11)${RESET} Удалить NaiveProxy"
+    echo -e "   ${BOLD}16)${RESET} 🔍 Диагностика системы"
     echo -e "   ──────────────────────────"
     echo -e "   ${BOLD}12)${RESET} 🔒 SSH Hardening"
     echo -e "   ${BOLD}13)${RESET} 🔄 Обновить систему"
@@ -2003,6 +2370,7 @@ main() {
             domains)     load_config; cmd_domains ;;
             qr)          load_config; print_client_config ;;
             ssh-key)     cat "${CONFIG_DIR}/ssh_private_key" 2>/dev/null || err "Ключ не найден: ${CONFIG_DIR}/ssh_private_key" ;;
+            diagnose)    cmd_diagnose ;;
             self-update)  load_config; cmd_self_update ;;
             camouflage)   install_camouflage_page ;;
             version)     echo "NaiveProxy Manager v${VERSION}" ;;
@@ -2036,6 +2404,7 @@ main() {
             13) cmd_sysupdate ;;
             14) cmd_self_update ;;
             15) install_camouflage_page && ok "Камуфляж обновлён" ;;
+            16) cmd_diagnose ;;
             0)  echo -e "${GREEN}Пока!${RESET}"; exit 0 ;;
             *)  warn "Неверный выбор" ;;
         esac

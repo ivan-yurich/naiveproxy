@@ -17,11 +17,11 @@
 ```
 
 **Professional private proxy server manager**
-Caddy 2 · NaiveProxy · Let's Encrypt · Telegram · SSH Hardening · QR Connection
+Caddy 2 · NaiveProxy · Let's Encrypt · Telegram · SSH Hardening · Diagnostics
 
 ---
 
-[![Version](https://img.shields.io/badge/version-3.8.0-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivanstudiya-cpu/naiveproxy/releases)
+[![Version](https://img.shields.io/badge/version-3.9.0-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivanstudiya-cpu/naiveproxy/releases)
 [![ShellCheck](https://img.shields.io/badge/ShellCheck-passing-3FB950?style=for-the-badge&logo=gnu-bash&logoColor=white)](https://www.shellcheck.net)
 [![Bash](https://img.shields.io/badge/Bash-5.0+-4EAA25?style=for-the-badge&logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-20.04%2B-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://ubuntu.com)
@@ -30,7 +30,7 @@ Caddy 2 · NaiveProxy · Let's Encrypt · Telegram · SSH Hardening · QR Connec
 
 ---
 
-[**Quick Start**](#-quick-start) • [**Features**](#-features) • [**SSH Hardening**](#-ssh-hardening) • [**Firewall**](#-firewall) • [**Clients**](#-client-apps) • [**FAQ**](#-faq)
+[**Quick Start**](#-quick-start) • [**Features**](#-features) • [**Diagnostics**](#-diagnostics) • [**SSH Hardening**](#-ssh-hardening) • [**Clients**](#-client-apps) • [**FAQ**](#-faq)
 
 </div>
 
@@ -60,7 +60,7 @@ Caddy 2 · NaiveProxy · Let's Encrypt · Telegram · SSH Hardening · QR Connec
 bash <(curl -fsSL https://raw.githubusercontent.com/ivanstudiya-cpu/naiveproxy/main/naiveproxy.sh)
 ```
 
-### What happens during installation:
+### Installation steps:
 
 ```
 [1/5] 🔄  System Update
@@ -93,7 +93,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/ivanstudiya-cpu/naiveproxy/m
 ### 🔐 Security
 - **SSH Hardening** — ED25519 key, port change, root block
 - **SSH key auto-save** — to `/etc/naiveproxy/ssh_private_key`
-- **Fail2Ban 3 levels** — bruteforce/DDoS/recidive
+- **Fail2Ban 3 levels** — bruteforce(7d) / DDoS(7d) / recidive(30d)
 - **UFW** — deny all incoming + scanner port blocking
 - **probe_resistance** — looks like a normal website
 - **Camouflage page** — DevStack IT blog
@@ -109,20 +109,17 @@ bash <(curl -fsSL https://raw.githubusercontent.com/ivanstudiya-cpu/naiveproxy/m
 </td>
 <td width="50%" valign="top">
 
+### 🔍 Diagnostics
+- **7 check blocks** — Caddy, config, TLS, network, firewall, resources, logs
+- **Color report** — ✅ / ⚠️ / ❌ per check
+- **Log analysis** — errors, CONNECT tunnels
+- **Send to Telegram** — full report in one click
+
 ### 🤖 Automation
 - **Telegram bot** — alerts + stats on demand
 - **Watchdog** — cron every 5 min, auto-restart
-- **Auto Caddy update** — every Sunday at 3:00
 - **Self-update** — script update from GitHub
-- **Certificate check** — alert when < 7 days left
-
-### 🛡️ Code Quality
-- `set -euo pipefail` — strict mode
-- **SHA256 verification** of Go binary
-- `grep -vF` instead of `sed` — no regex injection
-- `--data-urlencode` for Telegram
-- `trap` cleanup of temp files
-- **ShellCheck passing** — 0 warnings
+- **Certificate check** — alert when < 7 days
 
 </td>
 </tr>
@@ -147,18 +144,19 @@ bash <(curl -fsSL https://raw.githubusercontent.com/ivanstudiya-cpu/naiveproxy/m
 
 ```
 ──────────────────────────────────────────────────────
-   NaiveProxy Manager v3.8.0
+   NaiveProxy Manager v3.9.0
    Status: ● running  │  Domain: proxy.example.com
    Telegram: connected  │  Users: 3  │  SSH: 52847
 ──────────────────────────────────────────────────────
-   1)  Install NaiveProxy          9)  Update Caddy
-   2)  Status + certificate        10) Logs
-   3)  Client config + QR          11) Remove NaiveProxy
+   1)  Install NaiveProxy          10) Logs
+   2)  Status + certificate        11) Remove NaiveProxy
+   3)  Client config + QR          16) 🔍 Diagnostics
    4)  Users                       ──────────────────
    5)  Domains                     12) 🔒 SSH Hardening
    6)  Monitoring + stats          13) 🔄 Update system
    7)  Telegram setup              14) ⬆️  Update script
    8)  Restart Caddy               15) 🎭 Update camouflage
+   9)  Update Caddy
 ──────────────────────────────────────────────────────
 ```
 
@@ -166,6 +164,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/ivanstudiya-cpu/naiveproxy/m
 
 ```bash
 sudo bash naiveproxy.sh install        # Full installation
+sudo bash naiveproxy.sh diagnose       # System diagnostics
 sudo bash naiveproxy.sh status         # Status + TLS certificate
 sudo bash naiveproxy.sh config         # Config + QR code
 sudo bash naiveproxy.sh qr             # QR code only
@@ -188,6 +187,54 @@ sudo bash naiveproxy.sh remove         # Remove everything
 
 ---
 
+## 🔍 Diagnostics
+
+```bash
+sudo bash naiveproxy.sh diagnose
+```
+
+Checks **7 blocks** and shows a color report:
+
+```
+[1/7] Caddy          — found · running · naive padding · module
+[2/7] Configuration  — Caddyfile · :443,domain format · users
+[3/7] TLS & Network  — DNS · ports · ALPN h2 · certificate
+[4/7] Firewall       — UFW · Fail2Ban · blocked ports
+[5/7] Resources      — RAM · disk · CPU load
+[6/7] Logs           — errors · CONNECT tunnels
+[7/7] Version        — up to date · SSH hardening done
+
+📊 RESULT: ✅ 18  ⚠️ 0  ❌ 0
+🎉 Everything is working great!
+```
+
+Results can be sent to Telegram with one click.
+
+---
+
+## ⚠️ Critical — Caddyfile
+
+```bash
+# ❌ WRONG — clients won't connect:
+your-domain.com:443 { ... }
+
+# ✅ CORRECT — :443 must be FIRST:
+:443, your-domain.com {
+  tls your@email.com
+  forward_proxy {
+    basic_auth USERNAME PASSWORD
+    hide_ip
+    hide_via
+    probe_resistance
+  }
+  file_server { root /var/www/html }
+}
+```
+
+The script generates the correct config automatically since v3.7.0.
+
+---
+
 ## 🔒 SSH Hardening
 
 ```bash
@@ -196,113 +243,25 @@ sudo bash naiveproxy.sh ssh-hardening
 
 > 💡 **Can be skipped** if SSH is already configured. Press `n` during installation.
 
-### 5 steps:
-
-**① New sudo user** — created with password (or random)
-
-**② ED25519 SSH key + auto-save**
-
-Key is automatically saved to `/etc/naiveproxy/ssh_private_key`.
-Script outputs ready-to-use download command:
+**5 steps:** new sudo user → ED25519 key (auto-save) → port change → sshd_config → UFW + Fail2Ban
 
 ```bash
-# Linux/macOS:
+# Download SSH key to your computer:
 scp root@YOUR_IP:/etc/naiveproxy/ssh_private_key ~/.ssh/id_naiveproxy
 chmod 600 ~/.ssh/id_naiveproxy
-
-# Windows PowerShell:
-scp root@YOUR_IP:/etc/naiveproxy/ssh_private_key $HOME\.ssh\id_naiveproxy
-
-# Connect:
 ssh -i ~/.ssh/id_naiveproxy -p NEW_PORT user@YOUR_IP
-```
 
-Show key anytime:
-```bash
+# Show key anytime:
 sudo bash naiveproxy.sh ssh-key
 ```
 
-**③ SSH port change** — manual or random (49000-65000)
-
-**④ sshd_config**
-```ini
-PermitRootLogin        no
-PasswordAuthentication no
-MaxAuthTries           3
-LoginGraceTime         30
-X11Forwarding          no
-```
-
-**⑤ UFW + Fail2Ban** — new port opened BEFORE closing the old one
-
----
-
-## 🛡️ Firewall
-
-### UFW
-```
-Default: DENY ALL INCOMING
-Open: 80/tcp (ACME), 443/tcp, 443/udp, SSH port
-Blocked: MySQL(3306), Redis(6379), MongoDB(27017),
-         Elasticsearch(9200), 8080, 8888...
-Rate limit: 80/tcp — DDoS protection on ACME
-```
-
-### Fail2Ban — 3 protection levels
+### Fail2Ban — 3 levels:
 
 | Level | Trigger | Ban |
 |-------|---------|-----|
-| SSH bruteforce | 3 wrong passwords | **7 days** |
-| SSH DDoS | 10 attempts in 1 minute | **7 days** |
+| Bruteforce | 3 wrong passwords | **7 days** |
+| DDoS | 10 attempts in 1 min | **7 days** |
 | Recidivist | Repeated violations | **30 days** |
-
----
-
-## 📱 QR Code
-
-After installation the script generates a QR code right in the terminal:
-
-```
-█████████████████████████████████
-█ ▄▄▄▄▄ █▀▄▀█▀▄▀ ▀█▄▀ █ ▄▄▄▄▄ █
-...
-```
-
-Scan with **NekoBox** or **Shadowrocket** — one-tap connection!
-
-Show QR anytime:
-```bash
-sudo bash naiveproxy.sh qr
-```
-
----
-
-## ⚠️ Critical — Caddyfile
-
-**This is what prevents connection in most cases:**
-
-```bash
-# ❌ WRONG — clients won't connect:
-your-domain.com:443 {
-  ...
-}
-
-# ✅ CORRECT — :443 must be FIRST:
-:443, your-domain.com {
-  tls your@email.com
-  forward_proxy {
-    basic_auth user password
-    hide_ip
-    hide_via
-    probe_resistance
-  }
-  file_server {
-    root /var/www/html
-  }
-}
-```
-
-The script generates the correct config automatically since v3.7.0.
 
 ---
 
@@ -318,7 +277,8 @@ The script generates the correct config automatically since v3.7.0.
 | Caddy crashed | 🔴 Down → auto-restart |
 | SSH Hardening | 🔒 Port: 52847 |
 | Certificate < 7 days | ⚠️ 5 days left! |
-| Stats | 📊 Traffic · RAM · Disk · Cert |
+| Diagnostics | 🔍 Full report |
+| Stats | 📊 Traffic · RAM · Disk |
 
 ---
 
@@ -342,7 +302,7 @@ naive+https://USERNAME:PASSWORD@YOUR_DOMAIN:443
 
 | Client | Platform | How to add |
 |--------|----------|------------|
-| [NekoBox](https://github.com/MatsuriDayo/NekoBoxForAndroid/releases) | Android | Scan QR / URI |
+| [NekoBox](https://github.com/MatsuriDayo/NekoBoxForAndroid/releases) | Android | QR / URI |
 | [Shadowrocket](https://apps.apple.com/app/shadowrocket/id932747118) | iPhone | URI |
 | [Hiddify](https://github.com/hiddify/hiddify-next/releases) | Windows / macOS | URI |
 | [naive](https://github.com/klzgrad/naiveproxy/releases) | Windows / Linux | config.json |
@@ -352,66 +312,29 @@ naive+https://USERNAME:PASSWORD@YOUR_DOMAIN:443
 
 ---
 
-## 🎭 Camouflage Page
-
-Default — **DevStack** IT blog. Looks like a real website to scanners.
-
-**Path:** `/var/www/html/index.html`
-
-```bash
-# Replace with your own page:
-scp my_site.html user@YOUR_IP:/var/www/html/index.html
-
-# Restore DevStack:
-sudo bash naiveproxy.sh camouflage
-```
-
----
-
-## 📁 File Structure
-
-```
-/usr/local/bin/caddy
-/etc/caddy/Caddyfile                       (chmod 600)
-/etc/naiveproxy/
-├── naive.conf                             (chmod 600)
-├── users.conf                             (chmod 600)
-├── ssh_private_key                        ← SSH key (auto-saved)
-├── ssh_public_key
-├── monitor.sh
-├── .ssh_hardened
-├── .sysupdate_done
-└── backups/
-/etc/fail2ban/jail.local
-/var/www/html/index.html                   ← camouflage page
-/var/log/caddy/access.log
-/var/log/caddy/naive.log
-```
-
----
-
 ## ❓ FAQ
 
 <details>
 <summary><b>Client won't connect</b></summary>
 
-Check Caddyfile:
+Run diagnostics first:
 ```bash
-cat /etc/caddy/Caddyfile | grep ":443"
-# Should be: :443, your-domain.com {
-# NOT: your-domain.com:443 {
+sudo bash naiveproxy.sh diagnose
 ```
 
-Check ALPN:
+Or check manually:
 ```bash
+# Caddyfile should be: :443, domain {
+cat /etc/caddy/Caddyfile | grep ":443"
+
+# ALPN must be h2:
 openssl s_client -connect YOUR_DOMAIN:443 -alpn h2 2>/dev/null | grep "ALPN protocol"
-# Should be: ALPN protocol: h2
 ```
 
 </details>
 
 <details>
-<summary><b>How to download SSH key to my computer</b></summary>
+<summary><b>How to download SSH key</b></summary>
 
 ```bash
 # Linux/macOS:
@@ -420,15 +343,12 @@ chmod 600 ~/.ssh/id_naiveproxy
 
 # Windows PowerShell:
 scp root@YOUR_IP:/etc/naiveproxy/ssh_private_key $HOME\.ssh\id_naiveproxy
-
-# Connect:
-ssh -i ~/.ssh/id_naiveproxy -p SSH_PORT user@YOUR_IP
 ```
 
 </details>
 
 <details>
-<summary><b>Locked myself out after SSH hardening</b></summary>
+<summary><b>Locked out after SSH hardening</b></summary>
 
 Access via hosting console (VNC/KVM):
 ```bash
@@ -448,19 +368,6 @@ journalctl -u caddy -n 50 | grep -i "acme\|error\|cert"
 
 </details>
 
-<details>
-<summary><b>How to verify IP changed</b></summary>
-
-```bash
-# On server:
-curl https://ifconfig.me
-
-# Windows with naive.exe running:
-curl.exe --proxy socks5://127.0.0.1:1080 https://ifconfig.me
-```
-
-</details>
-
 ---
 
 ## 📊 Comparison
@@ -470,12 +377,11 @@ curl.exe --proxy socks5://127.0.0.1:1080 https://ifconfig.me
 | No Docker | ✅ | ❌ | ❌ |
 | SSH Hardening | ✅ | ❌ | ❌ |
 | SSH key auto-save | ✅ | ❌ | ❌ |
-| QR code on install | ✅ | ❌ | ❌ |
+| QR code | ✅ | ❌ | ❌ |
+| System diagnostics | ✅ | ❌ | ❌ |
 | Fail2Ban 3 levels | ✅ | ❌ | ❌ |
-| UFW deny all + scanners | ✅ | ❌ | ❌ |
-| System update | ✅ | ❌ | ❌ |
-| Script self-update | ✅ | ❌ | ❌ |
 | Camouflage page | ✅ | ❌ | ❌ |
+| Self-update | ✅ | ❌ | ❌ |
 | Certificate check | ✅ | ❌ | ❌ |
 | Correct Caddyfile | ✅ v3.7+ | — | — |
 | Telegram alerts | ✅ | ✅ | ✅ |
@@ -486,14 +392,24 @@ curl.exe --proxy socks5://127.0.0.1:1080 https://ifconfig.me
 ## 📜 Changelog
 
 <details>
-<summary><b>v3.8.0</b> — Security & UX ← CURRENT</summary>
+<summary><b>v3.9.0</b> — System Diagnostics ← CURRENT</summary>
 
-- ✨ SSH key auto-save to `/etc/naiveproxy/ssh_private_key`
-- ✨ QR code generation in terminal
-- ✨ scp command for key download
-- 🛡️ UFW: `deny all incoming` + scanner port blocking
-- 🛡️ Fail2Ban 3 levels: bruteforce(7d) / DDoS(7d) / recidive(30d)
-- 🆕 CLI: `qr`, `ssh-key`
+- ✨ Full system diagnostics — 7 blocks, 18+ checks
+- ✨ Color report ✅/⚠️/❌ with recommendations
+- ✨ Caddy log analysis for errors
+- ✨ Send diagnostics report to Telegram
+- 🆕 CLI: `diagnose`
+- 🆕 Menu item 16
+
+</details>
+
+<details>
+<summary><b>v3.8.0</b> — Security & UX</summary>
+
+- ✨ SSH key auto-save + scp command output
+- ✨ QR code in terminal
+- 🛡️ UFW deny all + scanner port blocking
+- 🛡️ Fail2Ban 3 protection levels
 
 </details>
 
@@ -501,7 +417,7 @@ curl.exe --proxy socks5://127.0.0.1:1080 https://ifconfig.me
 <summary><b>v3.7.0</b> — Critical Caddyfile Fix</summary>
 
 - 🔴 Critical fix: `:443, domain` instead of `domain:443`
-- ✅ Confirmed working: NekoBox Android + naive.exe Windows
+- ✅ Confirmed: NekoBox Android + naive.exe Windows working
 
 </details>
 
@@ -509,21 +425,14 @@ curl.exe --proxy socks5://127.0.0.1:1080 https://ifconfig.me
 <summary><b>v3.6.0</b> — Critical Build Fix</summary>
 
 - 🔴 build_caddy: direct git clone of `klzgrad/forwardproxy@naive`
-- 🔴 Auto-detect compatible Caddy version from go.mod
+- 🔴 Auto-detect Caddy version from go.mod
 
 </details>
 
 <details>
-<summary><b>v3.5.0</b> — Security Audit</summary>
+<summary><b>v3.0–3.5</b> — Core Features</summary>
 
-- 🔒 grep -vF instead of sed, --data-urlencode, trap cleanup
-
-</details>
-
-<details>
-<summary><b>v3.0-3.4</b> — Core Features</summary>
-
-- System update, SSH Hardening, Self-update, Domains, Camouflage
+- System update, SSH Hardening, Self-update, Domains, Camouflage, Security Audit
 
 </details>
 
@@ -537,7 +446,7 @@ MIT © [ivanstudiya-cpu](https://github.com/ivanstudiya-cpu)
 
 <div align="center">
 
-**If this helped you — leave a ⭐ star**
+**If this helped — leave a ⭐ star**
 
 [![GitHub stars](https://img.shields.io/github/stars/ivanstudiya-cpu/naiveproxy?style=for-the-badge&color=D4A017)](https://github.com/ivanstudiya-cpu/naiveproxy/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/ivanstudiya-cpu/naiveproxy?style=for-the-badge&color=58A6FF)](https://github.com/ivanstudiya-cpu/naiveproxy/network)
