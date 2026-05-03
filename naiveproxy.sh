@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-#   NaiveProxy Manager v4.1.0 — by ivanstudiya-cpu
+#   NaiveProxy Manager v4.2.0 — by ivanstudiya-cpu
 #   Стек: Caddy 2 + klzgrad/forwardproxy@naive
 #   ОС: Ubuntu 20.04 / 22.04 / 24.04
 #   GitHub: https://github.com/ivanstudiya-cpu/naiveproxy
@@ -8,7 +8,7 @@
 
 set -euo pipefail
 
-VERSION="4.1.0"
+VERSION="4.2.0"
 LANG_UI="${NAIVEPROXY_LANG:-ru}"  # ru или en — export NAIVEPROXY_LANG=en
 GITHUB_RAW="https://raw.githubusercontent.com/ivanstudiya-cpu/naiveproxy/main/naiveproxy.sh"
 GITHUB_API="https://api.github.com/repos/ivanstudiya-cpu/naiveproxy/releases/latest"
@@ -19,7 +19,9 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
+BLUE='\033[0;34m'
 BOLD='\033[1m'
+DIM='\033[2m'
 RESET='\033[0m'
 
 ok()   { echo -e "${GREEN}[✓]${RESET} $*"; }
@@ -2788,6 +2790,364 @@ tg_send_stats_to() {
 🕐 $(date '+%Y-%m-%d %H:%M:%S')"
 }
 
+
+# ══════════════════════════════════════════════════════════════
+#   DNS БЛОКИРОВКА РЕКЛАМЫ (unbound + blocklists)
+# ══════════════════════════════════════════════════════════════
+
+DNS_CONF="/etc/unbound/unbound.conf.d/naiveproxy-dns.conf"
+DNS_BLOCKLIST="/etc/unbound/blocklist.conf"
+DNS_WHITELIST="/etc/unbound/whitelist.txt"
+DNS_STATS_FILE="/etc/naiveproxy/dns_stats"
+
+# Источники blocklists (совместимы с unbound)
+BLOCKLIST_SOURCES=(
+    "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
+    "https://adaway.org/hosts.txt"
+    "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/hosts/pro.txt"
+)
+
+cmd_dns_install() {
+    hr
+    echo -e "${BOLD}  🚫 Установка DNS блокировщика рекламы${RESET}"
+    hr
+
+    # Устанавливаем unbound
+    info "Устанавливаю unbound..."
+    apt-get install -y -q unbound unbound-anchor curl
+
+    # Настраиваем unbound как рекурсивный DNS резолвер
+    info "Настраиваю unbound..."
+    cat > "${DNS_CONF}" << 'UNBOUNDEOF'
+server:
+    # Слушаем только локально
+    interface: 127.0.0.1
+    port: 5335
+    do-ip4: yes
+    do-ip6: no
+    do-udp: yes
+    do-tcp: yes
+
+    # Безопасность
+    hide-identity: yes
+    hide-version: yes
+    harden-glue: yes
+    harden-dnssec-stripped: yes
+    use-caps-for-id: yes
+    harden-large-queries: yes
+    harden-short-bufsize: yes
+
+    # Производительность
+    prefetch: yes
+    prefetch-key: yes
+    num-threads: 2
+    so-rcvbuf: 1m
+    msg-cache-size: 50m
+    rrset-cache-size: 100m
+    cache-min-ttl: 3600
+    cache-max-ttl: 86400
+
+    # Логи для статистики
+    log-queries: no
+    statistics-interval: 0
+
+    # Подключаем blocklist
+    include: /etc/unbound/blocklist.conf
+
+    # Upstream DNS (Cloudflare + Google через DoT)
+    forward-zone:
+        name: "."
+        forward-addr: 1.1.1.1@853#cloudflare-dns.com
+        forward-addr: 1.0.0.1@853#cloudflare-dns.com
+        forward-addr: 8.8.8.8@853#dns.google
+        forward-tls-upstream: yes
+UNBOUNDEOF
+
+    # Создаём пустой blocklist если нет
+    [[ -f "${DNS_BLOCKLIST}" ]] || touch "${DNS_BLOCKLIST}"
+
+    # Проверяем конфиг
+    if ! unbound-checkconf "${DNS_CONF}" &>/dev/null; then
+        err "Ошибка конфига unbound!"
+        return 1
+    fi
+
+    # Запускаем unbound
+    systemctl enable unbound --quiet
+    systemctl restart unbound
+    sleep 2
+
+    if ! systemctl is-active unbound &>/dev/null; then
+        err "unbound не запустился!"
+        journalctl -u unbound -n 10 --no-pager
+        return 1
+    fi
+
+    ok "unbound запущен на 127.0.0.1:5335"
+
+    # Обновляем blocklists
+    cmd_dns_update
+
+    # Интегрируем с Caddyfile — добавляем DNS
+    _dns_integrate_caddy
+
+    # Статистика
+    mkdir -p "$(dirname "${DNS_STATS_FILE}")"
+    echo "0" > "${DNS_STATS_FILE}"
+
+    ok "DNS блокировщик установлен!"
+    tg_send "🚫 <b>DNS блокировщик установлен</b>
+🖥 Сервер: <code>$(hostname)</code>
+🔒 Режим: unbound + blocklists
+🕐 $(date '+%Y-%m-%d %H:%M:%S')"
+}
+
+# Интеграция с Caddy — передаём DNS через unbound
+_dns_integrate_caddy() {
+    # Добавляем локальный DNS резолвер в системный
+    if ! grep -q "127.0.0.1" /etc/resolv.conf; then
+        # Бэкап
+        cp /etc/resolv.conf /etc/resolv.conf.bak 2>/dev/null || true
+        echo "nameserver 127.0.0.1" > /tmp/resolv_new
+        echo "nameserver 1.1.1.1" >> /tmp/resolv_new
+        cat /etc/resolv.conf >> /tmp/resolv_new
+        cp /tmp/resolv_new /etc/resolv.conf
+        ok "DNS: добавлен 127.0.0.1 в /etc/resolv.conf"
+    fi
+}
+
+# Обновление blocklists
+cmd_dns_update() {
+    hr
+    echo -e "${BOLD}  🔄 Обновление DNS blocklists${RESET}"
+    hr
+
+    if ! command -v unbound &>/dev/null; then
+        err "unbound не установлен. Сначала: меню → DNS блокировщик → Установить"
+        return 1
+    fi
+
+    info "Скачиваю blocklists..."
+    local tmp_hosts
+    tmp_hosts=$(mktemp)
+    trap 'rm -f "${tmp_hosts}" 2>/dev/null' RETURN
+
+    local total=0
+    local blocked=0
+
+    for url in "${BLOCKLIST_SOURCES[@]}"; do
+        info "  → ${url##*/}"
+        if curl -fsSL --max-time 30 "${url}" >> "${tmp_hosts}" 2>/dev/null; then
+            ok "  Загружено"
+        else
+            warn "  Не удалось загрузить"
+        fi
+    done
+
+    # Парсим hosts формат и конвертируем в unbound
+    info "Конвертирую в формат unbound..."
+
+    # Читаем whitelist
+    local whitelist_domains=""
+    if [[ -f "${DNS_WHITELIST}" ]]; then
+        whitelist_domains=$(grep -v '^#' "${DNS_WHITELIST}" | tr '
+' '|' | sed 's/|$//')
+    fi
+
+    python3 << PYEOF2
+import sys
+
+hosts_file = "${tmp_hosts}"
+output_file = "${DNS_BLOCKLIST}"
+whitelist = "${whitelist_domains}"
+wl_set = set(whitelist.split('|')) if whitelist else set()
+
+blocked = 0
+seen = set()
+
+with open(hosts_file, 'r', encoding='utf-8', errors='ignore') as f,      open(output_file, 'w') as out:
+    out.write("# NaiveProxy DNS Blocklist — обновлено $(date '+%Y-%m-%d %H:%M:%S')
+")
+    for line in f:
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+        parts = line.split()
+        if len(parts) >= 2 and parts[0] in ('0.0.0.0', '127.0.0.1'):
+            domain = parts[1].lower().strip()
+            # Фильтруем мусор
+            if domain in ('localhost', '0.0.0.0', '127.0.0.1', '::1', 'local'):
+                continue
+            if '.' not in domain:
+                continue
+            if domain in seen:
+                continue
+            if domain in wl_set:
+                continue
+            seen.add(domain)
+            out.write(f'local-zone: "{domain}" refuse
+')
+            blocked += 1
+
+print(f"blocked={blocked}")
+PYEOF2
+
+    # Считаем заблокированных
+    blocked=$(grep -c "^local-zone" "${DNS_BLOCKLIST}" 2>/dev/null || echo 0)
+
+    # Перезапускаем unbound
+    if unbound-checkconf "${DNS_CONF}" &>/dev/null; then
+        systemctl restart unbound
+        ok "unbound перезапущен"
+    else
+        err "Ошибка в blocklist — откат"
+        echo "" > "${DNS_BLOCKLIST}"
+        systemctl restart unbound
+        return 1
+    fi
+
+    # Сохраняем статистику
+    echo "${blocked}" > "${DNS_STATS_FILE}"
+
+    ok "Blocklist обновлён: ${blocked} доменов заблокировано"
+    info "Последнее обновление: $(date '+%Y-%m-%d %H:%M:%S')"
+
+    tg_send "🚫 <b>DNS Blocklist обновлён</b>
+🔒 Заблокировано доменов: <b>${blocked}</b>
+🕐 $(date '+%Y-%m-%d %H:%M:%S')"
+}
+
+# Статус DNS блокировщика
+cmd_dns_status() {
+    hr
+    echo -e "${BOLD}  🚫 DNS Блокировщик${RESET}"
+    hr
+
+    if ! command -v unbound &>/dev/null; then
+        warn "unbound не установлен"
+        return
+    fi
+
+    if systemctl is-active unbound &>/dev/null; then
+        ok "unbound: запущен"
+    else
+        err "unbound: остановлен"
+    fi
+
+    local blocked=0
+    [[ -f "${DNS_STATS_FILE}" ]] && blocked=$(cat "${DNS_STATS_FILE}")
+    [[ -f "${DNS_BLOCKLIST}" ]] && blocked=$(grep -c "^local-zone" "${DNS_BLOCKLIST}" 2>/dev/null || echo 0)
+
+    echo -e "  Заблокировано доменов: ${CYAN}${blocked}${RESET}"
+
+    # Тест блокировки
+    echo
+    info "Тест блокировки рекламных доменов..."
+    local test_domains=("ads.google.com" "tracking.google.com" "doubleclick.net" "googlesyndication.com")
+    for domain in "${test_domains[@]}"; do
+        if dig "@127.0.0.1" -p 5335 "${domain}" +short 2>/dev/null | grep -q "REFUSED\|^$"; then
+            echo -e "  ${GREEN}✅ ${domain} — ЗАБЛОКИРОВАН${RESET}"
+        else
+            echo -e "  ${YELLOW}⚠️  ${domain} — не заблокирован${RESET}"
+        fi
+    done
+
+    echo
+    info "Тест пропуска нормальных доменов..."
+    local ok_domains=("google.com" "youtube.com" "github.com")
+    for domain in "${ok_domains[@]}"; do
+        local result
+        result=$(dig "@127.0.0.1" -p 5335 "${domain}" +short 2>/dev/null | head -1)
+        if [[ -n "${result}" ]]; then
+            echo -e "  ${GREEN}✅ ${domain} → ${result}${RESET}"
+        else
+            echo -e "  ${RED}❌ ${domain} — не резолвится!${RESET}"
+        fi
+    done
+    hr
+}
+
+# Добавить домен в whitelist (разрешить)
+cmd_dns_whitelist() {
+    hr
+    echo -e "${BOLD}  ✅ Whitelist (разрешить домен)${RESET}"
+    hr
+
+    echo -ne "${CYAN}Домен для разрешения: ${RESET}"
+    read -r wl_domain
+    if [[ -z "${wl_domain}" ]]; then
+        warn "Домен не указан"
+        return
+    fi
+
+    # Убираем из blocklist
+    if grep -q ""${wl_domain}"" "${DNS_BLOCKLIST}" 2>/dev/null; then
+        grep -v ""${wl_domain}"" "${DNS_BLOCKLIST}" > "${DNS_BLOCKLIST}.tmp"             && mv "${DNS_BLOCKLIST}.tmp" "${DNS_BLOCKLIST}"
+        ok "${wl_domain} удалён из blocklist"
+    fi
+
+    # Добавляем в whitelist файл
+    echo "${wl_domain}" >> "${DNS_WHITELIST}"
+    ok "${wl_domain} добавлен в whitelist"
+
+    systemctl restart unbound
+    ok "unbound перезапущен"
+}
+
+# Удалить DNS блокировщик
+cmd_dns_remove() {
+    echo -ne "${YELLOW}Удалить DNS блокировщик? [y/N]: ${RESET}"
+    read -r ans
+    [[ "${ans,,}" != "y" ]] && return
+
+    systemctl stop unbound 2>/dev/null || true
+    systemctl disable unbound 2>/dev/null || true
+    rm -f "${DNS_CONF}" "${DNS_BLOCKLIST}" "${DNS_WHITELIST}"
+
+    # Восстанавливаем resolv.conf
+    [[ -f /etc/resolv.conf.bak ]] && cp /etc/resolv.conf.bak /etc/resolv.conf
+
+    ok "DNS блокировщик удалён"
+}
+
+# Меню DNS блокировщика
+cmd_dns_menu() {
+    while true; do
+        hr
+        echo -e "${BOLD}  🚫 DNS Блокировщик рекламы${RESET}"
+        hr
+
+        local blocked=0
+        [[ -f "${DNS_BLOCKLIST}" ]] && blocked=$(grep -c "^local-zone" "${DNS_BLOCKLIST}" 2>/dev/null || echo 0)
+        local dns_status="${RED}не установлен${RESET}"
+        command -v unbound &>/dev/null && systemctl is-active unbound &>/dev/null             && dns_status="${GREEN}активен (${blocked} доменов)${RESET}"
+
+        echo -e "  Статус: ${dns_status}"
+        echo
+        echo -e "  ${BOLD}1)${RESET} Установить блокировщик"
+        echo -e "  ${BOLD}2)${RESET} Обновить blocklists"
+        echo -e "  ${BOLD}3)${RESET} Статус и тест"
+        echo -e "  ${BOLD}4)${RESET} Разрешить домен (whitelist)"
+        echo -e "  ${BOLD}5)${RESET} Удалить блокировщик"
+        echo -e "  ${BOLD}0)${RESET} Назад"
+        hr
+        echo -ne "${CYAN}Выбор: ${RESET}"
+        read -r choice
+
+        case "${choice}" in
+            1) cmd_dns_install ;;
+            2) cmd_dns_update ;;
+            3) cmd_dns_status ;;
+            4) cmd_dns_whitelist ;;
+            5) cmd_dns_remove ;;
+            0) break ;;
+            *) warn "Неверный выбор" ;;
+        esac
+
+        echo -ne "${YELLOW}Enter для продолжения...${RESET}"; read -r
+    done
+}
+
 # ─── СТАТУС ──────────────────────────────────────────────────
 cmd_status() {
     hr
@@ -2912,6 +3272,7 @@ show_menu() {
     echo -e "   ${BOLD}10)${RESET} Логи"
     echo -e "   ${BOLD}11)${RESET} Удалить NaiveProxy"
     echo -e "   ${BOLD}16)${RESET} 🔍 Диагностика системы"
+    echo -e "   ${BOLD}17)${RESET} 🚫 DNS блокировщик рекламы"
     echo -e "   ──────────────────────────"
     echo -e "   ${BOLD}12)${RESET} 🔒 SSH Hardening"
     echo -e "   ${BOLD}13)${RESET} 🔄 Обновить систему"
@@ -2947,6 +3308,10 @@ main() {
             qr)          load_config; print_client_config ;;
             ssh-key)     cat "${CONFIG_DIR}/ssh_private_key" 2>/dev/null || err "Ключ не найден: ${CONFIG_DIR}/ssh_private_key" ;;
             diagnose)    cmd_diagnose ;;
+            dns)         cmd_dns_menu ;;
+            dns-install) cmd_dns_install ;;
+            dns-update)  cmd_dns_update ;;
+            dns-status)  cmd_dns_status ;;
             bot)         load_config; cmd_bot ;;
             bot-install) load_config; install_bot_service ;;
             self-update)  load_config; cmd_self_update ;;
@@ -2983,6 +3348,7 @@ main() {
             14) cmd_self_update ;;
             15) install_camouflage_page && ok "Камуфляж обновлён" ;;
             16) cmd_diagnose ;;
+            17) cmd_dns_menu ;;
             0)  echo -e "${GREEN}Пока!${RESET}"; exit 0 ;;
             *)  warn "Неверный выбор" ;;
         esac
