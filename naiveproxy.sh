@@ -867,7 +867,10 @@ build_caddy() {
 
     # Проверяем наличие naive padding в бинарнике
     if command -v strings &>/dev/null; then
-        if strings "$CADDY_BIN" 2>/dev/null | grep -q "Padding"; then
+        local _pc
+        _pc=$(strings "$CADDY_BIN" 2>/dev/null | grep -cE "^(Padding|SetPadding|WithPadding)$" || true)
+        _pc="${_pc//[^0-9]/}"; _pc="${_pc:-0}"
+        if [[ "${_pc}" -ge 2 ]]; then
             ok "Naive padding модуль подтверждён ✓"
         else
             warn "Padding не найден — возможна проблема совместимости"
@@ -1944,8 +1947,13 @@ cmd_diagnose() {
         apt-get install -y -q binutils 2>/dev/null || true
     fi
     if command -v strings &>/dev/null && [[ -f "${CADDY_BIN}" ]]; then
-        if strings "${CADDY_BIN}" 2>/dev/null | grep -q "^Padding$"; then
-            _ok "Naive padding модуль подтверждён"
+        # Проверяем naive padding по нескольким признакам
+        local _pad_count
+        _pad_count=$(strings "${CADDY_BIN}" 2>/dev/null | grep -cE "^(Padding|SetPadding|WithPadding|writePadding|PaddingLength)$" || true)
+        _pad_count="${_pad_count//[^0-9]/}"
+        _pad_count="${_pad_count:-0}"
+        if [[ "${_pad_count}" -ge 2 ]]; then
+            _ok "Naive padding модуль подтверждён (${_pad_count} символов)"
         else
             _fail "Naive padding НЕ найден в Caddy — пересобери: sudo bash naiveproxy.sh update"
         fi
@@ -2429,7 +2437,10 @@ ${caddy_status}
             fi
 
             # Padding
-            if command -v strings &>/dev/null && strings /usr/local/bin/caddy 2>/dev/null | grep -q "^Padding$"; then
+            local _p
+            _p=$(strings /usr/local/bin/caddy 2>/dev/null | grep -cE "^(Padding|SetPadding|WithPadding)$" || true)
+            _p="${_p//[^0-9]/}"; _p="${_p:-0}"
+            if command -v strings &>/dev/null && [[ "${_p}" -ge 2 ]]; then
                 diag_result+="✅ Naive padding OK
 "
                 pass=$((pass+1))
