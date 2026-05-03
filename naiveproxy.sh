@@ -2158,7 +2158,8 @@ cmd_diagnose() {
     local log_errors=0
     if [[ -f "${LOG_DIR}/access.log" ]]; then
         # Считаем ошибки за последние 100 строк
-        log_errors=$(tail -100 "${LOG_DIR}/access.log" 2>/dev/null             | python3 -c "
+        log_errors=$(tail -100 "${LOG_DIR}/access.log" 2>/dev/null \
+            | python3 -c "
 import sys,json
 errs=0
 for line in sys.stdin:
@@ -2167,10 +2168,15 @@ for line in sys.stdin:
         if d.get('status',200) >= 500: errs+=1
     except: pass
 print(errs)
-" 2>/dev/null || echo "0")
+" 2>/dev/null || true)
+        log_errors="${log_errors//[^0-9]/}"
+        log_errors="${log_errors:-0}"
 
         local connect_count
-        connect_count=$(tail -100 "${LOG_DIR}/access.log" 2>/dev/null             | grep -c '"CONNECT"' || echo "0")
+        connect_count=$(tail -100 "${LOG_DIR}/access.log" 2>/dev/null \
+            | grep -c '"CONNECT"' 2>/dev/null || true)
+        connect_count="${connect_count//[^0-9]/}"
+        connect_count="${connect_count:-0}"
 
         if [[ ${log_errors} -eq 0 ]]; then
             _ok "Логи: нет серверных ошибок (последние 100 запросов)"
@@ -2184,8 +2190,11 @@ print(errs)
 
     # Ошибки Caddy в journald
     local caddy_errors
-    caddy_errors=$(journalctl -u caddy -n 50 --no-pager 2>/dev/null         | grep -ci "error\|panic\|fatal" || echo "0")
-    if [[ ${caddy_errors} -eq 0 ]]; then
+    caddy_errors=$(journalctl -u caddy -n 50 --no-pager 2>/dev/null \
+        | grep -ci "error\|panic\|fatal" 2>/dev/null || true)
+    caddy_errors="${caddy_errors//[^0-9]/}"  # оставляем только цифры
+    caddy_errors="${caddy_errors:-0}"
+    if [[ "${caddy_errors}" -eq 0 ]]; then
         _ok "journald: нет критических ошибок Caddy"
     else
         _warn "journald: найдено ${caddy_errors} строк с ошибками — проверь: journalctl -u caddy -n 50"
