@@ -2047,17 +2047,25 @@ cmd_diagnose() {
 
         # ALPN h2
         local alpn
-        alpn=$(echo | timeout 5 openssl s_client             -connect "${domain}:443" -alpn h2 2>/dev/null             | grep "ALPN protocol" | awk '{print $3}' || echo "")
+        alpn=$(echo | timeout 8 openssl s_client \
+            -connect "${domain}:443" \
+            -alpn h2 \
+            -servername "${domain}" \
+            2>/dev/null | grep "ALPN protocol" | awk '{print $3}')
+        alpn="${alpn//[^a-z0-9]/}"  # убираем лишние символы
         if [[ "${alpn}" == "h2" ]]; then
             _ok "ALPN: h2 ✓ (HTTP/2 работает)"
         else
-            _fail "ALPN: НЕ h2 (получено: '${alpn}') — проверь Caddyfile"
+            _warn "ALPN: не h2 (получено: '${alpn}') — возможно сервер за NAT или firewall"
         fi
 
         # TLS сертификат
         local cert_days=0
         local cert_info
-        cert_info=$(echo | timeout 5 openssl s_client             -connect "${domain}:443" -servername "${domain}" 2>/dev/null             | openssl x509 -noout -dates 2>/dev/null || echo "")
+        cert_info=$(echo | timeout 8 openssl s_client \
+            -connect "${domain}:443" \
+            -servername "${domain}" \
+            2>/dev/null | openssl x509 -noout -dates 2>/dev/null || echo "")
         if [[ -n "${cert_info}" ]]; then
             local not_after expire_ts now_ts
             not_after=$(echo "${cert_info}" | grep "notAfter" | cut -d= -f2)
