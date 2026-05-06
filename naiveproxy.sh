@@ -2327,7 +2327,13 @@ tg_send_photo() {
     local photo_path="$2"
     local caption="$3"
     [[ -z "${TG_TOKEN:-}" || ! -f "${photo_path}" ]] && return
-    curl -s --max-time 30         -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendPhoto"         -F "chat_id=${chat_id}"         -F "photo=@${photo_path}"         --data-urlencode "caption=${caption}"         >/dev/null 2>&1 || true
+    # Используем только -F для multipart (-F и --data-urlencode несовместимы)
+    curl -s --max-time 30 \
+        -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendPhoto" \
+        -F "chat_id=${chat_id}" \
+        -F "caption=${caption}" \
+        -F "photo=@${photo_path}" \
+        >/dev/null 2>&1 || true
 }
 
 # Обработка одной команды
@@ -2626,6 +2632,7 @@ ${user_list}"
 
         /qr)
             local qr_user="${args%% *}"
+            # Если args содержит ":" — значит это конкретный логин с двоеточием (не должно быть)
             if [[ -z "${qr_user}" ]]; then
                 # QR для первого пользователя
                 qr_user=$(get_users | head -1 | cut -d: -f1)
@@ -2640,21 +2647,40 @@ ${user_list}"
             qr_pass=$(get_users | grep "^${qr_user}:" | cut -d: -f2)
 
             if [[ -z "${qr_pass}" ]]; then
-                tg_reply "${chat_id}" "❌ Пользователь <code>${qr_user}</code> не найден"
+                tg_reply "${chat_id}" "❌ Пользователь <code>${qr_user}</code> не найден
+Список пользователей: /users"
+                return
+            fi
+
+            if [[ -z "${DOMAIN:-}" ]]; then
+                tg_reply "${chat_id}" "❌ Домен не настроен в конфиге"
                 return
             fi
 
             local uri="naive+https://${qr_user}:${qr_pass}@${DOMAIN}:443"
-            local qr_file="/tmp/naiveproxy_qr_${qr_user}.png"
+
+            # Авто-установка qrencode если нет
+            if ! command -v qrencode &>/dev/null; then
+                tg_reply "${chat_id}" "📦 Устанавливаю qrencode..."
+                apt-get install -y -q qrencode &>/dev/null
+            fi
 
             if command -v qrencode &>/dev/null; then
-                qrencode -o "${qr_file}" -s 8 "${uri}" 2>/dev/null
-                tg_send_photo "${chat_id}" "${qr_file}"                     "QR для ${qr_user}@${DOMAIN}"
-                rm -f "${qr_file}"
+                local qr_file="/tmp/naiveproxy_qr_${qr_user}_$$.png"
+                if qrencode -o "${qr_file}" -s 8 "${uri}" 2>/dev/null && [[ -s "${qr_file}" ]]; then
+                    tg_send_photo "${chat_id}" "${qr_file}" "📱 QR для ${qr_user}@${DOMAIN}"
+                    # Дополнительно отправляем URI текстом
+                    tg_reply "${chat_id}" "🔗 <b>URI:</b>
+<code>${uri}</code>"
+                    rm -f "${qr_file}"
+                else
+                    tg_reply "${chat_id}" "⚠️ Ошибка генерации QR
+🔗 URI: <code>${uri}</code>"
+                fi
             else
                 tg_reply "${chat_id}" "📱 <b>URI для ${qr_user}:</b>
 <code>${uri}</code>
-(установи qrencode для QR: apt install qrencode)"
+(установи qrencode на сервере для QR картинки)"
             fi
             ;;
 
