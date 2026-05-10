@@ -21,7 +21,7 @@ Caddy 2 · NaiveProxy · Telegram Bot · DNS Ad Blocking · Diagnostics · SSH H
 
 ---
 
-[![Version](https://img.shields.io/badge/version-4.2.2-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivanstudiya-cpu/naiveproxy/releases)
+[![Version](https://img.shields.io/badge/version-4.2.3-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivanstudiya-cpu/naiveproxy/releases)
 [![ShellCheck](https://img.shields.io/badge/ShellCheck-passing-3FB950?style=for-the-badge&logo=gnu-bash&logoColor=white)](https://www.shellcheck.net)
 [![Bash](https://img.shields.io/badge/Bash-5.0+-4EAA25?style=for-the-badge&logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-20.04%2B-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://ubuntu.com)
@@ -515,7 +515,17 @@ systemctl restart naiveproxy-bot
 ## 📜 Changelog
 
 <details>
-<summary><b>v4.2.2</b> — Security Audit ← CURRENT</summary>
+<summary><b>v4.2.3</b> — ALPN Fix ← CURRENT</summary>
+
+**🐛 Final ALPN fix:**
+- 🔴 Fixed `grep: binary file matches` issue — added `-a` flag (text mode) to all ALPN checks
+- ✅ Diagnostics now correctly shows `✅ ALPN: h2 ✓` on all servers
+- 🔍 Reason: openssl outputs TLS handshake with binary chars, `grep` without `-a` discarded the result
+
+</details>
+
+<details>
+<summary><b>v4.2.2</b> — Security Audit</summary>
 
 **🔴 Critical fixes:**
 - 🔒 SSH port now changes correctly on Ubuntu 22.04+ (`sshd_config.d/` support)
