@@ -2114,7 +2114,7 @@ cmd_diagnose() {
             -connect "${domain}:443" \
             -alpn h2 \
             -servername "${domain}" \
-            2>/dev/null | grep "ALPN protocol" | awk '{print $3}')
+            2>/dev/null | grep -a "ALPN protocol" | awk '{print $3}')
         alpn="${alpn//[^a-z0-9]/}"  # убираем лишние символы
         if [[ "${alpn}" == "h2" ]]; then
             _ok "ALPN: h2 ✓ (HTTP/2 работает)"
@@ -2536,7 +2536,7 @@ ${caddy_status}
             # ALPN
             if [[ -n "${DOMAIN:-}" ]]; then
                 local alpn
-                alpn=$(echo | timeout 5 openssl s_client                     -connect "${DOMAIN}:443" -alpn h2 2>/dev/null                     | grep "ALPN protocol" | awk '{print $3}' || echo "")
+                alpn=$(echo | timeout 5 openssl s_client                     -connect "${DOMAIN}:443" -alpn h2 2>/dev/null                     | grep -a "ALPN protocol" | awk '{print $3}' || echo "")
                 if [[ "${alpn}" == "h2" ]]; then
                     diag_result+="✅ ALPN h2 OK
 "
