@@ -8,7 +8,7 @@
 
 set -euo pipefail
 
-VERSION="4.2.3"
+VERSION="4.2.4"
 LANG_UI="${NAIVEPROXY_LANG:-ru}"  # ru или en — export NAIVEPROXY_LANG=en
 GITHUB_RAW="https://raw.githubusercontent.com/ivanstudiya-cpu/naiveproxy/main/naiveproxy.sh"
 GITHUB_API="https://api.github.com/repos/ivanstudiya-cpu/naiveproxy/releases/latest"
@@ -56,6 +56,7 @@ show_banner() {
     echo -e "  ${CYAN}📱 Telegram:${RESET} https://t.me/+XVSkY6blCTY0ZDU6"
     echo -e "  ${CYAN}🌐 Сайт:${RESET}     https://ivan-it.net"
     echo -e "  ${CYAN}💻 GitHub:${RESET}   github.com/ivanstudiya-cpu/naiveproxy"
+    echo -e "  ${BOLD}${GOLD}💛 Донат:${RESET}    donationalerts.com/r/ivan_yurievich"
     echo -e "  ${DIM}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
     echo
 }
@@ -2458,7 +2459,9 @@ tg_handle_command() {
 /selfupdate — обновить скрипт
 /admins — список администраторов
 /addadmin ID — добавить администратора
-/deladmin ID — удалить администратора"
+/deladmin ID — удалить администратора
+
+💛 /donate — поддержать проект"
             ;;
 
         /status)
@@ -2733,6 +2736,22 @@ ${user_list}"
 <code>${uri}</code>
 (установи qrencode на сервере для QR картинки)"
             fi
+            ;;
+
+        /donate)
+            tg_reply "${chat_id}" "💛 <b>Поддержать проект</b>
+
+Если NaiveProxy Manager помог тебе — поддержи разработку!
+
+👉 <a href=\"https://www.donationalerts.com/r/ivan_yurievich\">DonationAlerts</a>
+
+<b>Что даст твой донат:</b>
+🚀 Больше времени на разработку
+🐛 Быстрые фиксы багов
+✨ Новые фичи каждый месяц
+📚 Документация и поддержка
+
+<b>Спасибо за поддержку! 🙏</b>"
             ;;
 
         /cert)
@@ -3284,6 +3303,49 @@ cmd_dns_remove() {
     ok "DNS блокировщик удалён"
 }
 
+# ─── Донат ─────────────────────────────────────────────────────
+cmd_donate() {
+    clear 2>/dev/null || true
+    echo
+    echo -e "${BOLD}${GOLD}  ╔════════════════════════════════════════════╗${RESET}"
+    echo -e "${BOLD}${GOLD}  ║     💛 ПОДДЕРЖАТЬ ПРОЕКТ                   ║${RESET}"
+    echo -e "${BOLD}${GOLD}  ╚════════════════════════════════════════════╝${RESET}"
+    echo
+    echo -e "  ${CYAN}Если NaiveProxy Manager помог тебе —${RESET}"
+    echo -e "  ${CYAN}поддержи разработку! Это очень мотивирует.${RESET}"
+    echo
+    echo -e "  ${BOLD}🎁 Ссылка на донат:${RESET}"
+    echo -e "  ${BOLD}${GOLD}👉 https://www.donationalerts.com/r/ivan_yurievich${RESET}"
+    echo
+    echo -e "  ${DIM}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+    echo -e "  ${BOLD}Что даст твой донат:${RESET}"
+    echo -e "  ${GREEN}🚀${RESET} Больше времени на разработку"
+    echo -e "  ${GREEN}🐛${RESET} Быстрые фиксы багов"
+    echo -e "  ${GREEN}✨${RESET} Новые фичи каждый месяц"
+    echo -e "  ${GREEN}📚${RESET} Документация и поддержка"
+    echo -e "  ${GREEN}🆕${RESET} Эксклюзив для донатеров в Telegram"
+    echo -e "  ${DIM}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
+    echo
+    echo -e "  ${BOLD}Другие способы поддержки:${RESET}"
+    echo -e "  ${CYAN}⭐${RESET} Поставь звезду:  github.com/ivanstudiya-cpu/naiveproxy"
+    echo -e "  ${CYAN}📱${RESET} Telegram канал:  t.me/+XVSkY6blCTY0ZDU6"
+    echo -e "  ${CYAN}🌐${RESET} Сайт:            ivan-it.net"
+    echo -e "  ${CYAN}📢${RESET} Расскажи друзьям!"
+    echo
+    echo -e "  ${BOLD}${GOLD}Спасибо за поддержку! 🙏${RESET}"
+    echo
+
+    # Если есть qrencode — покажем QR код доната
+    if command -v qrencode &>/dev/null; then
+        echo -e "  ${DIM}QR код для доната:${RESET}"
+        qrencode -t ANSIUTF8 "https://www.donationalerts.com/r/ivan_yurievich" 2>/dev/null | sed 's/^/    /'
+        echo
+    fi
+
+    echo -ne "  ${YELLOW}Enter для возврата в меню...${RESET}"
+    read -r
+}
+
 # Меню DNS блокировщика
 cmd_dns_menu() {
     while true; do
@@ -3447,6 +3509,7 @@ show_menu() {
     echo -e "   ${BOLD}11)${RESET} Удалить NaiveProxy"
     echo -e "   ${BOLD}16)${RESET} 🔍 Диагностика системы"
     echo -e "   ${BOLD}17)${RESET} 🚫 DNS блокировщик рекламы"
+    echo -e "   ${BOLD}18)${RESET} 💛 Поддержать проект (донат)"
     echo -e "   ──────────────────────────"
     echo -e "   ${BOLD}12)${RESET} 🔒 SSH Hardening"
     echo -e "   ${BOLD}13)${RESET} 🔄 Обновить систему"
@@ -3454,7 +3517,7 @@ show_menu() {
    ${BOLD}15)${RESET} 🎭 Обновить камуфляж"
     echo -e "   ${BOLD}0)${RESET}  Выход"
     hr
-    echo -ne "${CYAN}Выбор [0-15]: ${RESET}"
+    echo -ne "${CYAN}Выбор [0-18]: ${RESET}"
 }
 
 # ─── MAIN ────────────────────────────────────────────────────
@@ -3528,6 +3591,7 @@ main() {
             15) install_camouflage_page && ok "Камуфляж обновлён" ;;
             16) cmd_diagnose ;;
             17) cmd_dns_menu ;;
+            18) cmd_donate ;;
             0)  echo -e "${GREEN}Пока!${RESET}"; exit 0 ;;
             *)  warn "Неверный выбор" ;;
         esac
