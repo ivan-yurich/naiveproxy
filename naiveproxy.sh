@@ -8,7 +8,7 @@
 #   License: GPL-3.0 — see LICENSE file
 #   Commercial use without author permission is prohibited.
 #
-#   Telegram: https://t.me/+XVSkY6blCTY0ZDU6
+#   Telegram: https://t.me/ivan_it_net
 #   Сайт:     https://ivan-it.net
 #   GitHub:   https://github.com/ivanstudiya-cpu/naiveproxy
 #   Донат:    https://www.donationalerts.com/r/ivan_yurievich
@@ -61,7 +61,7 @@ show_banner() {
     echo -e "  ${DIM}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
     echo
     echo -e "  ${YELLOW}🔔 Обновления выходят раз в месяц${RESET}"
-    echo -e "  ${CYAN}📱 Telegram:${RESET} https://t.me/+XVSkY6blCTY0ZDU6"
+    echo -e "  ${CYAN}📱 Telegram:${RESET} https://t.me/ivan_it_net"
     echo -e "  ${CYAN}🌐 Сайт:${RESET}     https://ivan-it.net"
     echo -e "  ${CYAN}💻 GitHub:${RESET}   github.com/ivanstudiya-cpu/naiveproxy"
     echo -e "  ${BOLD}${GOLD}💛 Донат:${RESET}    donationalerts.com/r/ivan_yurievich"
@@ -3336,7 +3336,7 @@ cmd_donate() {
     echo
     echo -e "  ${BOLD}Другие способы поддержки:${RESET}"
     echo -e "  ${CYAN}⭐${RESET} Поставь звезду:  github.com/ivanstudiya-cpu/naiveproxy"
-    echo -e "  ${CYAN}📱${RESET} Telegram канал:  t.me/+XVSkY6blCTY0ZDU6"
+    echo -e "  ${CYAN}📱${RESET} Telegram канал:  t.me/ivan_it_net"
     echo -e "  ${CYAN}🌐${RESET} Сайт:            ivan-it.net"
     echo -e "  ${CYAN}📢${RESET} Расскажи друзьям!"
     echo
@@ -3563,7 +3563,7 @@ main() {
             camouflage)   install_camouflage_page ;;
             version)
                 echo "NaiveProxy Manager v${VERSION}"
-                echo "Telegram: https://t.me/+XVSkY6blCTY0ZDU6"
+                echo "Telegram: https://t.me/ivan_it_net"
                 echo "Сайт:     https://ivan-it.net"
                 echo "GitHub:   github.com/ivanstudiya-cpu/naiveproxy"
                 ;;

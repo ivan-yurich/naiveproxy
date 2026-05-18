@@ -35,7 +35,7 @@ Caddy 2 · NaiveProxy · Telegram Bot · DNS Ad Blocking · Diagnostics · SSH H
 ### 💛 Support the project
 
 [![Donate](https://img.shields.io/badge/💛_Donate-DonationAlerts-FF5E3A?style=for-the-badge)](https://www.donationalerts.com/r/ivan_yurievich)
-[![Telegram](https://img.shields.io/badge/Telegram-Channel-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/+XVSkY6blCTY0ZDU6)
+[![Telegram](https://img.shields.io/badge/Telegram-Channel-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/ivan_it_net)
 [![Website](https://img.shields.io/badge/Website-ivan--it.net-D4A017?style=for-the-badge&logo=googlechrome&logoColor=white)](https://ivan-it.net)
 
 **🔔 Updates released once a month**
@@ -865,7 +865,7 @@ Thanks for your support! 🙏
 
 **Contact info:**
 
-- 📱 **Telegram channel** — [t.me/+XVSkY6blCTY0ZDU6](https://t.me/+XVSkY6blCTY0ZDU6)
+- 📱 **Telegram channel** — [t.me/ivan_it_net](https://t.me/ivan_it_net)
 - 🌐 **Website** — [ivan-it.net](https://ivan-it.net)
 - 💻 **GitHub Issues** — for bugs and suggestions
 
@@ -900,7 +900,7 @@ Thanks for your support! 🙏
 |-----|------|
 | 💛 **Donate** | [donationalerts.com/r/ivan_yurievich](https://www.donationalerts.com/r/ivan_yurievich) |
 | ⭐ **GitHub Star** | [Give a star](https://github.com/ivanstudiya-cpu/naiveproxy) |
-| 📱 **Telegram channel** | [t.me/+XVSkY6blCTY0ZDU6](https://t.me/+XVSkY6blCTY0ZDU6) |
+| 📱 **Telegram channel** | [t.me/ivan_it_net](https://t.me/ivan_it_net) |
 | 🌐 **Website** | [ivan-it.net](https://ivan-it.net) |
 | 📢 **Share** | Tell your friends |
 
@@ -1004,7 +1004,7 @@ Thanks for your support! 🙏
 
 GPL-3.0 © **Ivan Yurievich (Иван Юрьевич)**  
 Commercial use without author permission is prohibited.  
-📞 Contact: [Telegram](https://t.me/+XVSkY6blCTY0ZDU6) · [ivan-it.net](https://ivan-it.net)
+📞 Contact: [Telegram](https://t.me/ivan_it_net) · [ivan-it.net](https://ivan-it.net)
 
 ---
 
@@ -1015,7 +1015,7 @@ Commercial use without author permission is prohibited.
 [![Donate](https://img.shields.io/badge/💛_Support-DonationAlerts-FF5E3A?style=for-the-badge)](https://www.donationalerts.com/r/ivan_yurievich)
 [![Star](https://img.shields.io/github/stars/ivanstudiya-cpu/naiveproxy?style=for-the-badge&color=D4A017)](https://github.com/ivanstudiya-cpu/naiveproxy/stargazers)
 
-📱 [Telegram](https://t.me/+XVSkY6blCTY0ZDU6) · 🌐 [ivan-it.net](https://ivan-it.net) · 💻 [GitHub](https://github.com/ivanstudiya-cpu/naiveproxy)
+📱 [Telegram](https://t.me/ivan_it_net) · 🌐 [ivan-it.net](https://ivan-it.net) · 💻 [GitHub](https://github.com/ivanstudiya-cpu/naiveproxy)
 
 *NaiveProxy Manager · by Ivan Yurievich · Updates once a month*
 
