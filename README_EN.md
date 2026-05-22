@@ -1,10 +1,12 @@
 <div align="center">
 
-🌐 **Language:** [🇷🇺 Русский](README.md) | [🇬🇧 English](README_EN.md)
+🌐 **Language / Язык:** [🇷🇺 Русский](README.md) · [🇬🇧 English](README_EN.md)
 
 </div>
 
 <div align="center">
+
+# 🛡️ NaiveProxy Manager
 
 ```
 ███╗   ██╗ █████╗ ██╗██╗   ██╗███████╗    ██████╗ ██████╗  ██████╗ ██╗  ██╗██╗   ██╗
@@ -13,14 +15,14 @@
 ██║╚██╗██║██╔══██║██║╚██╗ ██╔╝██╔══╝      ██╔═══╝ ██╔══██╗██║   ██║ ██╔██╗   ╚██╔╝
 ██║ ╚████║██║  ██║██║ ╚████╔╝ ███████╗    ██║     ██║  ██║╚██████╔╝██╔╝ ██╗   ██║
 ╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝  ╚═══╝  ╚══════╝    ╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝
-                                                                         MANAGER
+                                                                            MANAGER
 ```
 
-### 🚀 Professional private proxy server manager
+### 🚀 Professional secure proxy server manager
 
 **One script. Bare VPS → secure proxy with ad blocking in 10 minutes.**
 
-Caddy 2 · NaiveProxy · Telegram Bot · DNS Ad Blocking · Diagnostics · SSH Hardening
+*Caddy 2 · NaiveProxy · Telegram Bot · DNS Ad Blocking · Diagnostics · SSH Hardening*
 
 ---
 
@@ -30,13 +32,18 @@ Caddy 2 · NaiveProxy · Telegram Bot · DNS Ad Blocking · Diagnostics · SSH H
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-20.04%2B-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://ubuntu.com)
 [![License](https://img.shields.io/badge/License-GPL--3.0-58A6FF?style=for-the-badge)](LICENSE)
 
+[![Stars](https://img.shields.io/github/stars/ivan-yurich/naiveproxy?style=for-the-badge&logo=github&color=D4A017)](https://github.com/ivan-yurich/naiveproxy/stargazers)
+[![Forks](https://img.shields.io/github/forks/ivan-yurich/naiveproxy?style=for-the-badge&logo=github&color=58A6FF)](https://github.com/ivan-yurich/naiveproxy/network)
+[![Issues](https://img.shields.io/github/issues/ivan-yurich/naiveproxy?style=for-the-badge&logo=github&color=F85149)](https://github.com/ivan-yurich/naiveproxy/issues)
+[![Last commit](https://img.shields.io/github/last-commit/ivan-yurich/naiveproxy?style=for-the-badge&logo=github&color=3FB950)](https://github.com/ivan-yurich/naiveproxy/commits/main)
+
 ---
 
-### 💛 Support the project
+### 💛 Support development
 
-[![Donate](https://img.shields.io/badge/💛_Donate-DonationAlerts-FF5E3A?style=for-the-badge)](https://www.donationalerts.com/r/ivan_yurievich)
-[![Telegram](https://img.shields.io/badge/Telegram-Channel-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/ivan_it_net)
-[![Website](https://img.shields.io/badge/Website-ivan--it.net-D4A017?style=for-the-badge&logo=googlechrome&logoColor=white)](https://ivan-it.net)
+[![Donate](https://img.shields.io/badge/💛_Support_project-DonationAlerts-FF5E3A?style=for-the-badge)](https://www.donationalerts.com/r/ivan_yurievich)
+[![Telegram](https://img.shields.io/badge/📱_Telegram_channel-@ivan__it__net-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/ivan_it_net)
+[![Website](https://img.shields.io/badge/🌐_Website-ivan--it.net-D4A017?style=for-the-badge&logo=googlechrome&logoColor=white)](https://ivan-it.net)
 
 **🔔 Updates released once a month**
 
@@ -46,9 +53,47 @@ Caddy 2 · NaiveProxy · Telegram Bot · DNS Ad Blocking · Diagnostics · SSH H
 
 <div align="center">
 
-[**⚡ Quick Start**](#-quick-start) • [**✨ Features**](#-features) • [**🤖 Bot**](#-telegram-bot) • [**🚫 DNS Block**](#-dns-ad-blocking) • [**🔍 Diagnostics**](#-diagnostics) • [**❓ FAQ**](#-faq) • [**💛 Donate**](#-support-the-project-1)
+### 🎯 Navigation
+
+[**⚡ Quick Start**](#-quick-start) ·
+[**✨ Features**](#-features) ·
+[**🤖 Telegram Bot**](#-telegram-bot) ·
+[**🚫 Ad Blocking**](#-dns-ad-blocking) ·
+[**🔍 Diagnostics**](#-diagnostics) ·
+[**❓ FAQ**](#-faq) ·
+[**💛 Donate**](#-support-the-project)
 
 </div>
+
+---
+
+## 🌟 Why this is the best choice?
+
+<table>
+<tr>
+<td align="center" width="33%">
+
+### 🚀 Speed
+**10 minutes**
+from bare VPS to working proxy with auto TLS, bans and ad blocking
+
+</td>
+<td align="center" width="33%">
+
+### 🛡️ Security
+**DPI protection**
+NaiveProxy disguises traffic as regular Chrome — invisible to censors
+
+</td>
+<td align="center" width="33%">
+
+### 🤖 Convenience
+**Telegram control**
+16 commands + multi-admin + QR code in chat
+
+</td>
+</tr>
+</table>
 
 ---
 
@@ -60,22 +105,24 @@ Caddy 2 · NaiveProxy · Telegram Bot · DNS Ad Blocking · Diagnostics · SSH H
 
 ### 🐛 Bug fixes
 
-✅ New GitHub address `ivan-yurich/naiveproxy`
-✅ `/reload` — apply Caddyfile without restarting Caddy
-✅ Login, password and domain validation
-✅ Safe `basic_auth` generation in Caddyfile
-✅ Fixed-string user lookup in CLI and Telegram
-✅ Safer DNS whitelist and blocklist parsing
-✅ Caddy update builds the binary before the short restart
-✅ `files/naiveproxy.sh` synced with the main script
-✅ Syntax check for both script copies
+✅ Broken quotes in DNS whitelist
+✅ `((var++))` → `var=$((var+1))` (set -e safety)
+✅ `/qr` command — curl conflict fix
+✅ `/adduser` — login/password validation
+✅ Bot commands — `\r\n` cleanup
+✅ `set +e` — error doesn't break bot
+✅ Diagnostics — counter fixes
+✅ ALPN — `-servername` + `-a` flag
+✅ SSH port on Ubuntu 22.04+ (`sshd_config.d/`)
+✅ Protection against deleting last domain
+✅ Auto-restart Caddy and bot on failure
 
 </td>
 <td width="50%" valign="top">
 
 ### ⚡ New features
 
-🤖 **17 bot commands** + multi-admin
+🤖 **16 bot commands** + multi-admin
 🚫 **DNS blocking** ~1.5M domains + DoT
 🔍 **Diagnostics** — 7 blocks, 18+ checks
 🔒 **SSH Hardening** — ED25519, `ssh.socket` fix
@@ -83,16 +130,18 @@ Caddy 2 · NaiveProxy · Telegram Bot · DNS Ad Blocking · Diagnostics · SSH H
 ♻️ **Auto-recovery** — `Restart=on-failure`
 🎨 **ASCII banner** + branding
 💛 **Donate** via DonationAlerts
+🌐 **DNS-over-TLS** — Cloudflare + Google
+📦 **Auto-install** dependencies
 
 </td>
 </tr>
 </table>
 
-[👉 Full Changelog](#-changelog)
+[👉 Full Changelog below](#-changelog)
 
 ---
 
-## 🤔 What is this
+## 🤔 What is this and how does it work?
 
 **NaiveProxy** disguises traffic as Chrome browser using the real Chromium network stack. DPI systems and censors see legitimate HTTPS/2 — and let it through.
 
@@ -100,20 +149,52 @@ Caddy 2 · NaiveProxy · Telegram Bot · DNS Ad Blocking · Diagnostics · SSH H
 
 ```
 ┌─────────────┐     ┌──────────────┐     ┌───────────────────────────┐     ┌──────────┐
-│  Your       │     │  Censor/DPI  │     │   Your VPS                │     │          │
-│  phone      │────▶│              │────▶│   Caddy + NaiveProxy      │────▶│ Internet │
-│  laptop     │     │  Sees Chrome │     │   unbound DNS blocking    │     │          │
-└─────────────┘     │  HTTPS/2 ✓   │     │   probe_resistance        │     └──────────┘
- naive-client        └──────────────┘     └───────────────────────────┘
- Chromium stack       Passes through       ads blocked 🚫
+│   Your      │     │  Censor/DPI  │     │      Your VPS             │     │          │
+│   phone     │────▶│              │────▶│  Caddy + NaiveProxy       │────▶│ Internet │
+│   laptop    │     │ Sees Chrome  │     │  unbound DNS blocking     │     │          │
+└─────────────┘     │  HTTPS/2 ✓   │     │  probe_resistance         │     └──────────┘
+  Naive client       └──────────────┘     └───────────────────────────┘
+  Chromium stack      Passes through        ads blocked 🚫
 ```
+
+### 🎯 Who needs this:
+
+- 🌐 **Bypass blocks** — access to restricted resources
+- 🔒 **Privacy** — no one sees your traffic
+- 🚫 **Ad-free** — on all devices at once
+- 👨‍👩‍👧 **For family** — multiple users, different passwords
+- 💼 **For team** — multi-admin, diagnostics, monitoring
 
 ---
 
 ## ⚡ Quick Start
 
+### 🎬 One command — all set:
+
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/naiveproxy.sh)
+```
+
+### 📊 Installation process:
+
+```
+[1/5] 🔄  System update                                   ~1 min
+         apt upgrade + unattended-upgrades
+         → skip: press n
+
+[2/5] 🔒  SSH Hardening                                   ~2 min  [OPTIONAL]
+         ED25519 key · auto-save · new user · Fail2Ban
+         → skip if SSH already configured: press n
+
+[3/5] 📦  Building Caddy                                  ~5-15 min
+         git clone klzgrad/forwardproxy@naive
+         xcaddy build with auto version detection
+
+[4/5] ⚙️   Configuration                                   ~1 min
+         Caddyfile (:443, domain) · systemd · UFW · BBR · Telegram
+
+[5/5] ✅  Done!
+         URI + JSON configs + QR code for phone
 ```
 
 ---
@@ -125,44 +206,83 @@ bash <(curl -fsSL https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/
 <td width="50%" valign="top">
 
 ### 🔐 Security
-- SSH Hardening ED25519 + `sshd_config.d/`
-- SSH key auto-save
-- Fail2Ban 3 levels (iptables-multiport)
-- UFW deny all + scanner blocking
-- probe_resistance — looks like a website
-- DevStack camouflage page
-- Last domain protection
+
+🛡️ **SSH Hardening**
+ED25519 key + `sshd_config.d/` support for Ubuntu 22.04+
+
+🔑 **SSH key auto-save**
+In `/etc/naiveproxy/ssh_private_key` — download via `scp`
+
+🚫 **Fail2Ban 3 levels**
+Bruteforce (7d) · DDoS (7d) · Recidivist (30d)
+Uses `iptables-multiport` — faster than UFW
+
+🔥 **UFW + scanner protection**
+`deny all incoming` + blocking common scanners
+
+👻 **probe_resistance**
+Without login+password looks like a regular website
+
+🎭 **Camouflage page**
+DevStack IT blog — for random visitors
+
+🛡️ **Last domain deletion protection**
+Script won't let you accidentally kill the server
 
 ### 📡 Proxy
-- Auto TLS — Let's Encrypt
-- HTTP/2 + HTTP/3
-- QR code — one-scan phone connection
-- Multi-user without restart
-- Multiple domains
-- TCP BBR
-- `Restart=on-failure`
+
+🔒 **Auto TLS** — Let's Encrypt via Caddy
+🌐 **HTTP/2 + HTTP/3** — explicitly enabled
+📱 **QR code** — one scan from phone
+👥 **Multi-user** — without restart
+🌍 **Multiple domains** — on one server
+⚡ **TCP BBR** — optional acceleration
+♻️ **Auto-restart** — `Restart=on-failure`
 
 </td>
 <td width="50%" valign="top">
 
-### 🚫 DNS Blocking
-- ~1.5M ad domains
-- unbound + DNS-over-TLS
-- 3 blocklist sources
-- Whitelist
-- Auto-update
+### 🚫 DNS Ad Blocking
+
+📊 **~1.5M domains**
+Ads · Trackers · Malware
+
+⚡ **unbound** — fast local resolver
+
+🔐 **DNS-over-TLS**
+Encrypted queries to Cloudflare and Google
+
+📦 **3 blocklist sources:**
+- StevenBlack/hosts
+- AdAway
+- Hagezi Pro
+
+✅ **Whitelist** — allow specific domains
+🔄 **Auto-update** lists
 
 ### 🤖 Telegram Bot
-- 16 commands
-- Multi-admin
-- QR code as image
-- Auto-install dependencies
-- 24/7 system service
 
-### 🔍 Diagnostics
-- 7 blocks, 18+ checks
-- Color report
-- Send to Telegram
+⚙️ **16 commands** — full control
+👥 **Multi-admin** — multiple administrators
+📱 **QR code as image** — right in chat
+👤 **User management** — `/adduser`, `/deluser`
+🔍 **Diagnostics** — `/diagnose` from chat
+📦 **Auto-install** — qrencode, binutils
+🚀 **Systemd service** — 24/7 operation
+
+### 🔍 System Diagnostics
+
+🎯 **7 check blocks:**
+1. Caddy (status + naive padding)
+2. Configuration (Caddyfile)
+3. TLS and network (DNS, ports, ALPN)
+4. Firewall (UFW, Fail2Ban)
+5. Resources (RAM, disk, CPU)
+6. Logs (error analysis)
+7. Version and updates
+
+✅ **18+ checks** — each marked ✅/⚠️/❌
+📱 **Report to Telegram** — one click
 
 </td>
 </tr>
@@ -172,43 +292,203 @@ bash <(curl -fsSL https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/
 
 ## 📋 Requirements
 
-| | |
-|--|--|
-| **OS** | Ubuntu 20.04 / 22.04 / 24.04 |
-| **Rights** | root |
-| **Domain** | A-record → server IP |
-| **Ports** | 80/tcp · 443/tcp · 443/udp |
-| **RAM** | 512 MB+ |
+| Parameter | Minimum | Recommended |
+|-----------|---------|-------------|
+| **OS** | Ubuntu 20.04 | Ubuntu 22.04 / 24.04 |
+| **Rights** | root | root |
+| **Domain** | A-record → IP | + Cloudflare DNS |
+| **Ports** | 80 + 443 (tcp/udp) | + SSH port |
+| **RAM** | 512 MB | 1 GB+ |
+| **Disk** | 1 GB | 5 GB+ |
+| **CPU** | 1 vCPU | 1 vCPU |
+| **Traffic** | from 100 GB/month | unlimited |
+
+---
+
+## 🎮 Main Menu
+
+```
+──────────────────────────────────────────────────────
+   NaiveProxy Manager v4.2.4  [ENG]
+   Status: ● running  │  Domain: proxy.example.com
+   Telegram: connected  │  Users: 3  │  SSH: 52847
+──────────────────────────────────────────────────────
+   1)  📦 Install NaiveProxy        10) 📄 Logs
+   2)  📊 Status + certificate      11) 🗑  Remove NaiveProxy
+   3)  📱 Client config + QR        16) 🔍 Diagnostics
+   4)  👥 Users                     17) 🚫 DNS blocker
+   5)  🌍 Domains                   18) 💛 Support project
+   6)  📈 Monitoring + stats        ──────────────────
+   7)  🤖 Telegram + Bot setup      12) 🔒 SSH Hardening
+   8)  🔄 Restart Caddy             13) 🔄 Update system
+   9)  ⬆️  Update Caddy              14) ⬆️  Update script
+                                    15) 🎭 Update camouflage
+──────────────────────────────────────────────────────
+```
+
+### 📟 All CLI commands:
+
+<details>
+<summary><b>Click to see full list (24 commands)</b></summary>
+
+```bash
+# === Main ===
+sudo bash naiveproxy.sh install        # Full installation
+sudo bash naiveproxy.sh status         # Status + certificate
+sudo bash naiveproxy.sh config         # Config + QR code
+sudo bash naiveproxy.sh qr             # QR code only
+sudo bash naiveproxy.sh cert           # Certificate only
+sudo bash naiveproxy.sh users          # User management
+sudo bash naiveproxy.sh domains        # Domain management
+sudo bash naiveproxy.sh monitor        # Monitoring
+sudo bash naiveproxy.sh restart        # Restart Caddy
+sudo bash naiveproxy.sh update         # Update Caddy
+sudo bash naiveproxy.sh logs           # Logs
+
+# === Telegram ===
+sudo bash naiveproxy.sh tg-stats       # Stats to Telegram
+sudo bash naiveproxy.sh bot            # Run Telegram bot
+sudo bash naiveproxy.sh bot-install    # Bot as system service
+
+# === DNS blocker ===
+sudo bash naiveproxy.sh dns            # DNS menu
+sudo bash naiveproxy.sh dns-install    # Install blocker
+sudo bash naiveproxy.sh dns-update     # Update blocklists
+sudo bash naiveproxy.sh dns-status     # Blocker status
+
+# === Diagnostics ===
+sudo bash naiveproxy.sh diagnose       # 7-block diagnostics
+
+# === SSH ===
+sudo bash naiveproxy.sh ssh-hardening  # SSH Hardening
+sudo bash naiveproxy.sh ssh-key        # Show SSH key
+
+# === Management ===
+sudo bash naiveproxy.sh sysupdate      # Update system
+sudo bash naiveproxy.sh self-update    # Update script
+sudo bash naiveproxy.sh camouflage     # Reinstall camouflage
+sudo bash naiveproxy.sh version        # Version
+sudo bash naiveproxy.sh remove         # Remove everything
+```
+
+</details>
 
 ---
 
 ## 🤖 Telegram Bot
 
+Full server management directly from Telegram. Runs 24/7 as system service.
+
+### 🚀 Start:
+
 ```bash
-sudo bash naiveproxy.sh bot-install    # Auto-start
+# Install as system service (auto-start):
+sudo bash naiveproxy.sh bot-install
+
+# Stop:
+systemctl stop naiveproxy-bot
+
+# Logs:
+journalctl -u naiveproxy-bot -f
 ```
 
-| Command | Action |
-|---------|--------|
-| `/help` `/status` `/stats` | Information |
-| `/diagnose` `/cert` `/logs` | Diagnostics |
-| `/users` `/adduser` `/deluser` `/qr` | Users |
-| `/reload` `/restart` `/update` `/selfupdate` | Management |
-| `/admins` `/addadmin` `/deladmin` | Administration |
+### 📋 All 16 commands:
+
+<table>
+<tr>
+<th width="33%">📊 Information</th>
+<th width="33%">👥 Management</th>
+<th width="33%">⚙️ Administration</th>
+</tr>
+<tr>
+<td valign="top">
+
+`/help` — List commands
+`/status` — Status + RAM
+`/stats` — Full statistics
+`/diagnose` — 7-block diagnostics
+`/logs` — Last 20 logs
+`/cert` — TLS status 🟢/🟡/🔴
+
+</td>
+<td valign="top">
+
+`/users` — List users
+`/adduser login pass` — Add
+`/deluser login` — Remove
+`/qr login` — QR code image
+`/restart` — Restart Caddy
+`/update` — Update Caddy
+
+</td>
+<td valign="top">
+
+`/admins` — List admins
+`/addadmin ID` — Add admin
+`/deladmin ID` — Remove admin
+`/selfupdate` — Update script
+`/donate` — Support project
+
+</td>
+</tr>
+</table>
+
+### 🔐 Multi-admin:
+
+```
+/addadmin 987654321   ← add second admin
+/admins               ← view list
+```
+
+All commands protected — outsiders get `⛔ Access denied`.
 
 ---
 
 ## 🚫 DNS Ad Blocking
 
+Blocks ads and trackers at DNS level — works for **all devices** connected through the proxy.
+
+### ⚡ Install with one command:
+
 ```bash
 sudo bash naiveproxy.sh dns-install
 ```
 
-| Source | Blocks |
-|--------|--------|
-| StevenBlack/hosts | Ads + malware |
-| AdAway | Mobile ads |
-| Hagezi Pro | Aggressive blocking |
+### 🔍 How it works:
+
+```
+Phone → NaiveProxy → unbound (127.0.0.1:5335)
+                          │
+                          ├─ ads.google.com ───── ❌ REFUSE
+                          ├─ doubleclick.net ──── ❌ REFUSE
+                          ├─ youtube.com ──────── ✅ Cloudflare DoT
+                          └─ github.com ───────── ✅ Cloudflare DoT
+```
+
+### 📊 Blocklist sources (~1.5M domains):
+
+| Source | Size | Blocks |
+|--------|------|--------|
+| 🛡️ **StevenBlack/hosts** | ~150k | Ads + malware |
+| 📱 **AdAway** | ~30k | Mobile ads |
+| ⚡ **Hagezi Pro** | ~600k | Aggressive blocking |
+| **Total after dedup** | ~1.5M | Unique domains |
+
+### 🛠️ Commands:
+
+```bash
+sudo bash naiveproxy.sh dns-install    # Install
+sudo bash naiveproxy.sh dns-update     # Update blocklists
+sudo bash naiveproxy.sh dns-status     # Status and test
+sudo bash naiveproxy.sh dns            # Menu
+```
+
+### 🆘 If something broke — whitelist:
+
+```bash
+sudo bash naiveproxy.sh dns
+# → 4) Allow domain → enter problem domain
+```
 
 ---
 
@@ -218,23 +498,73 @@ sudo bash naiveproxy.sh dns-install
 sudo bash naiveproxy.sh diagnose
 ```
 
-```
-[1/7] Caddy          ✅ running · ✅ naive padding · ✅ module
-[2/7] Configuration  ✅ :443,domain · ✅ users
-[3/7] TLS & Network  ✅ DNS · ✅ ports · ✅ ALPN h2 · ✅ cert
-[4/7] Firewall       ✅ UFW · ✅ Fail2Ban active
-[5/7] Resources      ✅ RAM 40% · ✅ Disk 37%
-[6/7] Logs           ✅ no errors
-[7/7] Version        ✅ up to date
+### 📊 Example output:
 
-📊 RESULT: ✅ 18  ⚠️ 0  ❌ 0
+```
+┌─────────────────────────────────────────────────────────┐
+│  🔍 Diagnostics NaiveProxy Manager v4.2.4               │
+│  2026-05-23 14:32:18 · proxy.example.com               │
+└─────────────────────────────────────────────────────────┘
+
+[1/7] Caddy
+  ✅ Caddy found: v2.8.4
+  ✅ Caddy running (since 2026-05-22 03:15)
+  ✅ Naive padding module confirmed (5 symbols)
+  ✅ forward_proxy module loaded
+
+[2/7] Configuration
+  ✅ Caddyfile found: /etc/caddy/Caddyfile
+  ✅ Correct format ':443, domain'
+  ✅ order forward_proxy — OK
+  ✅ probe_resistance enabled
+  ✅ Users: 4
+  ✅ Caddyfile valid
+
+[3/7] TLS and network
+  ✅ DNS: proxy.example.com → 78.17.134.110
+  ✅ Port 80 listening (ACME)
+  ✅ Port 443 listening
+  ✅ ALPN: h2 ✓ (HTTP/2 working)
+  ✅ TLS certificate valid for 83 more days
+
+[4/7] Firewall
+  ✅ UFW active (12 rules)
+  ✅ Fail2Ban running (47 bans)
+
+[5/7] System resources
+  ✅ RAM: 367/1967 MB (18%)
+  ✅ Disk: 5.8G/15G (42%)
+  ✅ CPU: 0.19 (19% of 1 core)
+
+[6/7] Log analysis
+  ✅ No server errors (last 100 requests)
+  ℹ️  CONNECT tunnels: 96
+  ✅ journald: no critical errors
+
+[7/7] Version and updates
+  ✅ Script up to date: v4.2.4
+  ✅ SSH Hardening done
+
+══════════════════════════════════════════════════════════
+  📊 DIAGNOSTICS SUMMARY
+══════════════════════════════════════════════════════════
+  ✅ Passed:   18
+  ⚠️  Warnings: 0
+  ❌ Problems: 0
+
+  🎉 Everything works great!
+══════════════════════════════════════════════════════════
 ```
 
 ---
 
 ## ⚠️ Caddyfile — critical
 
-```
+```bash
+# ❌ WRONG — clients won't connect:
+your-domain.com:443 { ... }
+
+# ✅ CORRECT — :443 + servers block required:
 {
     order forward_proxy before file_server
     servers :443 {
@@ -243,30 +573,200 @@ sudo bash naiveproxy.sh diagnose
 }
 
 :443, your-domain.com {
-  tls your@email.com
-  forward_proxy {
-    basic_auth USER PASS
-    hide_ip
-    hide_via
-    probe_resistance
-  }
-  file_server { root /var/www/html }
+    tls your@email.com
+    forward_proxy {
+        basic_auth USERNAME PASSWORD
+        hide_ip
+        hide_via
+        probe_resistance
+    }
+    file_server { root /var/www/html }
 }
 ```
 
 ---
 
-## 📱 Clients
+## 🔒 SSH Hardening
+
+```bash
+sudo bash naiveproxy.sh ssh-hardening
+```
+
+> 💡 **Can be skipped** by pressing `n` during installation.
+
+### 🛡️ 5 protection steps:
+
+1. **New sudo user** — root isolated
+2. **ED25519 key** — modern cryptography + auto-save
+3. **SSH port change** — protection from automatic bots
+4. **sshd_config + sshd_config.d/** — Ubuntu 22.04+ support
+5. **UFW + Fail2Ban** — bruteforce protection
+
+### 🔑 Download SSH key:
+
+```bash
+scp root@YOUR_IP:/etc/naiveproxy/ssh_private_key ~/.ssh/id_naiveproxy
+chmod 600 ~/.ssh/id_naiveproxy
+ssh -i ~/.ssh/id_naiveproxy -p NEW_PORT user@YOUR_IP
+```
+
+### 🚨 Fail2Ban 3 levels:
+
+| Level | Trigger | Ban | Uses |
+|-------|---------|-----|------|
+| 🔴 **Bruteforce** | 3 wrong passwords | **7 days** | iptables-multiport |
+| 🟡 **DDoS** | 10 attempts in 1 min | **7 days** | iptables-multiport |
+| ⚫ **Recidivist** | Repeated violations | **30 days** | recidive jail |
+
+---
+
+## 📱 Client Apps
+
+### 🔗 URI format:
 
 ```
-URI: naive+https://USERNAME:PASSWORD@YOUR_DOMAIN:443
+naive+https://USERNAME:PASSWORD@YOUR_DOMAIN:443
 ```
 
-| Client | Platform |
-|--------|----------|
-| [NekoBox](https://github.com/MatsuriDayo/NekoBoxForAndroid/releases) | Android |
-| [Shadowrocket](https://apps.apple.com/app/shadowrocket/id932747118) | iPhone ($2.99) |
-| [Hiddify](https://github.com/hiddify/hiddify-next/releases) | Windows / macOS |
+### 📋 JSON for naive-client:
+
+```json
+{
+  "listen": "socks://127.0.0.1:1080",
+  "proxy": "https://USERNAME:PASSWORD@YOUR_DOMAIN:443",
+  "log": "naive.log"
+}
+```
+
+### 📲 Best clients:
+
+<table>
+<tr>
+<th>📱 Platform</th>
+<th>🥇 Recommended</th>
+<th>🥈 Alternative</th>
+</tr>
+<tr>
+<td><strong>Android</strong></td>
+<td>
+
+[**NekoBox**](https://github.com/MatsuriDayo/NekoBoxForAndroid/releases) ⭐
+Free · Open Source
+
+</td>
+<td>
+
+[Hiddify](https://github.com/hiddify/hiddify-next/releases)
+Easier for beginners
+
+</td>
+</tr>
+<tr>
+<td><strong>iOS / iPhone</strong></td>
+<td>
+
+[**Hiddify**](https://apps.apple.com/app/hiddify-proxy-vpn/id6596777532) ⭐
+Free in App Store
+
+</td>
+<td>
+
+[Shadowrocket](https://apps.apple.com/app/shadowrocket/id932747118) ($2.99)
+Paid, but top tier
+
+</td>
+</tr>
+<tr>
+<td><strong>Windows</strong></td>
+<td>
+
+[**Hiddify Next**](https://github.com/hiddify/hiddify-next/releases) ⭐
+GUI, easy to setup
+
+</td>
+<td>
+
+[NekoRay](https://github.com/MatsuriDayo/nekoray/releases)
+Advanced GUI
+
+</td>
+</tr>
+<tr>
+<td><strong>macOS</strong></td>
+<td>
+
+[**Hiddify Next**](https://github.com/hiddify/hiddify-next/releases) ⭐
+Free
+
+</td>
+<td>
+
+[V2BoX](https://apps.apple.com/app/v2box-v2ray-client/id6446814690)
+In App Store
+
+</td>
+</tr>
+<tr>
+<td><strong>Linux</strong></td>
+<td>
+
+[**NekoRay**](https://github.com/MatsuriDayo/nekoray/releases) ⭐
+Qt GUI
+
+</td>
+<td>
+
+[naive](https://github.com/klzgrad/naiveproxy/releases) CLI
+For servers
+
+</td>
+</tr>
+</table>
+
+> ⚠️ **v2rayNG does NOT support NaiveProxy.** Use NekoBox or Hiddify.
+
+---
+
+## 📁 File Structure
+
+<details>
+<summary><b>Click to see full structure</b></summary>
+
+```
+/usr/local/bin/caddy                           ← Caddy binary with naive
+/etc/caddy/Caddyfile                           (chmod 600)
+/etc/naiveproxy/
+├── naive.conf                                 ← Main config (chmod 600)
+├── users.conf                                 ← Users (chmod 600)
+├── ssh_private_key                            ← SSH key ED25519
+├── ssh_public_key
+├── dns_stats                                  ← DNS statistics
+├── monitor.sh
+├── .ssh_hardened                              ← SSH hardening marker
+├── .sysupdate_done
+└── backups/                                   ← Config backups
+
+/etc/unbound/
+├── unbound.conf.d/naiveproxy-dns.conf         ← DNS config
+├── blocklist.conf                             ← ~1.5M domains
+└── whitelist.txt                              ← Allowed domains
+
+/etc/fail2ban/jail.local                       ← Fail2Ban rules
+
+/etc/systemd/system/
+├── caddy.service                              ← Caddy with Restart=on-failure
+└── naiveproxy-bot.service                     ← Telegram bot 24/7
+
+/var/www/html/index.html                       ← Camouflage page
+
+/var/log/caddy/
+├── access.log                                 ← All requests
+└── naive.log                                  ← CONNECT tunnels
+
+/usr/local/bin/naiveproxy.sh                   ← The script itself
+```
+
+</details>
 
 ---
 
@@ -285,10 +785,7 @@ URI: naive+https://USERNAME:PASSWORD@YOUR_DOMAIN:443
 - **Hetzner** — Germany, very fast (from €4/month)
 - **DigitalOcean** — Netherlands, USA (from $4/month)
 - **Vultr** — many locations (from $2.50/month)
-- **Linode** — reliable, multiple regions
-- **OVH** — Europe, cheap options
-
-⚠️ Avoid hosters in countries with internet restrictions.
+- **Linode** — reliable
 
 </details>
 
@@ -303,11 +800,11 @@ URI: naive+https://USERNAME:PASSWORD@YOUR_DOMAIN:443
 **Where to buy:**
 - **Namecheap** — `.com` from $10/year
 - **Cloudflare Registrar** — at cost
-- **Porkbun** — cheap, good interface
+- **Porkbun** — cheap
 
 **Important — set up A-record:**
 ```
-your-domain.com → YOUR_SERVER_IP
+your-domain.com → SERVER_IP
 ```
 
 </details>
@@ -346,8 +843,6 @@ curl -fsSL https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/naivepr
 
 </details>
 
----
-
 ### 🔌 Client connection
 
 <details>
@@ -356,7 +851,7 @@ curl -fsSL https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/naivepr
 **Step-by-step diagnostics:**
 
 ```bash
-# 1. Run full system diagnostics
+# 1. Run full diagnostics
 sudo bash naiveproxy.sh diagnose
 
 # 2. Check Caddyfile
@@ -376,35 +871,13 @@ journalctl -u caddy -n 30 --no-pager
 </details>
 
 <details>
-<summary><b>Best app for Android?</b></summary>
-
-**Top 3 for Android:**
-
-1. **NekoBox** ⭐ — best, open source, no ads
-   - [github.com/MatsuriDayo/NekoBoxForAndroid](https://github.com/MatsuriDayo/NekoBoxForAndroid/releases)
-
-2. **Hiddify** — simple, for beginners
-   - [github.com/hiddify/hiddify-next](https://github.com/hiddify/hiddify-next/releases)
-
-3. **Husi** — NekoBox fork with improvements
-   - [github.com/dyhkwong/Exclave](https://github.com/dyhkwong/Exclave/releases)
-
-⚠️ **v2rayNG doesn't work** with NaiveProxy!
-
-</details>
-
-<details>
 <summary><b>Free iPhone app?</b></summary>
 
 **Free options:**
 
 1. **Hiddify** ⭐ — best free, in App Store
 2. **FoXray** — free, partial support
-3. **Streisand** — free, not in some App Stores
-
-**Paid (for comparison):**
-- **Shadowrocket** ($2.99) — best support
-- **Quantumult X** ($7.99) — for advanced users
+3. **Streisand** — free
 
 **How to connect:**
 1. Copy URI: `naive+https://user:pass@domain:443`
@@ -416,95 +889,18 @@ journalctl -u caddy -n 30 --no-pager
 <summary><b>App for Windows / Mac?</b></summary>
 
 **Windows:**
-- **Hiddify Next** — UI client, easy to setup
-- **naive.exe** — official CLI from klzgrad
+- **Hiddify Next** — UI client, easy setup
 - **NekoRay** — advanced GUI
 
 **macOS:**
 - **Hiddify Next** — recommended
 - **V2BoX** — in App Store
-- **ClashX Pro** — for advanced users
 
 **Linux:**
 - **NekoRay** — Qt GUI
 - **naive** CLI — for servers
 
 </details>
-
-<details>
-<summary><b>How to quickly import URI?</b></summary>
-
-**Method 1 — QR code (phone):**
-```bash
-sudo bash naiveproxy.sh qr
-# Just scan with camera in the app
-```
-
-**Method 2 — via Telegram bot:**
-```
-In bot: /qr username
-```
-
-**Method 3 — copy URI:**
-```bash
-sudo bash naiveproxy.sh config
-# Copy URI → "Import from clipboard" in app
-```
-
-</details>
-
----
-
-### 🚫 DNS Ad Blocking
-
-<details>
-<summary><b>DNS blocking broke a website — how to fix</b></summary>
-
-```bash
-# Method 1 — add to whitelist
-sudo bash naiveproxy.sh dns
-# → 4) Allow domain → enter domain
-
-# Method 2 — temporarily disable
-sudo systemctl stop unbound
-
-# Method 3 — completely remove
-sudo bash naiveproxy.sh dns
-# → 5) Remove blocker
-```
-
-</details>
-
-<details>
-<summary><b>YouTube ads not fully blocked</b></summary>
-
-This is **normal**! YouTube embeds ads in the video stream from the same domain (`googlevideo.com`) as the video itself. Blocking only the ad is impossible — blocking the domain would kill the video too.
-
-**What works:**
-- ✅ YouTube banners (on homepage)
-- ✅ Pre-roll ads (sometimes)
-- ❌ Ads inside videos — not blocked
-
-**Solutions for YouTube:** YouTube Premium or apps like NewPipe (Android), YouTube Vanced.
-
-</details>
-
-<details>
-<summary><b>How to update blocklists manually</b></summary>
-
-```bash
-sudo bash naiveproxy.sh dns-update
-```
-
-Or via menu:
-```bash
-sudo bash naiveproxy.sh dns
-# → 2) Update blocklists
-```
-
-</details>
-
----
 
 ### 🤖 Telegram Bot
 
@@ -532,9 +928,9 @@ sudo bash naiveproxy.sh bot-install
 
 1. Open [@BotFather](https://t.me/BotFather) in Telegram
 2. Send `/newbot`
-3. Enter bot name (any)
-4. Enter bot username (must end with `bot`)
-5. Copy token like `123456789:ABCdefGHIjklMNOpqrSTUvwxYZ`
+3. Enter bot name
+4. Enter username (must end with `bot`)
+5. Copy token like `123456789:ABCdefGHIjkl`
 
 Enter token in script:
 ```bash
@@ -549,7 +945,7 @@ sudo bash naiveproxy.sh
 
 **Method 1 — via bot:**
 1. Send any message to your bot
-2. Open in browser: `https://api.telegram.org/botYOUR_TOKEN/getUpdates`
+2. Open: `https://api.telegram.org/botYOUR_TOKEN/getUpdates`
 3. Find `"chat":{"id":12345}` — that's your ID
 
 **Method 2 — via @userinfobot:**
@@ -558,59 +954,41 @@ sudo bash naiveproxy.sh
 
 </details>
 
+### 🚫 DNS Blocking
+
 <details>
-<summary><b>/qr command doesn't send picture</b></summary>
+<summary><b>DNS blocking broke a website — how to fix</b></summary>
 
 ```bash
-# Install qrencode
-apt install -y qrencode
+# Method 1 — add to whitelist
+sudo bash naiveproxy.sh dns
+# → 4) Allow domain → enter domain
 
-# Restart bot
-systemctl restart naiveproxy-bot
+# Method 2 — temporarily disable
+sudo systemctl stop unbound
 
-# Try /qr in bot
+# Method 3 — completely remove
+sudo bash naiveproxy.sh dns
+# → 5) Remove blocker
 ```
 
 </details>
 
 <details>
-<summary><b>How to add second administrator?</b></summary>
+<summary><b>YouTube ads not fully blocked</b></summary>
 
-In Telegram bot send:
-```
-/addadmin 123456789
-```
-(where 123456789 — Chat ID of second admin)
+This is **normal**! YouTube embeds ads in the video stream from the same domain (`googlevideo.com`) as the video itself.
 
-View list:
-```
-/admins
-```
+**What works:**
+- ✅ YouTube banners (on homepage)
+- ✅ Pre-roll ads (sometimes)
+- ❌ Ads inside videos — not blocked
+
+**Solutions for YouTube:** YouTube Premium or NewPipe (Android).
 
 </details>
 
----
-
-### 🔒 SSH Hardening and security
-
-<details>
-<summary><b>How to download SSH key to my computer</b></summary>
-
-```bash
-# Download key via scp
-scp root@YOUR_IP:/etc/naiveproxy/ssh_private_key ~/.ssh/id_naiveproxy
-
-# Set correct permissions
-chmod 600 ~/.ssh/id_naiveproxy
-
-# Connect with key
-ssh -i ~/.ssh/id_naiveproxy -p NEW_PORT user@YOUR_IP
-
-# Or show key in console
-sudo bash naiveproxy.sh ssh-key
-```
-
-</details>
+### 🔒 SSH Hardening
 
 <details>
 <summary><b>Locked myself out after SSH hardening</b></summary>
@@ -620,16 +998,10 @@ sudo bash naiveproxy.sh ssh-key
 ```bash
 # 1. Open VNC/KVM in hoster panel
 # 2. Execute:
-
 ufw allow 22/tcp
 systemctl restart sshd
 
 # 3. Now login via SSH on standard port 22
-```
-
-**If SSH port changed but you forgot which:**
-```bash
-grep -E "^Port " /etc/ssh/sshd_config /etc/ssh/sshd_config.d/*.conf 2>/dev/null
 ```
 
 </details>
@@ -644,27 +1016,11 @@ fail2ban-client status sshd
 # Unban your IP
 fail2ban-client unban YOUR_IP
 
-# Unban all IPs
+# Unban all
 fail2ban-client unban --all
-
-# Add your IP to whitelist (permanent)
-echo "ignoreip = 127.0.0.1/8 ::1 YOUR_IP" >> /etc/fail2ban/jail.local
-systemctl restart fail2ban
 ```
 
 </details>
-
-<details>
-<summary><b>How to change SSH port again?</b></summary>
-
-```bash
-sudo bash naiveproxy.sh ssh-hardening
-# Script will ask for new port and apply all settings
-```
-
-</details>
-
----
 
 ### 🔧 Server management
 
@@ -678,63 +1034,10 @@ caddy validate --config /etc/caddy/Caddyfile
 # 2. View logs
 journalctl -u caddy -n 50 --no-pager
 
-# 3. Run in foreground for debugging
-caddy run --config /etc/caddy/Caddyfile
-
-# 4. Common causes:
+# 3. Common causes:
 # - Ports 80/443 occupied (apache2, nginx)
 # - No permissions on /var/log/caddy
-# - DNS not configured (no A-record)
-```
-
-</details>
-
-<details>
-<summary><b>How to change user password</b></summary>
-
-```bash
-sudo bash naiveproxy.sh users
-# → 3) Change password
-```
-
-Or via Telegram bot:
-```
-/deluser username
-/adduser username newpassword
-```
-
-</details>
-
-<details>
-<summary><b>How to add second domain to same server</b></summary>
-
-```bash
-# 1. Create A-record for new domain → same IP
-# 2. Add domain:
-sudo bash naiveproxy.sh domains
-# → 1) Add domain
-# 3. Caddy will automatically get certificate for new domain
-```
-
-</details>
-
-<details>
-<summary><b>Certificate fails — Let's Encrypt error</b></summary>
-
-**Common causes:**
-
-```bash
-# 1. DNS not configured — check
-dig +short your-domain.com
-
-# 2. Port 80 blocked — open it
-ufw allow 80/tcp
-
-# 3. Rate limit exceeded (5 failures per hour)
-# Wait 1 hour and try again
-
-# 4. CAA record blocks Let's Encrypt
-# Check with registrar — should be empty or letsencrypt.org
+# - DNS not configured
 ```
 
 </details>
@@ -746,14 +1049,13 @@ ufw allow 80/tcp
 # Create backup
 tar -czf naiveproxy-backup-$(date +%Y%m%d).tar.gz \
   /etc/caddy/Caddyfile \
-  /etc/naiveproxy/ \
-  /var/www/html/index.html
+  /etc/naiveproxy/
 
-# Download to your computer
+# Download
 scp root@YOUR_IP:~/naiveproxy-backup-*.tar.gz ~/Downloads/
 
-# Restore on new server
-sudo bash naiveproxy.sh install  # install first
+# Restore
+sudo bash naiveproxy.sh install
 tar -xzf naiveproxy-backup.tar.gz -C /
 systemctl restart caddy
 ```
@@ -767,110 +1069,39 @@ systemctl restart caddy
 sudo bash naiveproxy.sh remove
 # Removes: Caddy, configs, logs, systemd services
 
-# Additionally clean up:
+# Additional cleanup:
 apt remove --purge -y caddy fail2ban unbound
-rm -rf /etc/caddy /etc/naiveproxy /etc/unbound /var/log/caddy
+rm -rf /etc/caddy /etc/naiveproxy /etc/unbound
 ```
 
 </details>
 
 ---
 
-### 📊 Monitoring and logs
+## 📊 Comparison with alternatives
 
-<details>
-<summary><b>Where to find logs</b></summary>
-
-```bash
-# Caddy logs (access)
-tail -f /var/log/caddy/access.log
-
-# NaiveProxy logs (CONNECT tunnels)
-tail -f /var/log/caddy/naive.log
-
-# Systemd logs
-journalctl -u caddy -f
-journalctl -u naiveproxy-bot -f
-
-# All logs via script
-sudo bash naiveproxy.sh logs
-```
-
-</details>
-
-<details>
-<summary><b>How to view traffic statistics</b></summary>
-
-```bash
-sudo bash naiveproxy.sh monitor
-```
-
-Shows:
-- Daily/monthly traffic
-- Active users
-- Connection count
-- Top domains
-
-</details>
-
-<details>
-<summary><b>Server is slow — how to find cause</b></summary>
-
-```bash
-# Run diagnostics
-sudo bash naiveproxy.sh diagnose
-
-# Top CPU processes
-top -bn1 | head -20
-
-# Memory usage
-free -h
-
-# Active connections
-ss -ant | wc -l
-
-# Log size (can fill disk)
-du -sh /var/log/*
-```
-
-</details>
-
----
-
-### 💛 Project support
-
-<details>
-<summary><b>How to support development</b></summary>
-
-**Ways to support:**
-
-1. 💛 **Donate** on DonationAlerts:
-   👉 [donationalerts.com/r/ivan_yurievich](https://www.donationalerts.com/r/ivan_yurievich)
-
-2. ⭐ **Give a star** on GitHub
-
-3. 📢 **Tell friends** — share the link
-
-4. 🐛 **Report bugs** — open Issue on GitHub
-
-5. 💡 **Suggest ideas** — in Telegram channel
-
-Thanks for your support! 🙏
-
-</details>
-
-<details>
-<summary><b>Where to ask questions?</b></summary>
-
-**Contact info:**
-
-- 📱 **Telegram channel** — [t.me/ivan_it_net](https://t.me/ivan_it_net)
-- 🌐 **Website** — [ivan-it.net](https://ivan-it.net)
-- 💻 **GitHub Issues** — for bugs and suggestions
-
-⏱️ Usually respond within 24 hours.
-
-</details>
+<table>
+<tr>
+<th>Feature</th>
+<th align="center">🥇 NaiveProxy Manager</th>
+<th align="center">x-ui / 3x-ui</th>
+<th align="center">Marzban</th>
+</tr>
+<tr><td>No Docker</td><td align="center">✅</td><td align="center">❌</td><td align="center">❌</td></tr>
+<tr><td>SSH Hardening + sshd_config.d/</td><td align="center">✅</td><td align="center">❌</td><td align="center">❌</td></tr>
+<tr><td>SSH key auto-save</td><td align="center">✅</td><td align="center">❌</td><td align="center">❌</td></tr>
+<tr><td>QR code</td><td align="center">✅</td><td align="center">❌</td><td align="center">⚠️</td></tr>
+<tr><td><strong>DNS Ad Blocking</strong></td><td align="center">✅ ~1.5M</td><td align="center">❌</td><td align="center">❌</td></tr>
+<tr><td><strong>Telegram bot with commands</strong></td><td align="center">✅ 16 cmds</td><td align="center">⚠️ basic</td><td align="center">⚠️ basic</td></tr>
+<tr><td>System diagnostics (7 blocks)</td><td align="center">✅</td><td align="center">❌</td><td align="center">❌</td></tr>
+<tr><td>Fail2Ban 3 levels</td><td align="center">✅</td><td align="center">❌</td><td align="center">❌</td></tr>
+<tr><td>Camouflage page</td><td align="center">✅</td><td align="center">❌</td><td align="center">❌</td></tr>
+<tr><td>Self-Update</td><td align="center">✅</td><td align="center">❌</td><td align="center">❌</td></tr>
+<tr><td>Last domain protection</td><td align="center">✅</td><td align="center">❌</td><td align="center">❌</td></tr>
+<tr><td>Auto-restart on failure</td><td align="center">✅</td><td align="center">❌</td><td align="center">❌</td></tr>
+<tr><td>Correct Caddyfile</td><td align="center">✅</td><td align="center">—</td><td align="center">—</td></tr>
+<tr><td>ShellCheck passing</td><td align="center">✅</td><td align="center">—</td><td align="center">—</td></tr>
+</table>
 
 ---
 
@@ -880,28 +1111,65 @@ Thanks for your support! 🙏
 
 ### If this script helped you — support development! 🙏
 
-[![Donate](https://img.shields.io/badge/💛_DonationAlerts-Any_amount-FF5E3A?style=for-the-badge)](https://www.donationalerts.com/r/ivan_yurievich)
+[![Donate](https://img.shields.io/badge/💛_DonationAlerts-Any_amount-FF5E3A?style=for-the-badge&logoColor=white)](https://www.donationalerts.com/r/ivan_yurievich)
 
 **👉 https://www.donationalerts.com/r/ivan_yurievich**
 
 </div>
 
-### What your donation will fund:
-- 🚀 **More time** on development
-- 🐛 **Quick bug fixes**
-- ✨ **New features** every month
-- 📚 **Documentation** and support
-- 🆕 **Exclusive** content for donors in Telegram
+### 🎯 What your donation will fund:
 
-### All ways to support:
+<table>
+<tr>
+<td align="center" width="20%">
 
-| Way | Link |
-|-----|------|
-| 💛 **Donate** | [donationalerts.com/r/ivan_yurievich](https://www.donationalerts.com/r/ivan_yurievich) |
-| ⭐ **GitHub Star** | [Give a star](https://github.com/ivan-yurich/naiveproxy) |
-| 📱 **Telegram channel** | [t.me/ivan_it_net](https://t.me/ivan_it_net) |
-| 🌐 **Website** | [ivan-it.net](https://ivan-it.net) |
-| 📢 **Share** | Tell your friends |
+🚀
+**More time**
+on development
+
+</td>
+<td align="center" width="20%">
+
+🐛
+**Quick fixes**
+for bugs
+
+</td>
+<td align="center" width="20%">
+
+✨
+**New features**
+every month
+
+</td>
+<td align="center" width="20%">
+
+📚
+**Documentation**
+and support
+
+</td>
+<td align="center" width="20%">
+
+🆕
+**Exclusive**
+for donors
+
+</td>
+</tr>
+</table>
+
+### 🤝 All ways to support:
+
+| Way | Link | What it gives |
+|-----|------|---------------|
+| 💛 **Donate** | [DonationAlerts](https://www.donationalerts.com/r/ivan_yurievich) | Financial support |
+| ⭐ **GitHub Star** | [Give a star](https://github.com/ivan-yurich/naiveproxy) | Project visibility |
+| 📱 **Telegram channel** | [@ivan_it_net](https://t.me/ivan_it_net) | Subscribe for updates |
+| 🌐 **Website** | [ivan-it.net](https://ivan-it.net) | Visit |
+| 📢 **Share** | — | Tell your friends |
+| 🐛 **Report bug** | [Issues](https://github.com/ivan-yurich/naiveproxy/issues) | Help improve |
+| 💡 **Suggest idea** | [Telegram](https://t.me/ivan_it_net) | Grow the project |
 
 **Thanks for your support! Every donation motivates me to make the project even better 💛**
 
@@ -910,58 +1178,47 @@ Thanks for your support! 🙏
 ## 📜 Changelog
 
 <details>
-<summary><b>v4.2.4</b> — Security Audit & Reload ← CURRENT</summary>
+<summary><b>v4.2.4</b> — Audit Fixes ← CURRENT</summary>
 
-- 🔗 New GitHub address: `ivan-yurich/naiveproxy`
-- ♻️ `reload` command and Telegram `/reload` without restarting Caddy
-- 🔒 Login, password, domain and DNS whitelist validation
-- 🔧 Safer Caddyfile `basic_auth` generation
-- ⚡ Caddy update no longer stops service during the 5-15 minute build
-- 📦 `files/naiveproxy.sh` synced with the main script
+**🐛 Final security audit:**
+- 🔴 Fixed broken quotes `""${var}""` in DNS whitelist (real bug!)
+- 🟡 `((var++))` → `var=$((var+1))` in 3 places (set -e exit safety)
+- 🟢 Literal `\n` in printf → `\\n`
+- ✅ ShellCheck: 0 errors, 2 harmless warnings
+- ✨ `/donate` command in Telegram bot
+- ✨ Menu item 18 — donation + QR code
 
 </details>
 
 <details>
 <summary><b>v4.2.3</b> — ALPN Fix</summary>
 
-- 🐛 Fixed `grep: binary file matches` — added `-a` flag
-- ✅ Diagnostics correctly shows `ALPN: h2` on all servers
+- 🐛 Fixed `grep: binary file matches` — `-a` flag
+- ✅ Diagnostics correctly shows `ALPN: h2`
 
 </details>
 
 <details>
 <summary><b>v4.2.2</b> — Security Audit (10 fixes)</summary>
 
-**Critical:**
 - 🔒 SSH `sshd_config.d/` + `ssh.socket` disable
-- 🛡️ Protection against deleting last domain
+- 🛡️ Last domain deletion protection
 - 📦 `apt update` before Fail2Ban
-- 🔧 `PasswordAuthentication`/`PermitRootLogin` add if missing
-
-**Security:**
 - ⚡ Fail2Ban `iptables-multiport`
 - 🌐 UFW `allow 80/tcp` (ACME)
 - 🔑 Passwords 20 chars `[a-zA-Z0-9_-]`
 - ♻️ Caddy `Restart=on-failure`
-
-**Bot:**
 - ✅ `/qr` curl fix
 - ✅ `/adduser` validation
-- ✅ `\r\n` cleanup
-- ✅ `set +e` in handler
-
-**Diagnostics:**
-- 🐛 `pass=$((pass+1))` counters
-- 🐛 ALPN `-servername`
-- 🐛 Naive padding multi-criteria
+- 🐛 Diagnostics counters
 
 </details>
 
 <details>
 <summary><b>v4.2.1</b> — Banner & Branding</summary>
 
-- ✨ ASCII banner + Telegram channel + website
-- 🐛 `DIM`, `BLUE` variables
+- ✨ ASCII banner at startup
+- ✨ Telegram channel + website in banner
 
 </details>
 
@@ -969,8 +1226,8 @@ Thanks for your support! 🙏
 <summary><b>v4.2.0</b> — DNS Ad Blocker</summary>
 
 - ✨ unbound + ~1.5M domains
-- ✨ DNS-over-TLS
-- 🆕 `dns`, `dns-install`, `dns-update`
+- ✨ DNS-over-TLS (Cloudflare + Google)
+- 🆕 CLI: `dns`, `dns-install`, `dns-update`
 
 </details>
 
@@ -1013,9 +1270,13 @@ Thanks for your support! 🙏
 
 ## 📄 License
 
-GPL-3.0 © **Ivan Yurievich (Иван Юрьевич)**  
-Commercial use without author permission is prohibited.  
-📞 Contact: [Telegram](https://t.me/ivan_it_net) · [ivan-it.net](https://ivan-it.net)
+**GPL-3.0** © **Ivan Yurievich (Иван Юрьевич)**
+
+Commercial use without written permission from the author is prohibited.
+
+📞 Licensing contact: [Telegram](https://t.me/ivan_it_net) · [ivan-it.net](https://ivan-it.net)
+
+Full license text: [LICENSE](LICENSE)
 
 ---
 
@@ -1025,9 +1286,15 @@ Commercial use without author permission is prohibited.
 
 [![Donate](https://img.shields.io/badge/💛_Support-DonationAlerts-FF5E3A?style=for-the-badge)](https://www.donationalerts.com/r/ivan_yurievich)
 [![Star](https://img.shields.io/github/stars/ivan-yurich/naiveproxy?style=for-the-badge&color=D4A017)](https://github.com/ivan-yurich/naiveproxy/stargazers)
+[![Fork](https://img.shields.io/github/forks/ivan-yurich/naiveproxy?style=for-the-badge&color=58A6FF)](https://github.com/ivan-yurich/naiveproxy/network)
 
-📱 [Telegram](https://t.me/ivan_it_net) · 🌐 [ivan-it.net](https://ivan-it.net) · 💻 [GitHub](https://github.com/ivan-yurich/naiveproxy)
+---
 
-*NaiveProxy Manager · by Ivan Yurievich · Updates once a month*
+📱 [**Telegram**](https://t.me/ivan_it_net) · 🌐 [**ivan-it.net**](https://ivan-it.net) · 💻 [**GitHub**](https://github.com/ivan-yurich/naiveproxy) · 💛 [**Donate**](https://www.donationalerts.com/r/ivan_yurievich)
+
+**NaiveProxy Manager · by Ivan Yurievich**
+
+*Professional secure proxy server manager*
+*Updates released once a month · Made with 💛 in Russia*
 
 </div>

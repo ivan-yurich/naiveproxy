@@ -546,25 +546,6 @@ check_installed() {
     [[ -f "$CADDY_BIN" && -f "$CADDYFILE" ]]
 }
 
-is_valid_domain() {
-    [[ "${1:-}" =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$ ]]
-}
-
-is_valid_proxy_user() {
-    [[ "${1:-}" =~ ^[a-zA-Z0-9_-]{2,32}$ ]]
-}
-
-is_valid_proxy_pass() {
-    [[ "${1:-}" =~ ^[a-zA-Z0-9_-]{8,64}$ ]]
-}
-
-caddy_quote() {
-    local value="${1:-}"
-    value="${value//\\/\\\\}"
-    value="${value//\"/\\\"}"
-    printf '"%s"' "$value"
-}
-
 # ─── Конфиг ──────────────────────────────────────────────────
 load_config() {
     if [[ -f "$CONFIG_FILE" ]]; then
@@ -599,6 +580,7 @@ EMAIL="${EMAIL:-}"
 TG_TOKEN="${TG_TOKEN:-}"
 TG_CHAT_ID="${TG_CHAT_ID:-}"
 TG_ADMINS="${TG_ADMINS:-}"  # Доп. администраторы через запятую: id1,id2,id3
+TG_ADMINS="${TG_ADMINS:-}"
 INSTALLED_AT="$(date '+%Y-%m-%d %H:%M:%S')"
 EOF
     chmod 600 "$CONFIG_FILE"
@@ -615,14 +597,6 @@ load_users() {
 
 get_users() {
     grep -v '^#\|^[[:space:]]*$' "$USERS_FILE" 2>/dev/null || true
-}
-
-get_user_pass() {
-    local lookup_user="$1"
-    while IFS=: read -r user pass; do
-        [[ "$user" == "$lookup_user" ]] && { printf '%s\n' "$pass"; return 0; }
-    done < <(get_users)
-    return 1
 }
 
 # ─── Telegram ────────────────────────────────────────────────
@@ -904,7 +878,6 @@ install_deps() {
 build_caddy() {
     info "Собираю Caddy с forwardproxy (naive)..."
     info "Занимает 5-15 минут, не прерывай..."
-    local output_bin="${1:-$CADDY_BIN}"
 
     export PATH="/usr/local/go/bin:$PATH"
     export GOPATH="/root/go"
@@ -916,9 +889,8 @@ build_caddy() {
     go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
 
     # Клонируем naive ветку напрямую — единственный надёжный способ
-    local fp_dir
-    fp_dir=$(mktemp -d /tmp/naiveproxy_forwardproxy_XXXXXX)
-    trap 'rm -rf "${fp_dir:-}" 2>/dev/null' RETURN
+    local fp_dir="/tmp/klzgrad-forwardproxy"
+    [[ -n "${fp_dir}" ]] && rm -rf "${fp_dir}"
     info "Клонирую klzgrad/forwardproxy@naive..."
     if ! git clone -b naive --depth 1         https://github.com/klzgrad/forwardproxy.git "$fp_dir" 2>/dev/null; then
         err "Не удалось клонировать forwardproxy. Проверь интернет."
@@ -933,14 +905,14 @@ build_caddy() {
     # Собираем именно эту версию Caddy с локальным forwardproxy
     "$GOPATH/bin/xcaddy" build "${caddy_ver}" \
         --with github.com/caddyserver/forwardproxy="$fp_dir" \
-        --output "$output_bin"
+        --output "$CADDY_BIN"
 
-    chmod +x "$output_bin"
+    chmod +x "$CADDY_BIN"
 
     # Проверяем наличие naive padding в бинарнике
     if command -v strings &>/dev/null; then
         local _pc
-        _pc=$(strings "$output_bin" 2>/dev/null | grep -cE "^(Padding|SetPadding|WithPadding)$" || true)
+        _pc=$(strings "$CADDY_BIN" 2>/dev/null | grep -cE "^(Padding|SetPadding|WithPadding)$" || true)
         _pc="${_pc//[^0-9]/}"; _pc="${_pc:-0}"
         if [[ "${_pc}" -ge 2 ]]; then
             ok "Naive padding модуль подтверждён ✓"
@@ -949,7 +921,8 @@ build_caddy() {
         fi
     fi
 
-    ok "Caddy собран: $("$output_bin" version 2>/dev/null | head -1)"
+    [[ -n "${fp_dir}" ]] && rm -rf "${fp_dir}"
+    ok "Caddy собран: $("$CADDY_BIN" version 2>/dev/null | head -1)"
 }
 
 
@@ -963,12 +936,7 @@ write_caddyfile_multi() {
     local auth_blocks=""
     while IFS=: read -r u p; do
         [[ -z "$u" ]] && continue
-        if ! is_valid_proxy_user "$u" || ! is_valid_proxy_pass "$p"; then
-            err "Небезопасная запись пользователя в $USERS_FILE: $u"
-            err "Логин: 2-32 символа [A-Za-z0-9_-], пароль: 8-64 символа [A-Za-z0-9_-]"
-            return 1
-        fi
-        auth_blocks+="        basic_auth $(caddy_quote "$u") $(caddy_quote "$p")"$'\n'
+        auth_blocks+="        basic_auth ${u} ${p}"$'\n'
     done < <(get_users)
 
     # Глобальный блок
@@ -995,12 +963,8 @@ EOF
     for dom in "${domains_list[@]}"; do
         dom="${dom// /}"  # убираем пробелы
         [[ -z "$dom" ]] && continue
-        if ! is_valid_domain "$dom"; then
-            err "Неверный домен в конфиге: $dom"
-            return 1
-        fi
         cat >> "$CADDYFILE" <<EOF
-:443, ${dom} {
+${dom}:443 {
     tls ${EMAIL}
 
   forward_proxy {
@@ -1043,12 +1007,14 @@ install_camouflage_page() {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="DevStack — Technical notes on Linux, networking, security and open source infrastructure.">
 <title>DevStack — Linux & Infrastructure Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#080B0F;--bg2:#0D1117;--bg3:#161B22;--border:#21262D;--gold:#D4A017;--gold2:#F0C040;--text:#E6EDF3;--text-dim:#7D8590;--text-muted:#484F58;--green:#3FB950;--blue:#58A6FF;--red:#F85149;--tag-bg:#1F2937}
 *{margin:0;padding:0;box-sizing:border-box}html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;min-height:100vh}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;font-size:16px;line-height:1.6;min-height:100vh}
 body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px);pointer-events:none;z-index:9999}
-code,pre,.mono{font-family:Consolas,'Courier New',monospace}
+code,pre,.mono{font-family:'JetBrains Mono',monospace}
 a{color:var(--blue);text-decoration:none}a:hover{color:var(--gold2)}
 header{border-bottom:1px solid var(--border);background:var(--bg2);position:sticky;top:0;z-index:100;backdrop-filter:blur(8px)}
 .header-inner{max-width:1100px;margin:0 auto;padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between}
@@ -1253,21 +1219,12 @@ write_caddyfile() {
     mkdir -p "$CADDY_DIR" "$WEBROOT" "$LOG_DIR"
 
     install_camouflage_page
-    if ! is_valid_domain "${DOMAIN:-}"; then
-        err "Неверный домен в конфиге: ${DOMAIN:-}"
-        return 1
-    fi
 
     # Собираем блоки basic_auth
     local auth_blocks=""
     while IFS=: read -r u p; do
         [[ -z "$u" ]] && continue
-        if ! is_valid_proxy_user "$u" || ! is_valid_proxy_pass "$p"; then
-            err "Небезопасная запись пользователя в $USERS_FILE: $u"
-            err "Логин: 2-32 символа [A-Za-z0-9_-], пароль: 8-64 символа [A-Za-z0-9_-]"
-            return 1
-        fi
-        auth_blocks+="        basic_auth $(caddy_quote "$u") $(caddy_quote "$p")"$'\n'
+        auth_blocks+="        basic_auth ${u} ${p}"$'\n'
     done < <(get_users)
 
     cat > "$CADDYFILE" <<EOF
@@ -1479,7 +1436,8 @@ prompt_params() {
     while true; do
         echo -ne "${CYAN}Домен (например, proxy.example.com): ${RESET}"
         read -r DOMAIN
-        if is_valid_domain "$DOMAIN"; then
+        # Валидация: только буквы, цифры, дефис, точка
+        if [[ -n "$DOMAIN" && "$DOMAIN" =~ ^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$ ]]; then
             break
         fi
         err "Неверный формат домена. Только буквы, цифры, дефис, точка."
@@ -1492,24 +1450,16 @@ prompt_params() {
         err "Введи корректный email"
     done
 
-    while true; do
-        echo -ne "${CYAN}Логин первого пользователя (Enter = naive): ${RESET}"
-        read -r first_user
-        first_user="${first_user:-naive}"
-        is_valid_proxy_user "$first_user" && break
-        err "Логин: 2-32 символа, только A-Z a-z 0-9 _ -"
-    done
+    echo -ne "${CYAN}Логин первого пользователя (Enter = naive): ${RESET}"
+    read -r first_user
+    first_user="${first_user:-naive}"
 
-    while true; do
-        echo -ne "${CYAN}Пароль (Enter = случайный): ${RESET}"
-        read -r first_pass
-        if [[ -z "$first_pass" ]]; then
-            first_pass=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9_-' | head -c 20)
-            info "Сгенерирован пароль: $first_pass"
-        fi
-        is_valid_proxy_pass "$first_pass" && break
-        err "Пароль: 8-64 символа, только A-Z a-z 0-9 _ -"
-    done
+    echo -ne "${CYAN}Пароль (Enter = случайный): ${RESET}"
+    read -r first_pass
+    if [[ -z "$first_pass" ]]; then
+        first_pass=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | head -c 20)
+        info "Сгенерирован пароль: $first_pass"
+    fi
 
     load_users
     echo "${first_user}:${first_pass}" > "$USERS_FILE"
@@ -1532,7 +1482,7 @@ cmd_domains() {
         IFS=',' read -ra dlist <<< "$current_domains"
         for d in "${dlist[@]}"; do
             d="${d// /}"
-            [[ -n "$d" ]] && echo -e "  ${i}. ${CYAN}${d}${RESET}" && ((i++))
+            [[ -n "$d" ]] && echo -e "  ${i}. ${CYAN}${d}${RESET}" && i=$((i+1))
         done
         echo
         echo -e "  ${BOLD}1)${RESET} Добавить домен"
@@ -1546,7 +1496,7 @@ cmd_domains() {
             1)
                 echo -ne "${CYAN}Новый домен: ${RESET}"
                 read -r new_dom
-                if ! is_valid_domain "$new_dom"; then
+                if [[ ! "$new_dom" =~ ^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$ ]]; then
                     err "Неверный формат домена"
                     continue
                 fi
@@ -1586,7 +1536,7 @@ cmd_domains() {
                     if [[ "$j" != "$del_idx" ]]; then
                         new_domains="${new_domains},${d}"
                     fi
-                    ((j++))
+                    j=$((j+1))
                 done
                 DOMAINS="${new_domains#,}"
                 DOMAIN=$(echo "$DOMAINS" | cut -d',' -f1)
@@ -1625,7 +1575,7 @@ cmd_users() {
             1)
                 local count=0
                 while IFS=: read -r u p; do
-                    ((count++))
+                    count=$((count+1))
                     echo -e "  ${count}. ${BOLD}${u}${RESET} : $p"
                 done < <(get_users)
                 [[ $count -eq 0 ]] && warn "Нет пользователей"
@@ -1635,25 +1585,23 @@ cmd_users() {
                 echo -ne "${CYAN}Новый логин: ${RESET}"; read -r new_user
                 [[ -z "$new_user" ]] && { err "Логин не может быть пустым"; continue; }
                 # Валидация: только буквы, цифры, дефис, подчёркивание (защита от sed-инъекции)
-                if ! is_valid_proxy_user "$new_user"; then
-                    err "Логин: 2-32 символа, только A-Z a-z 0-9 _ -"
+                if [[ ! "$new_user" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+                    err "Логин содержит недопустимые символы. Только: a-z A-Z 0-9 _ -"
                     continue
                 fi
-                if get_user_pass "$new_user" >/dev/null; then
+                if get_users | grep -q "^${new_user}:"; then
                     err "Пользователь $new_user уже существует"
                     continue
                 fi
                 echo -ne "${CYAN}Пароль (Enter = случайный): ${RESET}"; read -r new_pass
                 if [[ -z "$new_pass" ]]; then
-                    new_pass=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9_-' | head -c 20)
+                    new_pass=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | head -c 20)
                     info "Сгенерирован пароль: $new_pass"
-                fi
-                if ! is_valid_proxy_pass "$new_pass"; then
-                    err "Пароль: 8-64 символа, только A-Z a-z 0-9 _ -"
+                elif [[ "$new_pass" == *":"* ]]; then
+                    err "Пароль не может содержать символ ':'"
                     continue
                 fi
-                printf '%s:%s
-' "${new_user}" "${new_pass}" >> "$USERS_FILE"
+                printf '%s:%s\n' "${new_user}" "${new_pass}" >> "$USERS_FILE"
                 backup_config
                 write_caddyfile
                 systemctl reload caddy 2>/dev/null || systemctl restart caddy
@@ -1664,7 +1612,7 @@ cmd_users() {
                 ;;
             3)
                 echo -ne "${CYAN}Логин для удаления: ${RESET}"; read -r del_user
-                if ! is_valid_proxy_user "$del_user" || ! get_user_pass "$del_user" >/dev/null; then
+                if ! get_users | grep -q "^${del_user}:"; then
                     err "Пользователь $del_user не найден"
                     continue
                 fi
@@ -1679,16 +1627,15 @@ cmd_users() {
                 ;;
             4)
                 echo -ne "${CYAN}Логин: ${RESET}"; read -r chg_user
-                if ! is_valid_proxy_user "$chg_user" || ! get_user_pass "$chg_user" >/dev/null; then
+                if ! get_users | grep -q "^${chg_user}:"; then
                     err "Пользователь $chg_user не найден"; continue
                 fi
                 echo -ne "${CYAN}Новый пароль (Enter = случайный): ${RESET}"; read -r chg_pass
                 if [[ -z "$chg_pass" ]]; then
-                    chg_pass=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9_-' | head -c 20)
+                    chg_pass=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | head -c 20)
                     info "Сгенерирован пароль: $chg_pass"
-                fi
-                if ! is_valid_proxy_pass "$chg_pass"; then
-                    err "Пароль: 8-64 символа, только A-Z a-z 0-9 _ -"; continue
+                elif [[ "$chg_pass" == *":"* ]]; then
+                    err "Пароль не может содержать символ ':'"; continue
                 fi
                 backup_config
                 # Безопасная замена без sed regex
@@ -2515,7 +2462,6 @@ tg_handle_command() {
 
 ⚙️ <b>Управление</b>
 /restart — перезапустить Caddy
-/reload — применить Caddyfile без рестарта
 /update — обновить Caddy
 /selfupdate — обновить скрипт
 /admins — список администраторов
@@ -2679,7 +2625,7 @@ ${user_list}"
             fi
 
             # Валидация логина
-            if ! is_valid_proxy_user "${new_user}"; then
+            if ! [[ "${new_user}" =~ ^[a-zA-Z0-9_-]{2,32}$ ]]; then
                 tg_reply "${chat_id}" "❌ Неверный логин <code>${new_user}</code>
 Только буквы, цифры, _, - (2-32 символа)"
                 return
@@ -2690,12 +2636,16 @@ ${user_list}"
                 # Авто-генерация
                 new_pass=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9_-' | head -c 20)
                 tg_reply "${chat_id}" "🔑 Пароль не указан, сгенерирован автоматически"
-            elif ! is_valid_proxy_pass "${new_pass}"; then
-                tg_reply "${chat_id}" "❌ Пароль: 8-64 символа, только A-Z a-z 0-9 _ -"
+            elif [[ "${new_pass}" == *":"* ]]; then
+                tg_reply "${chat_id}" "❌ Пароль не может содержать ':'"
+                return
+            elif [[ ${#new_pass} -lt 8 ]]; then
+                tg_reply "${chat_id}" "❌ Пароль слишком короткий (минимум 8 символов)
+Текущий: ${#new_pass} символов"
                 return
             fi
 
-            if get_user_pass "${new_user}" >/dev/null; then
+            if get_users | grep -q "^${new_user}:"; then
                 tg_reply "${chat_id}" "❌ Пользователь <code>${new_user}</code> уже существует"
                 return
             fi
@@ -2724,12 +2674,12 @@ ${user_list}"
 
         /deluser)
             local del_user="${args%% *}"
-            if [[ -z "${del_user}" ]] || ! is_valid_proxy_user "${del_user}"; then
+            if [[ -z "${del_user}" ]]; then
                 tg_reply "${chat_id}" "❌ Использование: /deluser логин"
                 return
             fi
 
-            if ! get_user_pass "${del_user}" >/dev/null; then
+            if ! get_users | grep -q "^${del_user}:"; then
                 tg_reply "${chat_id}" "❌ Пользователь <code>${del_user}</code> не найден"
                 return
             fi
@@ -2749,13 +2699,13 @@ ${user_list}"
                 qr_user=$(get_users | head -1 | cut -d: -f1)
             fi
 
-            if [[ -z "${qr_user}" ]] || ! is_valid_proxy_user "${qr_user}"; then
+            if [[ -z "${qr_user}" ]]; then
                 tg_reply "${chat_id}" "❌ Нет пользователей. Добавь: /adduser логин пароль"
                 return
             fi
 
             local qr_pass
-            qr_pass=$(get_user_pass "${qr_user}" || true)
+            qr_pass=$(get_users | grep "^${qr_user}:" | cut -d: -f2)
 
             if [[ -z "${qr_pass}" ]]; then
                 tg_reply "${chat_id}" "❌ Пользователь <code>${qr_user}</code> не найден
@@ -2847,15 +2797,6 @@ ${user_list}"
             fi
             ;;
 
-        /reload)
-            tg_reply "${chat_id}" "♻️ Применяю Caddyfile без перезапуска..."
-            if cmd_reload >/dev/null 2>&1; then
-                tg_reply "${chat_id}" "✅ Caddy reload выполнен без разрыва активных соединений"
-            else
-                tg_reply "${chat_id}" "❌ Reload не удался. Проверь: caddy validate --config /etc/caddy/Caddyfile"
-            fi
-            ;;
-
         /update)
             tg_reply "${chat_id}" "🔄 Обновляю Caddy, подожди 5-15 минут..."
             local _script
@@ -2917,12 +2858,12 @@ ${admin_list}"
 
         /deladmin)
             local del_admin="${args%% *}"
-            if [[ -z "${del_admin}" || ! "${del_admin}" =~ ^[0-9]{5,15}$ ]]; then
+            if [[ -z "${del_admin}" ]]; then
                 tg_reply "${chat_id}" "❌ Использование: /deladmin 123456789"
                 return
             fi
             TG_ADMINS=$(echo "${TG_ADMINS}" | tr ',' '
-'                 | grep -Fvx "${del_admin}" | tr '
+'                 | grep -v "^${del_admin}$" | tr '
 ' ',' | sed 's/,$//')
             save_config
             tg_reply "${chat_id}" "🗑 Администратор <code>${del_admin}</code> удалён"
@@ -3167,15 +3108,10 @@ _dns_integrate_caddy() {
     if ! grep -q "127.0.0.1" /etc/resolv.conf; then
         # Бэкап
         cp /etc/resolv.conf /etc/resolv.conf.bak 2>/dev/null || true
-        local resolv_tmp
-        resolv_tmp=$(mktemp /tmp/naiveproxy_resolv_XXXXXX)
-        trap 'rm -f "${resolv_tmp:-}" 2>/dev/null' RETURN
-        {
-            echo "nameserver 127.0.0.1"
-            echo "nameserver 1.1.1.1"
-            cat /etc/resolv.conf
-        } > "$resolv_tmp"
-        cp "$resolv_tmp" /etc/resolv.conf
+        echo "nameserver 127.0.0.1" > /tmp/resolv_new
+        echo "nameserver 1.1.1.1" >> /tmp/resolv_new
+        cat /etc/resolv.conf >> /tmp/resolv_new
+        cp /tmp/resolv_new /etc/resolv.conf
         ok "DNS: добавлен 127.0.0.1 в /etc/resolv.conf"
     fi
 }
@@ -3211,30 +3147,27 @@ cmd_dns_update() {
     # Парсим hosts формат и конвертируем в unbound
     info "Конвертирую в формат unbound..."
 
-    python3 - "${tmp_hosts}" "${DNS_BLOCKLIST}" "${DNS_WHITELIST}" << 'PYEOF2'
-import re
+    # Читаем whitelist
+    local whitelist_domains=""
+    if [[ -f "${DNS_WHITELIST}" ]]; then
+        whitelist_domains=$(grep -v '^#' "${DNS_WHITELIST}" | tr '
+' '|' | sed 's/|$//')
+    fi
+
+    python3 << PYEOF2
 import sys
 
-hosts_file = sys.argv[1]
-output_file = sys.argv[2]
-whitelist_file = sys.argv[3]
-domain_re = re.compile(r'^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$')
+hosts_file = "${tmp_hosts}"
+output_file = "${DNS_BLOCKLIST}"
+whitelist = "${whitelist_domains}"
+wl_set = set(whitelist.split('|')) if whitelist else set()
 
 blocked = 0
 seen = set()
-wl_set = set()
-
-try:
-    with open(whitelist_file, 'r', encoding='utf-8', errors='ignore') as wf:
-        for wl_line in wf:
-            wl_line = wl_line.strip().lower()
-            if wl_line and not wl_line.startswith('#') and domain_re.fullmatch(wl_line):
-                wl_set.add(wl_line)
-except FileNotFoundError:
-    pass
 
 with open(hosts_file, 'r', encoding='utf-8', errors='ignore') as f,      open(output_file, 'w') as out:
-    out.write("# NaiveProxy DNS Blocklist\n")
+    out.write("# NaiveProxy DNS Blocklist — обновлено $(date '+%Y-%m-%d %H:%M:%S')
+")
     for line in f:
         line = line.strip()
         if not line or line.startswith('#'):
@@ -3245,14 +3178,15 @@ with open(hosts_file, 'r', encoding='utf-8', errors='ignore') as f,      open(ou
             # Фильтруем мусор
             if domain in ('localhost', '0.0.0.0', '127.0.0.1', '::1', 'local'):
                 continue
-            if not domain_re.fullmatch(domain):
+            if '.' not in domain:
                 continue
             if domain in seen:
                 continue
             if domain in wl_set:
                 continue
             seen.add(domain)
-            out.write(f'local-zone: "{domain}" refuse\n')
+            out.write(f'local-zone: "{domain}" refuse
+')
             blocked += 1
 
 print(f"blocked={blocked}")
@@ -3341,20 +3275,19 @@ cmd_dns_whitelist() {
 
     echo -ne "${CYAN}Домен для разрешения: ${RESET}"
     read -r wl_domain
-    wl_domain="${wl_domain,,}"
-    if ! is_valid_domain "${wl_domain}"; then
-        warn "Неверный домен"
+    if [[ -z "${wl_domain}" ]]; then
+        warn "Домен не указан"
         return
     fi
 
     # Убираем из blocklist
-    if grep -Fq "\"${wl_domain}\"" "${DNS_BLOCKLIST}" 2>/dev/null; then
-        grep -Fv "\"${wl_domain}\"" "${DNS_BLOCKLIST}" > "${DNS_BLOCKLIST}.tmp"             && mv "${DNS_BLOCKLIST}.tmp" "${DNS_BLOCKLIST}"
+    if grep -q "\"${wl_domain}\"" "${DNS_BLOCKLIST}" 2>/dev/null; then
+        grep -v "\"${wl_domain}\"" "${DNS_BLOCKLIST}" > "${DNS_BLOCKLIST}.tmp" \
+            && mv "${DNS_BLOCKLIST}.tmp" "${DNS_BLOCKLIST}"
         ok "${wl_domain} удалён из blocklist"
     fi
 
     # Добавляем в whitelist файл
-    mkdir -p "$(dirname "${DNS_WHITELIST}")"
     echo "${wl_domain}" >> "${DNS_WHITELIST}"
     ok "${wl_domain} добавлен в whitelist"
 
@@ -3496,25 +3429,6 @@ cmd_restart() {
     fi
 }
 
-cmd_reload() {
-    info "Проверяю Caddyfile перед reload..."
-    if ! "$CADDY_BIN" validate --config "$CADDYFILE" >/dev/null 2>&1; then
-        err "Caddyfile содержит ошибку. Reload отменён."
-        "$CADDY_BIN" validate --config "$CADDYFILE" || true
-        return 1
-    fi
-
-    info "Применяю конфиг без перезапуска Caddy..."
-    if systemctl reload caddy; then
-        ok "Caddy reload выполнен без разрыва активных соединений"
-        load_config; tg_alert_up
-    else
-        err "Reload не удался. Caddy не перезапускал, смотри лог:"
-        journalctl -u caddy -n 20 --no-pager
-        return 1
-    fi
-}
-
 # ─── ОБНОВЛЕНИЕ ──────────────────────────────────────────────
 cmd_update() {
     hr
@@ -3528,16 +3442,9 @@ cmd_update() {
     info "Текущая версия: $old_ver"
 
     backup_config
-
-    local tmp_caddy
-    tmp_caddy=$(mktemp /tmp/naiveproxy_caddy_XXXXXX)
-    rm -f "$tmp_caddy"
-    trap 'rm -f "${tmp_caddy:-}" 2>/dev/null' RETURN
-
-    build_caddy "$tmp_caddy"
-    install -m 755 "$tmp_caddy" "$CADDY_BIN"
-
-    systemctl restart caddy
+    systemctl stop caddy
+    build_caddy
+    systemctl start caddy
 
     local new_ver
     new_ver=$("$CADDY_BIN" version 2>/dev/null | head -1 || echo "unknown")
@@ -3616,10 +3523,9 @@ show_menu() {
     echo -e "   ${BOLD}13)${RESET} 🔄 Обновить систему"
     echo -e "   ${BOLD}14)${RESET} ⬆️  Обновить скрипт
    ${BOLD}15)${RESET} 🎭 Обновить камуфляж"
-    echo -e "   ${BOLD}19)${RESET} ♻️  Reload Caddy без разрыва"
     echo -e "   ${BOLD}0)${RESET}  Выход"
     hr
-    echo -ne "${CYAN}Выбор [0-19]: ${RESET}"
+    echo -ne "${CYAN}Выбор [0-18]: ${RESET}"
 }
 
 # ─── MAIN ────────────────────────────────────────────────────
@@ -3633,7 +3539,6 @@ main() {
             install)   cmd_install ;;
             status)    cmd_status ;;
             config)    print_client_config ;;
-            reload)    cmd_reload ;;
             restart)   cmd_restart ;;
             update)    cmd_update ;;
             remove)    cmd_remove ;;
@@ -3663,7 +3568,7 @@ main() {
                 echo "GitHub:   github.com/ivan-yurich/naiveproxy"
                 ;;
             *) err "Неизвестная команда: $1"
-               echo "Доступные: install status config reload restart update remove logs monitor users tg-stats ssh-hardening sysupdate cert domains self-update version camouflage"
+               echo "Доступные: install status config restart update remove logs monitor users tg-stats ssh-hardening sysupdate cert domains self-update version camouflage"
                exit 1 ;;
         esac
         exit 0
@@ -3695,7 +3600,6 @@ main() {
             16) cmd_diagnose ;;
             17) cmd_dns_menu ;;
             18) cmd_donate ;;
-            19) cmd_reload ;;
             0)  echo -e "${GREEN}Пока!${RESET}"; exit 0 ;;
             *)  warn "Неверный выбор" ;;
         esac

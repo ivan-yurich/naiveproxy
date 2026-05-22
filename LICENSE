@@ -1,119 +1,220 @@
+═══════════════════════════════════════════════════════════════════
+
+       ███╗   ██╗ █████╗ ██╗██╗   ██╗███████╗
+       ████╗  ██║██╔══██╗██║██║   ██║██╔════╝
+       ██╔██╗ ██║███████║██║██║   ██║█████╗
+       ██║╚██╗██║██╔══██║██║╚██╗ ██╔╝██╔══╝
+       ██║ ╚████║██║  ██║██║ ╚████╔╝ ███████╗
+       ╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝  ╚═══╝  ╚══════╝
+       ██████╗ ██████╗  ██████╗ ██╗  ██╗██╗   ██╗
+       ██╔══██╗██╔══██╗██╔═══██╗╚██╗██╔╝╚██╗ ██╔╝
+       ██████╔╝██████╔╝██║   ██║ ╚███╔╝  ╚████╔╝
+       ██╔═══╝ ██╔══██╗██║   ██║ ██╔██╗   ╚██╔╝
+       ██║     ██║  ██║╚██████╔╝██╔╝ ██╗   ██║
+       ╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝
+                                      MANAGER
+
+              Professional Proxy Server Manager
+
+═══════════════════════════════════════════════════════════════════
+
                     GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
 
  Copyright (C) 2026 Иван Юрьевич (Ivan Yurievich)
- Telegram: https://t.me/ivan_it_net
- Website:  https://ivan-it.net
- GitHub:   https://github.com/ivan-yurich
+ All Rights Reserved.
+
+ 📱 Telegram:  https://t.me/ivan_it_net
+ 🌐 Website:   https://ivan-it.net
+ 💻 GitHub:    https://github.com/ivan-yurich/naiveproxy
+ 💛 Donate:    https://www.donationalerts.com/r/ivan_yurievich
 
  Everyone is permitted to copy and distribute verbatim copies
  of this license document, but changing it is not allowed.
 
 ═══════════════════════════════════════════════════════════════════
-                    ДОПОЛНИТЕЛЬНЫЕ УСЛОВИЯ (RU)
+
+                  🇷🇺  ДОПОЛНИТЕЛЬНЫЕ УСЛОВИЯ
+
 ═══════════════════════════════════════════════════════════════════
 
 NaiveProxy Manager создан и поддерживается Иваном Юрьевичем.
 Этот проект распространяется под лицензией GPL-3.0 со следующими
 дополнительными условиями:
 
-✅ РАЗРЕШЕНО:
-  • Использовать программу в личных целях бесплатно
-  • Изучать исходный код
-  • Создавать модификации для личного использования
-  • Распространять программу при условии сохранения этой лицензии
-    и копирайта автора
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│  ✅ РАЗРЕШЕНО (БЕСПЛАТНО):                                       │
+│                                                                 │
+│    ✓ Использовать программу в личных целях                      │
+│    ✓ Изучать исходный код                                       │
+│    ✓ Создавать модификации для личного использования            │
+│    ✓ Распространять программу при сохранении этой лицензии      │
+│      и копирайта автора                                         │
+│    ✓ Использовать для семьи и друзей (некоммерчески)            │
+│    ✓ Делать форки на GitHub с сохранением авторства             │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 
-❌ ЗАПРЕЩЕНО БЕЗ ПИСЬМЕННОГО РАЗРЕШЕНИЯ АВТОРА:
-  • Коммерческое использование (продажа, платные подписки на сервис
-    созданный на основе этого ПО)
-  • Удаление или изменение информации об авторе (имени, ссылок,
-    Telegram канала, сайта)
-  • Удаление ссылки на донат (DonationAlerts)
-  • Создание производных проектов под другим именем без указания
-    оригинального автора (Ивана Юрьевича) и ссылки на оригинальный
-    репозиторий
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│  ❌ ЗАПРЕЩЕНО БЕЗ ПИСЬМЕННОГО РАЗРЕШЕНИЯ АВТОРА:                │
+│                                                                 │
+│    ✗ Коммерческое использование:                                │
+│      • Продажа этого ПО или его модификаций                     │
+│      • Создание платных VPN/прокси-сервисов на его основе       │
+│      • Использование в корпоративных продуктах за деньги        │
+│      • Платные подписки на сервисы созданные на этом ПО         │
+│                                                                 │
+│    ✗ Удаление или изменение информации об авторе:               │
+│      • Имени автора (Иван Юрьевич)                              │
+│      • Ссылок на Telegram канал                                 │
+│      • Ссылок на сайт ivan-it.net                               │
+│      • Копирайта в исходниках                                   │
+│      • Ссылки на донат (DonationAlerts)                         │
+│                                                                 │
+│    ✗ Создание производных проектов:                             │
+│      • Без указания оригинального автора                        │
+│      • Без ссылки на оригинальный репозиторий                   │
+│      • Под закрытой лицензией                                   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 
-📞 КОНТАКТЫ ДЛЯ КОММЕРЧЕСКОГО ЛИЦЕНЗИРОВАНИЯ:
-  Telegram: https://t.me/ivan_it_net
-  Сайт:     https://ivan-it.net
-
-  Для коммерческого использования (платные VPN сервисы, продажа
-  модифицированных версий, использование в корпоративных продуктах)
-  необходимо получить отдельное разрешение от автора.
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│  📞 КОНТАКТЫ ДЛЯ КОММЕРЧЕСКОГО ЛИЦЕНЗИРОВАНИЯ:                  │
+│                                                                 │
+│     📱  Telegram:  https://t.me/ivan_it_net                     │
+│     🌐  Сайт:      https://ivan-it.net                          │
+│     💛  Поддержка: https://donationalerts.com/r/ivan_yurievich  │
+│                                                                 │
+│  Для коммерческого использования необходимо получить            │
+│  отдельную коммерческую лицензию от автора.                     │
+│                                                                 │
+│  💡 Скидки и партнёрство — пиши в Telegram!                     │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 
 ═══════════════════════════════════════════════════════════════════
-                  ADDITIONAL TERMS (EN)
+
+                  🇬🇧  ADDITIONAL TERMS (ENGLISH)
+
 ═══════════════════════════════════════════════════════════════════
 
 NaiveProxy Manager is created and maintained by Ivan Yurievich.
 This project is distributed under the GPL-3.0 license with the
 following additional terms:
 
-✅ ALLOWED:
-  • Use the program for personal purposes free of charge
-  • Study the source code
-  • Create modifications for personal use
-  • Distribute the program while preserving this license and
-    the author's copyright
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│  ✅ ALLOWED (FREE):                                              │
+│                                                                 │
+│    ✓ Use the program for personal purposes                      │
+│    ✓ Study the source code                                      │
+│    ✓ Create modifications for personal use                      │
+│    ✓ Distribute the program while preserving this license       │
+│      and the author's copyright                                 │
+│    ✓ Use for family and friends (non-commercial)                │
+│    ✓ Make GitHub forks while preserving authorship              │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 
-❌ PROHIBITED WITHOUT WRITTEN PERMISSION FROM THE AUTHOR:
-  • Commercial use (selling, paid subscriptions to services
-    created based on this software)
-  • Removing or modifying author information (name, links,
-    Telegram channel, website)
-  • Removing the donation link (DonationAlerts)
-  • Creating derivative projects under a different name without
-    crediting the original author (Ivan Yurievich) and linking
-    to the original repository
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│  ❌ PROHIBITED WITHOUT WRITTEN PERMISSION FROM AUTHOR:           │
+│                                                                 │
+│    ✗ Commercial use:                                            │
+│      • Selling this software or its modifications               │
+│      • Creating paid VPN/proxy services based on it             │
+│      • Using in corporate products for profit                   │
+│      • Paid subscriptions to services built on this software    │
+│                                                                 │
+│    ✗ Removing or modifying author information:                  │
+│      • Author's name (Ivan Yurievich / Иван Юрьевич)            │
+│      • Links to Telegram channel                                │
+│      • Links to ivan-it.net website                             │
+│      • Copyright in source code                                 │
+│      • Donation link (DonationAlerts)                           │
+│                                                                 │
+│    ✗ Creating derivative projects:                              │
+│      • Without crediting the original author                    │
+│      • Without linking to the original repository               │
+│      • Under closed license                                     │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 
-📞 CONTACT FOR COMMERCIAL LICENSING:
-  Telegram: https://t.me/ivan_it_net
-  Website:  https://ivan-it.net
-
-  Commercial use (paid VPN services, selling modified versions,
-  use in corporate products) requires obtaining a separate
-  permission from the author.
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│  📞 CONTACT FOR COMMERCIAL LICENSING:                            │
+│                                                                 │
+│     📱  Telegram:  https://t.me/ivan_it_net                     │
+│     🌐  Website:   https://ivan-it.net                          │
+│     💛  Support:   https://donationalerts.com/r/ivan_yurievich  │
+│                                                                 │
+│  Commercial use requires obtaining a separate commercial        │
+│  license from the author.                                       │
+│                                                                 │
+│  💡 Discounts and partnership — message me on Telegram!         │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 
 ═══════════════════════════════════════════════════════════════════
-                    GPL-3.0 LICENSE
+
+                    📜  GPL-3.0 LICENSE
+
 ═══════════════════════════════════════════════════════════════════
 
 Полный текст лицензии GPL-3.0 доступен по ссылке:
-https://www.gnu.org/licenses/gpl-3.0.txt
-
 The full GPL-3.0 license text is available at:
-https://www.gnu.org/licenses/gpl-3.0.txt
 
-Основные пункты GPL-3.0 / Key GPL-3.0 terms:
+  → https://www.gnu.org/licenses/gpl-3.0.txt
 
-1. Свобода запуска программы для любых целей.
-   Freedom to run the program for any purpose.
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│  ОСНОВНЫЕ ПУНКТЫ GPL-3.0 / KEY GPL-3.0 TERMS:                  │
+│                                                                 │
+│  1. 🚀  Свобода запуска программы для любых целей.              │
+│         Freedom to run the program for any purpose.             │
+│                                                                 │
+│  2. 🔍  Свобода изучения исходного кода и модификации.          │
+│         Freedom to study source code and modify it.             │
+│                                                                 │
+│  3. 📤  Свобода распространения копий программы.                │
+│         Freedom to distribute copies of the program.            │
+│                                                                 │
+│  4. 🔄  Свобода распространения модифицированных версий.        │
+│         Freedom to distribute modified versions.                │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 
-2. Свобода изучения исходного кода и его модификации.
-   Freedom to study the source code and modify it.
-
-3. Свобода распространения копий программы.
-   Freedom to distribute copies of the program.
-
-4. Свобода распространения модифицированных версий.
-   Freedom to distribute modified versions.
-
-КОПИРАЙТ-ЛЕВО (COPYLEFT):
-Если вы распространяете модифицированную версию этого ПО, ВЫ ОБЯЗАНЫ:
-  • Опубликовать исходный код модификаций
-  • Распространять под той же лицензией GPL-3.0
-  • Сохранить копирайт оригинального автора (Иван Юрьевич)
-  • Указать какие изменения были внесены
-
-If you distribute a modified version of this software, YOU MUST:
-  • Publish the source code of modifications
-  • Distribute under the same GPL-3.0 license
-  • Preserve the original author's copyright (Ivan Yurievich)
-  • Indicate what changes were made
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│  🔒  КОПИРАЙТ-ЛЕВО (COPYLEFT):                                  │
+│                                                                 │
+│  Если вы распространяете модифицированную версию этого ПО,      │
+│  ВЫ ОБЯЗАНЫ:                                                    │
+│                                                                 │
+│    📤  Опубликовать исходный код модификаций                    │
+│    📜  Распространять под той же лицензией GPL-3.0              │
+│    ©️   Сохранить копирайт оригинального автора                  │
+│    📝  Указать какие изменения были внесены                     │
+│                                                                 │
+│  ─────────────────────────────────────────────                  │
+│                                                                 │
+│  If you distribute a modified version of this software,         │
+│  YOU MUST:                                                      │
+│                                                                 │
+│    📤  Publish the source code of modifications                 │
+│    📜  Distribute under the same GPL-3.0 license                │
+│    ©️   Preserve the original author's copyright                 │
+│    📝  Indicate what changes were made                          │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 
 ═══════════════════════════════════════════════════════════════════
-                    ОТКАЗ ОТ ГАРАНТИЙ / DISCLAIMER
+
+                  ⚠️  ОТКАЗ ОТ ГАРАНТИЙ / DISCLAIMER
+
 ═══════════════════════════════════════════════════════════════════
 
 ПРОГРАММА ПРЕДОСТАВЛЯЕТСЯ "КАК ЕСТЬ", БЕЗ КАКИХ-ЛИБО ГАРАНТИЙ,
@@ -122,13 +223,36 @@ If you distribute a modified version of this software, YOU MUST:
 ИСПОЛЬЗОВАНИЯ ЭТОЙ ПРОГРАММЫ.
 
 THIS PROGRAM IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED. THE AUTHOR SHALL NOT BE LIABLE FOR ANY DAMAGE
+EXPRESS OR IMPLIED. THE AUTHOR SHALL NOT BE LIABLE FOR ANY DAMAGES
 ARISING FROM THE USE OR INABILITY TO USE THIS PROGRAM.
 
 ═══════════════════════════════════════════════════════════════════
 
-Copyright © 2026 Иван Юрьевич (Ivan Yurievich)
-All rights reserved.
+                  💛  ПОДДЕРЖАТЬ ПРОЕКТ / SUPPORT
 
-NaiveProxy Manager
-https://github.com/ivan-yurich/naiveproxy
+═══════════════════════════════════════════════════════════════════
+
+  Если NaiveProxy Manager помог тебе — поддержи разработку!
+  If NaiveProxy Manager helped you — support development!
+
+  👉  https://www.donationalerts.com/r/ivan_yurievich
+
+  Подпишись на Telegram канал / Subscribe to Telegram channel:
+  👉  https://t.me/ivan_it_net
+
+  Поставь ⭐ на GitHub / Give a ⭐ on GitHub:
+  👉  https://github.com/ivan-yurich/naiveproxy
+
+  Спасибо за поддержку! 🙏 / Thanks for support! 🙏
+
+═══════════════════════════════════════════════════════════════════
+
+  Copyright © 2026 Иван Юрьевич (Ivan Yurievich)
+  All Rights Reserved.
+
+  NaiveProxy Manager · Professional Proxy Server Manager
+  https://github.com/ivan-yurich/naiveproxy
+
+  Сделано с 💛 в России / Made with 💛 in Russia
+
+═══════════════════════════════════════════════════════════════════
