@@ -26,7 +26,7 @@
 
 ---
 
-[![Version](https://img.shields.io/badge/version-4.2.4-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
+[![Version](https://img.shields.io/badge/version-4.2.5-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
 [![ShellCheck](https://img.shields.io/badge/ShellCheck-passing-3FB950?style=for-the-badge&logo=gnu-bash&logoColor=white)](https://www.shellcheck.net)
 [![Bash](https://img.shields.io/badge/Bash-5.0+-4EAA25?style=for-the-badge&logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-20.04%2B-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://ubuntu.com)
@@ -97,7 +97,7 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 
 ---
 
-## 🎉 What's new in v4.2.4
+## 🎉 What's new in v4.2.5
 
 <table>
 <tr>
@@ -309,7 +309,7 @@ Encrypted queries to Cloudflare and Google
 
 ```
 ──────────────────────────────────────────────────────
-   NaiveProxy Manager v4.2.4  [ENG]
+   NaiveProxy Manager v4.2.5  [ENG]
    Status: ● running  │  Domain: proxy.example.com
    Telegram: connected  │  Users: 3  │  SSH: 52847
 ──────────────────────────────────────────────────────
@@ -502,7 +502,7 @@ sudo bash naiveproxy.sh diagnose
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  🔍 Diagnostics NaiveProxy Manager v4.2.4               │
+│  🔍 Diagnostics NaiveProxy Manager v4.2.5               │
 │  2026-05-23 14:32:18 · proxy.example.com               │
 └─────────────────────────────────────────────────────────┘
 
@@ -542,7 +542,7 @@ sudo bash naiveproxy.sh diagnose
   ✅ journald: no critical errors
 
 [7/7] Version and updates
-  ✅ Script up to date: v4.2.4
+  ✅ Script up to date: v4.2.5
   ✅ SSH Hardening done
 
 ══════════════════════════════════════════════════════════
@@ -1178,7 +1178,20 @@ for donors
 ## 📜 Changelog
 
 <details>
-<summary><b>v4.2.4</b> — Audit Fixes ← CURRENT</summary>
+<summary><b>v4.2.5</b> — SSH/Caddy Safety ← CURRENT</summary>
+
+**🛡️ Safer install and Caddy handling:**
+- SSH Hardening no longer runs by default during install
+- New `ssh-rescue` mode to restore SSH: port 22, root/password temporarily allowed
+- Generated Caddyfile is formatted and validated with `caddy validate`
+- Caddy update builds the new binary before restarting the service
+- User deletion now matches the exact login, avoiding regex/substring mistakes
+- Telegram `/adduser`, `/deluser`, `/qr`, `/deladmin` use safer validation
+
+</details>
+
+<details>
+<summary><b>v4.2.4</b> — Audit Fixes</summary>
 
 **🐛 Final security audit:**
 - 🔴 Fixed broken quotes `""${var}""` in DNS whitelist (real bug!)

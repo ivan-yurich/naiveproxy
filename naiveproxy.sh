@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-#   NaiveProxy Manager v4.2.4 — by Иван Юрьевич
+#   NaiveProxy Manager v4.2.5 — by Иван Юрьевич
 #   Стек: Caddy 2 + klzgrad/forwardproxy@naive
 #   ОС: Ubuntu 20.04 / 22.04 / 24.04
 #
@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-VERSION="4.2.4"
+VERSION="4.2.5"
 LANG_UI="${NAIVEPROXY_LANG:-ru}"  # ru или en — export NAIVEPROXY_LANG=en
 GITHUB_RAW="https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/naiveproxy.sh"
 GITHUB_API="https://api.github.com/repos/ivan-yurich/naiveproxy/releases/latest"
@@ -175,7 +175,7 @@ cmd_ssh_hardening() {
 
     local sshd_config="/etc/ssh/sshd_config"
     local current_port
-    current_port=$(grep -E "^Port " "$sshd_config" 2>/dev/null | awk '{print $2}' || echo "22")
+    current_port=$(current_ssh_port)
 
     echo -e "  Текущий SSH порт: ${CYAN}${current_port}${RESET}"
     echo
@@ -335,14 +335,24 @@ cmd_ssh_hardening() {
     cp "$sshd_config" "$sshd_backup"
     ok "Бэкап sshd_config создан: $sshd_backup"
 
-    # Применяем настройки
-    local disable_root="yes"
-    local disable_pass="yes"
+    # Безопасные значения по умолчанию: не отключаем текущие способы входа без явного согласия.
+    local permit_root="yes"
+    local password_auth="yes"
 
-    # Если нет ключа для нового пользователя — не отключаем пароль
+    if [[ "$target_user" != "root" ]]; then
+        echo -ne "${YELLOW}Запретить SSH вход root? [y/N]: ${RESET}"
+        read -r ans_disable_root
+        [[ "${ans_disable_root,,}" == "y" ]] && permit_root="no"
+    else
+        warn "Hardening выполняется для root — root вход оставляю включённым, чтобы не потерять доступ."
+    fi
+
     if [[ ! -f "$auth_keys" ]] || ! grep -q "ssh-" "$auth_keys" 2>/dev/null; then
         warn "Нет SSH-ключа — пароль оставляем включённым"
-        disable_pass="no"
+    else
+        echo -ne "${YELLOW}Отключить SSH вход по паролю? [y/N]: ${RESET}"
+        read -r ans_disable_pass
+        [[ "${ans_disable_pass,,}" == "y" ]] && password_auth="no"
     fi
 
     # Меняем настройки
@@ -359,29 +369,23 @@ cmd_ssh_hardening() {
             sed -i "s/^#*Port .*/Port ${new_ssh_port}/" "$cfg"
         fi
     done
-    # Ubuntu 22.04+ использует ssh.socket — нужно отключить
-    if systemctl is-enabled ssh.socket &>/dev/null; then
-        info "Отключаю ssh.socket (Ubuntu 22.04+ override)..."
-        systemctl disable ssh.socket --quiet 2>/dev/null || true
-        systemctl stop ssh.socket 2>/dev/null || true
-    fi
     # PermitRootLogin
     if grep -qE "^#?PermitRootLogin " "$sshd_config"; then
-        sed -i "s/^#*PermitRootLogin .*/PermitRootLogin ${disable_root}/" "$sshd_config"
+        sed -i "s/^#*PermitRootLogin .*/PermitRootLogin ${permit_root}/" "$sshd_config"
     else
-        echo "PermitRootLogin ${disable_root}" >> "$sshd_config"
+        echo "PermitRootLogin ${permit_root}" >> "$sshd_config"
     fi
     # PasswordAuthentication
     if grep -qE "^#?PasswordAuthentication " "$sshd_config"; then
-        sed -i "s/^#*PasswordAuthentication .*/PasswordAuthentication ${disable_pass}/" "$sshd_config"
+        sed -i "s/^#*PasswordAuthentication .*/PasswordAuthentication ${password_auth}/" "$sshd_config"
     else
-        echo "PasswordAuthentication ${disable_pass}" >> "$sshd_config"
+        echo "PasswordAuthentication ${password_auth}" >> "$sshd_config"
     fi
     # Также в conf.d файлах (Ubuntu 22.04+)
     for cfg in /etc/ssh/sshd_config.d/*.conf; do
         [[ ! -f "$cfg" ]] && continue
-        sed -i "s/^#*PermitRootLogin .*/PermitRootLogin ${disable_root}/" "$cfg" 2>/dev/null || true
-        sed -i "s/^#*PasswordAuthentication .*/PasswordAuthentication ${disable_pass}/" "$cfg" 2>/dev/null || true
+        sed -i "s/^#*PermitRootLogin .*/PermitRootLogin ${permit_root}/" "$cfg" 2>/dev/null || true
+        sed -i "s/^#*PasswordAuthentication .*/PasswordAuthentication ${password_auth}/" "$cfg" 2>/dev/null || true
     done
     sed -i "s/^#*PubkeyAuthentication .*/PubkeyAuthentication yes/" "$sshd_config"
     sed -i "s/^#*AuthorizedKeysFile .*/AuthorizedKeysFile .ssh\/authorized_keys/" "$sshd_config"
@@ -414,14 +418,35 @@ cmd_ssh_hardening() {
     # Открываем новый порт ПЕРЕД закрытием старого
     ufw allow "${new_ssh_port}/tcp" comment "SSH hardened" >/dev/null 2>&1 || true
 
-    # Закрываем старый порт только если он изменился
+    # Старый порт не закрываем автоматически: это частая причина lockout.
     if [[ "$new_ssh_port" != "$current_port" ]]; then
-        ufw delete allow "${current_port}/tcp" >/dev/null 2>&1 || true
-        ufw delete allow ssh >/dev/null 2>&1 || true
-        ok "Старый SSH порт ${current_port} закрыт в UFW"
+        warn "Старый SSH порт ${current_port} оставлен открытым в UFW как аварийный запас."
+        warn "Закрой его вручную только после проверки входа на порт ${new_ssh_port}."
     fi
 
     ok "Новый SSH порт ${new_ssh_port} открыт в UFW"
+
+    # Ubuntu 22.04+ может использовать ssh.socket. Переключаемся на ssh.service
+    # и сразу перезапускаем SSH, до установки дополнительных пакетов.
+    local ssh_socket_was_enabled="no"
+    if systemctl is-enabled ssh.socket &>/dev/null; then
+        ssh_socket_was_enabled="yes"
+        info "Отключаю ssh.socket (Ubuntu 22.04+ override) и включаю ssh.service..."
+        systemctl enable ssh --quiet 2>/dev/null || systemctl enable sshd --quiet 2>/dev/null || true
+        systemctl disable --now ssh.socket --quiet 2>/dev/null || true
+    fi
+
+    if restart_ssh_service; then
+        ok "SSH сервис перезапущен с новыми настройками"
+    else
+        err "Не удалось перезапустить ssh/sshd. Откатываю sshd_config..."
+        cp "$sshd_backup" "$sshd_config" 2>/dev/null || true
+        if [[ "$ssh_socket_was_enabled" == "yes" ]]; then
+            systemctl enable --now ssh.socket --quiet 2>/dev/null || true
+        fi
+        restart_ssh_service || true
+        return 1
+    fi
 
     # Fail2Ban
     apt-get update -qq 2>/dev/null || true
@@ -477,10 +502,6 @@ UEOF
     ok "  SSH DDoS: 10 попыток за 1 мин → бан 7 дней"
     ok "  Рецидивисты: → бан 30 дней"
 
-    # ── Перезапуск sshd ───────────────────────────────────────
-    systemctl restart sshd
-    ok "sshd перезапущен с новыми настройками"
-
     # Маркер
     mkdir -p "$CONFIG_DIR"
     cat > "$SSH_HARDENING_DONE" << EOF
@@ -498,8 +519,8 @@ EOF
     hr
     echo -e "  ${BOLD}Новый SSH порт:${RESET}  ${CYAN}${new_ssh_port}${RESET}"
     echo -e "  ${BOLD}Пользователь:${RESET}   ${CYAN}${target_user}${RESET}"
-    echo -e "  ${BOLD}Root вход:${RESET}      ${RED}запрещён${RESET}"
-    echo -e "  ${BOLD}Пароль вход:${RESET}    $([ "$disable_pass" = "yes" ] && echo -e "${RED}запрещён${RESET}" || echo -e "${YELLOW}разрешён${RESET}")"
+    echo -e "  ${BOLD}Root вход:${RESET}      $([ "$permit_root" = "no" ] && echo -e "${RED}запрещён${RESET}" || echo -e "${YELLOW}разрешён${RESET}")"
+    echo -e "  ${BOLD}Пароль вход:${RESET}    $([ "$password_auth" = "no" ] && echo -e "${RED}запрещён${RESET}" || echo -e "${YELLOW}разрешён${RESET}")"
     echo -e "  ${BOLD}Fail2Ban:${RESET}       ${GREEN}активен${RESET}"
     echo
     echo -e "  ${BOLD}Подключение:${RESET}"
@@ -512,6 +533,39 @@ EOF
 🚪 SSH порт: <code>${new_ssh_port}</code>
 🛡 Fail2Ban: включён
 🕐 $(date '+%Y-%m-%d %H:%M:%S')"
+}
+
+cmd_ssh_rescue() {
+    hr
+    echo -e "${BOLD}${YELLOW}  SSH Rescue Mode${RESET}"
+    hr
+    warn "Включаю временный аварийный SSH-доступ на 22 порту."
+    warn "После восстановления зайди по SSH и заново настрой hardening."
+
+    mkdir -p /etc/ssh/sshd_config.d
+    cat > /etc/ssh/sshd_config.d/99-naiveproxy-rescue.conf <<'EOF'
+Port 22
+PermitRootLogin yes
+PasswordAuthentication yes
+PubkeyAuthentication yes
+EOF
+
+    systemctl disable --now ssh.socket >/dev/null 2>&1 || true
+    ufw allow 22/tcp comment "SSH rescue" >/dev/null 2>&1 || true
+    ufw allow 80/tcp comment "NaiveProxy ACME" >/dev/null 2>&1 || true
+    ufw allow 443/tcp comment "NaiveProxy HTTPS" >/dev/null 2>&1 || true
+    ufw allow 443/udp comment "NaiveProxy HTTP3" >/dev/null 2>&1 || true
+    systemctl stop fail2ban >/dev/null 2>&1 || true
+
+    if sshd -t; then
+        restart_ssh_service
+        ok "SSH rescue включён: порт 22, root/password временно разрешены"
+        warn "Если пароль root неизвестен, задай его командой: passwd root"
+        ss -tlnp | grep -E ':(22)\s' || true
+    else
+        err "sshd_config не прошёл проверку"
+        return 1
+    fi
 }
 
 
@@ -544,6 +598,35 @@ check_os() {
 
 check_installed() {
     [[ -f "$CADDY_BIN" && -f "$CADDYFILE" ]]
+}
+
+is_valid_domain() {
+    [[ "${1:-}" =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$ ]]
+}
+
+is_valid_proxy_user() {
+    [[ "${1:-}" =~ ^[a-zA-Z0-9_-]{2,32}$ ]]
+}
+
+is_valid_proxy_pass() {
+    [[ "${1:-}" =~ ^[a-zA-Z0-9_-]{8,64}$ ]]
+}
+
+current_ssh_port() {
+    local port
+    port=$(sshd -T 2>/dev/null | awk '$1 == "port" {print $2; exit}' || true)
+    [[ -n "$port" ]] || port="22"
+    printf '%s\n' "$port"
+}
+
+restart_ssh_service() {
+    if systemctl restart ssh 2>/dev/null; then
+        return 0
+    fi
+    if systemctl restart sshd 2>/dev/null; then
+        return 0
+    fi
+    return 1
 }
 
 # ─── Конфиг ──────────────────────────────────────────────────
@@ -580,7 +663,6 @@ EMAIL="${EMAIL:-}"
 TG_TOKEN="${TG_TOKEN:-}"
 TG_CHAT_ID="${TG_CHAT_ID:-}"
 TG_ADMINS="${TG_ADMINS:-}"  # Доп. администраторы через запятую: id1,id2,id3
-TG_ADMINS="${TG_ADMINS:-}"
 INSTALLED_AT="$(date '+%Y-%m-%d %H:%M:%S')"
 EOF
     chmod 600 "$CONFIG_FILE"
@@ -597,6 +679,14 @@ load_users() {
 
 get_users() {
     grep -v '^#\|^[[:space:]]*$' "$USERS_FILE" 2>/dev/null || true
+}
+
+get_user_pass() {
+    local lookup_user="$1"
+    while IFS=: read -r user pass; do
+        [[ "$user" == "$lookup_user" ]] && { printf '%s\n' "$pass"; return 0; }
+    done < <(get_users)
+    return 1
 }
 
 # ─── Telegram ────────────────────────────────────────────────
@@ -878,6 +968,7 @@ install_deps() {
 build_caddy() {
     info "Собираю Caddy с forwardproxy (naive)..."
     info "Занимает 5-15 минут, не прерывай..."
+    local output_bin="${1:-$CADDY_BIN}"
 
     export PATH="/usr/local/go/bin:$PATH"
     export GOPATH="/root/go"
@@ -889,8 +980,9 @@ build_caddy() {
     go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
 
     # Клонируем naive ветку напрямую — единственный надёжный способ
-    local fp_dir="/tmp/klzgrad-forwardproxy"
-    [[ -n "${fp_dir}" ]] && rm -rf "${fp_dir}"
+    local fp_dir
+    fp_dir=$(mktemp -d /tmp/naiveproxy_forwardproxy_XXXXXX)
+    trap 'rm -rf "${fp_dir:-}" 2>/dev/null' RETURN
     info "Клонирую klzgrad/forwardproxy@naive..."
     if ! git clone -b naive --depth 1         https://github.com/klzgrad/forwardproxy.git "$fp_dir" 2>/dev/null; then
         err "Не удалось клонировать forwardproxy. Проверь интернет."
@@ -905,14 +997,14 @@ build_caddy() {
     # Собираем именно эту версию Caddy с локальным forwardproxy
     "$GOPATH/bin/xcaddy" build "${caddy_ver}" \
         --with github.com/caddyserver/forwardproxy="$fp_dir" \
-        --output "$CADDY_BIN"
+        --output "$output_bin"
 
-    chmod +x "$CADDY_BIN"
+    chmod +x "$output_bin"
 
     # Проверяем наличие naive padding в бинарнике
     if command -v strings &>/dev/null; then
         local _pc
-        _pc=$(strings "$CADDY_BIN" 2>/dev/null | grep -cE "^(Padding|SetPadding|WithPadding)$" || true)
+        _pc=$(strings "$output_bin" 2>/dev/null | grep -cE "^(Padding|SetPadding|WithPadding)$" || true)
         _pc="${_pc//[^0-9]/}"; _pc="${_pc:-0}"
         if [[ "${_pc}" -ge 2 ]]; then
             ok "Naive padding модуль подтверждён ✓"
@@ -921,8 +1013,7 @@ build_caddy() {
         fi
     fi
 
-    [[ -n "${fp_dir}" ]] && rm -rf "${fp_dir}"
-    ok "Caddy собран: $("$CADDY_BIN" version 2>/dev/null | head -1)"
+    ok "Caddy собран: $("$output_bin" version 2>/dev/null | head -1)"
 }
 
 
@@ -936,6 +1027,11 @@ write_caddyfile_multi() {
     local auth_blocks=""
     while IFS=: read -r u p; do
         [[ -z "$u" ]] && continue
+        if ! is_valid_proxy_user "$u" || ! is_valid_proxy_pass "$p"; then
+            err "Небезопасная запись пользователя в $USERS_FILE: $u"
+            err "Логин: 2-32 символа [A-Za-z0-9_-], пароль: 8-64 символа [A-Za-z0-9_-]"
+            return 1
+        fi
         auth_blocks+="        basic_auth ${u} ${p}"$'\n'
     done < <(get_users)
 
@@ -963,6 +1059,10 @@ EOF
     for dom in "${domains_list[@]}"; do
         dom="${dom// /}"  # убираем пробелы
         [[ -z "$dom" ]] && continue
+        if ! is_valid_domain "$dom"; then
+            err "Неверный домен в конфиге: $dom"
+            return 1
+        fi
         cat >> "$CADDYFILE" <<EOF
 ${dom}:443 {
     tls ${EMAIL}
@@ -989,6 +1089,14 @@ EOF
     done
 
     chmod 600 "$CADDYFILE"
+    if [[ -x "$CADDY_BIN" ]]; then
+        "$CADDY_BIN" fmt --overwrite "$CADDYFILE" >/dev/null 2>&1 || true
+        "$CADDY_BIN" validate --config "$CADDYFILE" >/dev/null 2>&1 || {
+            err "Сгенерированный Caddyfile не прошёл validate"
+            "$CADDY_BIN" validate --config "$CADDYFILE" || true
+            return 1
+        }
+    fi
     local dom_count
     dom_count=$(echo "${DOMAINS:-${DOMAIN:-}}" | tr ',' '\n' | grep -c '[a-z]' || echo 1)
     ok "Caddyfile обновлён (доменов: ${dom_count}, пользователей: $(get_users | wc -l))"
@@ -1219,11 +1327,20 @@ write_caddyfile() {
     mkdir -p "$CADDY_DIR" "$WEBROOT" "$LOG_DIR"
 
     install_camouflage_page
+    if ! is_valid_domain "${DOMAIN:-}"; then
+        err "Неверный домен в конфиге: ${DOMAIN:-}"
+        return 1
+    fi
 
     # Собираем блоки basic_auth
     local auth_blocks=""
     while IFS=: read -r u p; do
         [[ -z "$u" ]] && continue
+        if ! is_valid_proxy_user "$u" || ! is_valid_proxy_pass "$p"; then
+            err "Небезопасная запись пользователя в $USERS_FILE: $u"
+            err "Логин: 2-32 символа [A-Za-z0-9_-], пароль: 8-64 символа [A-Za-z0-9_-]"
+            return 1
+        fi
         auth_blocks+="        basic_auth ${u} ${p}"$'\n'
     done < <(get_users)
 
@@ -1264,6 +1381,14 @@ ${auth_blocks}        hide_ip
 EOF
 
     chmod 600 "$CADDYFILE"
+    if [[ -x "$CADDY_BIN" ]]; then
+        "$CADDY_BIN" fmt --overwrite "$CADDYFILE" >/dev/null 2>&1 || true
+        "$CADDY_BIN" validate --config "$CADDYFILE" >/dev/null 2>&1 || {
+            err "Сгенерированный Caddyfile не прошёл validate"
+            "$CADDY_BIN" validate --config "$CADDYFILE" || true
+            return 1
+        }
+    fi
     ok "Caddyfile обновлён (пользователей: $(get_users | wc -l))"
 }
 
@@ -1436,8 +1561,7 @@ prompt_params() {
     while true; do
         echo -ne "${CYAN}Домен (например, proxy.example.com): ${RESET}"
         read -r DOMAIN
-        # Валидация: только буквы, цифры, дефис, точка
-        if [[ -n "$DOMAIN" && "$DOMAIN" =~ ^[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?)*$ ]]; then
+        if is_valid_domain "$DOMAIN"; then
             break
         fi
         err "Неверный формат домена. Только буквы, цифры, дефис, точка."
@@ -1450,16 +1574,24 @@ prompt_params() {
         err "Введи корректный email"
     done
 
-    echo -ne "${CYAN}Логин первого пользователя (Enter = naive): ${RESET}"
-    read -r first_user
-    first_user="${first_user:-naive}"
+    while true; do
+        echo -ne "${CYAN}Логин первого пользователя (Enter = naive): ${RESET}"
+        read -r first_user
+        first_user="${first_user:-naive}"
+        is_valid_proxy_user "$first_user" && break
+        err "Логин: 2-32 символа, только A-Z a-z 0-9 _ -"
+    done
 
-    echo -ne "${CYAN}Пароль (Enter = случайный): ${RESET}"
-    read -r first_pass
-    if [[ -z "$first_pass" ]]; then
-        first_pass=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | head -c 20)
-        info "Сгенерирован пароль: $first_pass"
-    fi
+    while true; do
+        echo -ne "${CYAN}Пароль (Enter = случайный): ${RESET}"
+        read -r first_pass
+        if [[ -z "$first_pass" ]]; then
+            first_pass=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9_-' | head -c 20)
+            info "Сгенерирован пароль: $first_pass"
+        fi
+        is_valid_proxy_pass "$first_pass" && break
+        err "Пароль: 8-64 символа, только A-Z a-z 0-9 _ -"
+    done
 
     load_users
     echo "${first_user}:${first_pass}" > "$USERS_FILE"
@@ -1585,20 +1717,21 @@ cmd_users() {
                 echo -ne "${CYAN}Новый логин: ${RESET}"; read -r new_user
                 [[ -z "$new_user" ]] && { err "Логин не может быть пустым"; continue; }
                 # Валидация: только буквы, цифры, дефис, подчёркивание (защита от sed-инъекции)
-                if [[ ! "$new_user" =~ ^[a-zA-Z0-9_-]+$ ]]; then
-                    err "Логин содержит недопустимые символы. Только: a-z A-Z 0-9 _ -"
+                if ! is_valid_proxy_user "$new_user"; then
+                    err "Логин: 2-32 символа, только A-Z a-z 0-9 _ -"
                     continue
                 fi
-                if get_users | grep -q "^${new_user}:"; then
+                if get_user_pass "$new_user" >/dev/null; then
                     err "Пользователь $new_user уже существует"
                     continue
                 fi
                 echo -ne "${CYAN}Пароль (Enter = случайный): ${RESET}"; read -r new_pass
                 if [[ -z "$new_pass" ]]; then
-                    new_pass=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | head -c 20)
+                    new_pass=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9_-' | head -c 20)
                     info "Сгенерирован пароль: $new_pass"
-                elif [[ "$new_pass" == *":"* ]]; then
-                    err "Пароль не может содержать символ ':'"
+                fi
+                if ! is_valid_proxy_pass "$new_pass"; then
+                    err "Пароль: 8-64 символа, только A-Z a-z 0-9 _ -"
                     continue
                 fi
                 printf '%s:%s\n' "${new_user}" "${new_pass}" >> "$USERS_FILE"
@@ -1612,13 +1745,12 @@ cmd_users() {
                 ;;
             3)
                 echo -ne "${CYAN}Логин для удаления: ${RESET}"; read -r del_user
-                if ! get_users | grep -q "^${del_user}:"; then
+                if ! is_valid_proxy_user "$del_user" || ! get_user_pass "$del_user" >/dev/null; then
                     err "Пользователь $del_user не найден"
                     continue
                 fi
                 backup_config
-                # grep -F для фиксированной строки — защита от regex в имени
-                grep -vF "${del_user}:" "$USERS_FILE" > "${USERS_FILE}.tmp" && mv "${USERS_FILE}.tmp" "$USERS_FILE" || true
+                awk -F: -v user="${del_user}" '$1 != user' "$USERS_FILE" > "${USERS_FILE}.tmp" && mv "${USERS_FILE}.tmp" "$USERS_FILE" || true
                 write_caddyfile
                 systemctl reload caddy 2>/dev/null || systemctl restart caddy
                 ok "Пользователь $del_user удалён"
@@ -1627,15 +1759,16 @@ cmd_users() {
                 ;;
             4)
                 echo -ne "${CYAN}Логин: ${RESET}"; read -r chg_user
-                if ! get_users | grep -q "^${chg_user}:"; then
+                if ! is_valid_proxy_user "$chg_user" || ! get_user_pass "$chg_user" >/dev/null; then
                     err "Пользователь $chg_user не найден"; continue
                 fi
                 echo -ne "${CYAN}Новый пароль (Enter = случайный): ${RESET}"; read -r chg_pass
                 if [[ -z "$chg_pass" ]]; then
-                    chg_pass=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | head -c 20)
+                    chg_pass=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9_-' | head -c 20)
                     info "Сгенерирован пароль: $chg_pass"
-                elif [[ "$chg_pass" == *":"* ]]; then
-                    err "Пароль не может содержать символ ':'"; continue
+                fi
+                if ! is_valid_proxy_pass "$chg_pass"; then
+                    err "Пароль: 8-64 символа, только A-Z a-z 0-9 _ -"; continue
                 fi
                 backup_config
                 # Безопасная замена без sed regex
@@ -1732,7 +1865,6 @@ cmd_install() {
         echo -ne "${YELLOW}Переустановить? [y/N]: ${RESET}"
         read -r ans
         [[ "${ans,,}" == "y" ]] || return
-        systemctl stop caddy 2>/dev/null || true
     fi
 
     # ── Шаг 0: Обновление системы ────────────────────────────
@@ -1746,9 +1878,10 @@ cmd_install() {
 
     # ── Шаг 1: SSH Hardening ─────────────────────────────────
     if [[ ! -f "$SSH_HARDENING_DONE" ]]; then
-        echo -ne "${YELLOW}Выполнить SSH Hardening? [Y/n]: ${RESET}"
+        warn "SSH Hardening может сменить порт и правила входа. По умолчанию пропускаю, чтобы не потерять SSH."
+        echo -ne "${YELLOW}Выполнить SSH Hardening сейчас? [y/N]: ${RESET}"
         read -r ans
-        [[ "${ans,,}" != "n" ]] && cmd_ssh_hardening
+        [[ "${ans,,}" == "y" ]] && cmd_ssh_hardening
     else
         info "SSH уже настроен: $(grep SSH_PORT "$SSH_HARDENING_DONE" | cut -d= -f2)"
     fi
@@ -2625,7 +2758,7 @@ ${user_list}"
             fi
 
             # Валидация логина
-            if ! [[ "${new_user}" =~ ^[a-zA-Z0-9_-]{2,32}$ ]]; then
+            if ! is_valid_proxy_user "${new_user}"; then
                 tg_reply "${chat_id}" "❌ Неверный логин <code>${new_user}</code>
 Только буквы, цифры, _, - (2-32 символа)"
                 return
@@ -2636,16 +2769,13 @@ ${user_list}"
                 # Авто-генерация
                 new_pass=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9_-' | head -c 20)
                 tg_reply "${chat_id}" "🔑 Пароль не указан, сгенерирован автоматически"
-            elif [[ "${new_pass}" == *":"* ]]; then
-                tg_reply "${chat_id}" "❌ Пароль не может содержать ':'"
-                return
-            elif [[ ${#new_pass} -lt 8 ]]; then
-                tg_reply "${chat_id}" "❌ Пароль слишком короткий (минимум 8 символов)
-Текущий: ${#new_pass} символов"
+            elif ! is_valid_proxy_pass "${new_pass}"; then
+                tg_reply "${chat_id}" "❌ Неверный пароль
+Только буквы, цифры, _, - (8-64 символа)"
                 return
             fi
 
-            if get_users | grep -q "^${new_user}:"; then
+            if get_user_pass "${new_user}" >/dev/null; then
                 tg_reply "${chat_id}" "❌ Пользователь <code>${new_user}</code> уже существует"
                 return
             fi
@@ -2679,12 +2809,12 @@ ${user_list}"
                 return
             fi
 
-            if ! get_users | grep -q "^${del_user}:"; then
+            if ! is_valid_proxy_user "${del_user}" || ! get_user_pass "${del_user}" >/dev/null; then
                 tg_reply "${chat_id}" "❌ Пользователь <code>${del_user}</code> не найден"
                 return
             fi
 
-            grep -vF "${del_user}:" "${USERS_FILE}" > "${USERS_FILE}.tmp"                 && mv "${USERS_FILE}.tmp" "${USERS_FILE}"
+            awk -F: -v user="${del_user}" '$1 != user' "${USERS_FILE}" > "${USERS_FILE}.tmp"                 && mv "${USERS_FILE}.tmp" "${USERS_FILE}"
             write_caddyfile
             systemctl reload caddy 2>/dev/null || systemctl restart caddy
 
@@ -2705,7 +2835,7 @@ ${user_list}"
             fi
 
             local qr_pass
-            qr_pass=$(get_users | grep "^${qr_user}:" | cut -d: -f2)
+            qr_pass=$(get_user_pass "${qr_user}" || true)
 
             if [[ -z "${qr_pass}" ]]; then
                 tg_reply "${chat_id}" "❌ Пользователь <code>${qr_user}</code> не найден
@@ -2858,12 +2988,12 @@ ${admin_list}"
 
         /deladmin)
             local del_admin="${args%% *}"
-            if [[ -z "${del_admin}" ]]; then
+            if [[ -z "${del_admin}" || ! "${del_admin}" =~ ^[0-9]{5,15}$ ]]; then
                 tg_reply "${chat_id}" "❌ Использование: /deladmin 123456789"
                 return
             fi
             TG_ADMINS=$(echo "${TG_ADMINS}" | tr ',' '
-'                 | grep -v "^${del_admin}$" | tr '
+'                 | grep -Fvx "${del_admin}" | tr '
 ' ',' | sed 's/,$//')
             save_config
             tg_reply "${chat_id}" "🗑 Администратор <code>${del_admin}</code> удалён"
@@ -3429,6 +3559,26 @@ cmd_restart() {
     fi
 }
 
+cmd_reload() {
+    info "Проверяю Caddyfile перед reload..."
+    if ! "$CADDY_BIN" validate --config "$CADDYFILE" >/dev/null 2>&1; then
+        err "Caddyfile содержит ошибку. Reload отменён."
+        "$CADDY_BIN" validate --config "$CADDYFILE" || true
+        return 1
+    fi
+
+    "$CADDY_BIN" fmt --overwrite "$CADDYFILE" >/dev/null 2>&1 || true
+    info "Применяю конфиг без полного перезапуска Caddy..."
+    if systemctl reload caddy; then
+        ok "Caddy reload выполнен без разрыва активных соединений"
+        load_config; tg_alert_up
+    else
+        err "Reload не удался. Caddy не перезапускал, смотри лог:"
+        journalctl -u caddy -n 20 --no-pager
+        return 1
+    fi
+}
+
 # ─── ОБНОВЛЕНИЕ ──────────────────────────────────────────────
 cmd_update() {
     hr
@@ -3442,9 +3592,15 @@ cmd_update() {
     info "Текущая версия: $old_ver"
 
     backup_config
-    systemctl stop caddy
-    build_caddy
-    systemctl start caddy
+
+    local tmp_caddy
+    tmp_caddy=$(mktemp /tmp/naiveproxy_caddy_XXXXXX)
+    rm -f "$tmp_caddy"
+    trap 'rm -f "${tmp_caddy:-}" 2>/dev/null' RETURN
+
+    build_caddy "$tmp_caddy"
+    install -m 755 "$tmp_caddy" "$CADDY_BIN"
+    systemctl restart caddy
 
     local new_ver
     new_ver=$("$CADDY_BIN" version 2>/dev/null | head -1 || echo "unknown")
@@ -3523,9 +3679,10 @@ show_menu() {
     echo -e "   ${BOLD}13)${RESET} 🔄 Обновить систему"
     echo -e "   ${BOLD}14)${RESET} ⬆️  Обновить скрипт
    ${BOLD}15)${RESET} 🎭 Обновить камуфляж"
+    echo -e "   ${BOLD}19)${RESET} ♻️  Reload Caddy без разрыва"
     echo -e "   ${BOLD}0)${RESET}  Выход"
     hr
-    echo -ne "${CYAN}Выбор [0-18]: ${RESET}"
+    echo -ne "${CYAN}Выбор [0-19]: ${RESET}"
 }
 
 # ─── MAIN ────────────────────────────────────────────────────
@@ -3539,6 +3696,7 @@ main() {
             install)   cmd_install ;;
             status)    cmd_status ;;
             config)    print_client_config ;;
+            reload)    cmd_reload ;;
             restart)   cmd_restart ;;
             update)    cmd_update ;;
             remove)    cmd_remove ;;
@@ -3547,6 +3705,7 @@ main() {
             users)     cmd_users ;;
             tg-stats)      tg_send_stats; ok "Отправлено" ;;
             ssh-hardening) cmd_ssh_hardening ;;
+            ssh-rescue)    cmd_ssh_rescue ;;
             sysupdate)     cmd_sysupdate ;;
             cert)        load_config; check_cert "${DOMAIN:-}" ;;
             domains)     load_config; cmd_domains ;;
@@ -3568,7 +3727,7 @@ main() {
                 echo "GitHub:   github.com/ivan-yurich/naiveproxy"
                 ;;
             *) err "Неизвестная команда: $1"
-               echo "Доступные: install status config restart update remove logs monitor users tg-stats ssh-hardening sysupdate cert domains self-update version camouflage"
+               echo "Доступные: install status config reload restart update remove logs monitor users tg-stats ssh-hardening ssh-rescue sysupdate cert domains self-update version camouflage"
                exit 1 ;;
         esac
         exit 0
@@ -3600,6 +3759,7 @@ main() {
             16) cmd_diagnose ;;
             17) cmd_dns_menu ;;
             18) cmd_donate ;;
+            19) cmd_reload ;;
             0)  echo -e "${GREEN}Пока!${RESET}"; exit 0 ;;
             *)  warn "Неверный выбор" ;;
         esac
