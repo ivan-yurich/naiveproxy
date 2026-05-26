@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================================
-#   NaiveProxy Manager v4.2.7 — by Иван Юрьевич
-#   Стек: Caddy 2 + klzgrad/forwardproxy@naive
+#   NaiveProxy Manager v5.0.0 — by Иван Юрьевич
+#   Стек: Caddy 2 + klzgrad/forwardproxy@naive + Hysteria 2
 #   ОС: Ubuntu 20.04 / 22.04 / 24.04
 #
 #   Copyright (C) 2026 Иван Юрьевич (Ivan Yurievich)
@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-VERSION="4.2.7"
+VERSION="5.0.0"
 LANG_UI="${NAIVEPROXY_LANG:-ru}"  # ru или en — export NAIVEPROXY_LANG=en
 GITHUB_RAW="https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/naiveproxy.sh"
 GITHUB_API="https://api.github.com/repos/ivan-yurich/naiveproxy/releases/latest"
@@ -74,6 +74,9 @@ CADDY_BIN="/usr/local/bin/caddy"
 CADDY_SERVICE="/etc/systemd/system/caddy.service"
 CADDYFILE="/etc/caddy/Caddyfile"
 CADDY_DIR="/etc/caddy"
+HYSTERIA_BIN="/usr/local/bin/hysteria"
+HYSTERIA_SERVICE="/etc/systemd/system/hysteria.service"
+HYSTERIA_CONFIG="/etc/naiveproxy/hysteria.yaml"
 WEBROOT="/var/www/html"
 CONFIG_FILE="/etc/naiveproxy/naive.conf"
 CONFIG_DIR="/etc/naiveproxy"
@@ -629,6 +632,34 @@ restart_ssh_service() {
     return 1
 }
 
+detect_hysteria_arch() {
+    local arch
+    arch=$(uname -m)
+    case "$arch" in
+        x86_64|amd64) echo "amd64" ;;
+        aarch64|arm64) echo "arm64" ;;
+        armv7l|armv7*) echo "armv7" ;;
+        i386|i686) echo "386" ;;
+        *) err "Архитектура $arch не поддерживается Hysteria 2 автоустановкой"; return 1 ;;
+    esac
+}
+
+find_caddy_cert() {
+    local domain="${1:-${DOMAIN:-}}"
+    [[ -z "$domain" ]] && return 1
+    find /root/.local/share/caddy/certificates -type f -path "*/${domain}/${domain}.crt" 2>/dev/null | head -1
+}
+
+find_caddy_key() {
+    local domain="${1:-${DOMAIN:-}}"
+    [[ -z "$domain" ]] && return 1
+    find /root/.local/share/caddy/certificates -type f -path "*/${domain}/${domain}.key" 2>/dev/null | head -1
+}
+
+is_valid_port() {
+    [[ "${1:-}" =~ ^[0-9]+$ ]] && [[ "$1" -ge 1 ]] && [[ "$1" -le 65535 ]]
+}
+
 # ─── Конфиг ──────────────────────────────────────────────────
 load_config() {
     if [[ -f "$CONFIG_FILE" ]]; then
@@ -663,6 +694,9 @@ EMAIL="${EMAIL:-}"
 TG_TOKEN="${TG_TOKEN:-}"
 TG_CHAT_ID="${TG_CHAT_ID:-}"
 TG_ADMINS="${TG_ADMINS:-}"  # Доп. администраторы через запятую: id1,id2,id3
+HYSTERIA_PORT="${HYSTERIA_PORT:-8443}"
+HYSTERIA_PASSWORD="${HYSTERIA_PASSWORD:-}"
+HYSTERIA_OBFS_PASSWORD="${HYSTERIA_OBFS_PASSWORD:-}"
 INSTALLED_AT="$(date '+%Y-%m-%d %H:%M:%S')"
 EOF
     chmod 600 "$CONFIG_FILE"
@@ -1610,6 +1644,277 @@ EOF
     fi
     ok "Отсканируй QR в NekoBox / Shadowrocket"
     hr
+}
+
+# ─── HYSTERIA 2 ───────────────────────────────────────────────
+install_hysteria_bin() {
+    local arch asset url tmp_bin tmp_hash expected actual
+    arch=$(detect_hysteria_arch) || return 1
+    asset="hysteria-linux-${arch}"
+    url="https://github.com/apernet/hysteria/releases/latest/download/${asset}"
+    tmp_bin=$(mktemp /tmp/hysteria_XXXXXX)
+    tmp_hash=$(mktemp /tmp/hysteria_hashes_XXXXXX)
+    trap 'rm -f "${tmp_bin:-}" "${tmp_hash:-}" 2>/dev/null; trap - RETURN' RETURN
+
+    info "Скачиваю Hysteria 2 (${asset})..."
+    if ! curl -fsSL --retry 3 --connect-timeout 15 --max-time 180 "$url" -o "$tmp_bin"; then
+        err "Не удалось скачать Hysteria 2: $url"
+        return 1
+    fi
+
+    if curl -fsSL --connect-timeout 10 --max-time 30 \
+        "https://github.com/apernet/hysteria/releases/latest/download/hashes.txt" -o "$tmp_hash" 2>/dev/null; then
+        expected=$(grep -F "$asset" "$tmp_hash" | awk '{for(i=1;i<=NF;i++) if($i ~ /^[a-f0-9]{64}$/){print $i; exit}}' | head -1)
+        if [[ -n "$expected" ]]; then
+            actual=$(sha256sum "$tmp_bin" | awk '{print $1}')
+            if [[ "$actual" != "$expected" ]]; then
+                err "SHA256 Hysteria 2 не совпадает. Установка остановлена."
+                return 1
+            fi
+            ok "SHA256 Hysteria 2 подтверждён"
+        else
+            warn "Не нашёл SHA256 для ${asset} в hashes.txt, продолжаю после HTTPS-загрузки"
+        fi
+    else
+        warn "Не удалось скачать hashes.txt, продолжаю после HTTPS-загрузки"
+    fi
+
+    install -m 755 "$tmp_bin" "$HYSTERIA_BIN"
+    ok "Hysteria 2 установлен: $("$HYSTERIA_BIN" version 2>/dev/null | head -1 || echo "$HYSTERIA_BIN")"
+}
+
+write_hysteria_config() {
+    load_config
+    local cert_file key_file
+    cert_file=$(find_caddy_cert "${DOMAIN:-}" || true)
+    key_file=$(find_caddy_key "${DOMAIN:-}" || true)
+
+    if [[ -z "$cert_file" || -z "$key_file" ]]; then
+        err "Не нашёл TLS сертификат Caddy для ${DOMAIN:-не задан}"
+        err "Сначала запусти NaiveProxy и дождись TLS: sudo bash naiveproxy.sh install"
+        return 1
+    fi
+
+    mkdir -p "$CONFIG_DIR"
+    cat > "$HYSTERIA_CONFIG" <<EOF
+# Hysteria 2 работает отдельно от Caddy:
+# TCP/443 -> Caddy NaiveProxy, UDP/${HYSTERIA_PORT:-8443} -> Hysteria 2
+listen: :${HYSTERIA_PORT:-8443}
+
+tls:
+  cert: ${cert_file}
+  key: ${key_file}
+
+auth:
+  type: password
+  password: ${HYSTERIA_PASSWORD}
+
+obfs:
+  type: salamander
+  salamander:
+    password: ${HYSTERIA_OBFS_PASSWORD}
+
+masquerade:
+  type: proxy
+  proxy:
+    url: https://${DOMAIN}/
+    rewriteHost: true
+EOF
+    chmod 600 "$HYSTERIA_CONFIG"
+
+    ok "Hysteria 2 конфиг записан: $HYSTERIA_CONFIG"
+}
+
+write_hysteria_service() {
+    cat > "$HYSTERIA_SERVICE" <<EOF
+[Unit]
+Description=Hysteria 2 Proxy
+Documentation=https://v2.hysteria.network/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=${HYSTERIA_BIN} server -c ${HYSTERIA_CONFIG}
+Restart=on-failure
+RestartSec=5s
+LimitNOFILE=1048576
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    systemctl daemon-reload
+    systemctl enable hysteria --quiet
+    ok "systemd сервис Hysteria 2 настроен"
+}
+
+print_hysteria_client_config() {
+    load_config
+    if [[ -z "${DOMAIN:-}" || -z "${HYSTERIA_PASSWORD:-}" || -z "${HYSTERIA_OBFS_PASSWORD:-}" ]]; then
+        warn "Hysteria 2 ещё не настроен. Запусти: sudo bash naiveproxy.sh hysteria"
+        return 1
+    fi
+
+    local hy2_uri
+    hy2_uri="hy2://${HYSTERIA_PASSWORD}@${DOMAIN}:${HYSTERIA_PORT:-8443}/?sni=${DOMAIN}&obfs=salamander&obfs-password=${HYSTERIA_OBFS_PASSWORD}"
+    hr
+    echo -e "${BOLD}${GREEN}  Клиентский конфиг Hysteria 2${RESET}"
+    hr
+    echo -e "${CYAN}  Стек:${RESET} Hysteria 2 / QUIC / UDP ${HYSTERIA_PORT:-8443}"
+    echo -e "${YELLOW}  Не конфликтует с NaiveProxy:${RESET} Caddy остаётся на TCP/443, Hysteria 2 на UDP/${HYSTERIA_PORT:-8443}"
+    echo
+    echo -e "${CYAN}  URI:${RESET}"
+    echo -e "  ${hy2_uri}"
+    echo
+    echo -e "${CYAN}  sing-box outbound:${RESET}"
+    cat <<EOF
+  {
+    "type": "hysteria2",
+    "tag": "hysteria2-out",
+    "server": "${DOMAIN}",
+    "server_port": ${HYSTERIA_PORT:-8443},
+    "password": "${HYSTERIA_PASSWORD}",
+    "obfs": {
+      "type": "salamander",
+      "password": "${HYSTERIA_OBFS_PASSWORD}"
+    },
+    "tls": {
+      "enabled": true,
+      "server_name": "${DOMAIN}"
+    }
+  }
+EOF
+    echo
+    if command -v qrencode &>/dev/null; then
+        qrencode -t ANSIUTF8 "$hy2_uri"
+    else
+        info "Для QR установи: apt install qrencode"
+    fi
+    hr
+}
+
+cmd_hysteria_install() {
+    load_config
+    if [[ -z "${DOMAIN:-}" ]]; then
+        err "Домен не настроен. Сначала установи NaiveProxy."
+        return 1
+    fi
+
+    hr
+    echo -e "${BOLD}  Установка Hysteria 2${RESET}"
+    hr
+    echo -e "  NaiveProxy остаётся: ${CYAN}TCP/443${RESET}"
+    echo -e "  Hysteria 2 будет:   ${CYAN}UDP/8443${RESET} по умолчанию"
+    echo
+
+    echo -ne "${CYAN}UDP порт Hysteria 2 [8443]: ${RESET}"
+    read -r HYSTERIA_PORT
+    HYSTERIA_PORT="${HYSTERIA_PORT:-8443}"
+    if ! is_valid_port "$HYSTERIA_PORT"; then
+        err "Неверный порт: $HYSTERIA_PORT"
+        return 1
+    fi
+    if [[ "$HYSTERIA_PORT" == "443" ]]; then
+        warn "UDP/443 может конфликтовать с Caddy HTTP/3. Рекомендую 8443."
+        echo -ne "${YELLOW}Оставить UDP/443? [y/N]: ${RESET}"
+        read -r ans
+        [[ "${ans,,}" == "y" ]] || HYSTERIA_PORT="8443"
+    fi
+
+    if ss -ulpn 2>/dev/null | grep -q ":${HYSTERIA_PORT} "; then
+        warn "UDP порт ${HYSTERIA_PORT} уже слушается. Проверь: ss -ulpn | grep ':${HYSTERIA_PORT}'"
+        echo -ne "${YELLOW}Продолжить всё равно? [y/N]: ${RESET}"
+        read -r ans
+        [[ "${ans,,}" == "y" ]] || return 1
+    fi
+
+    HYSTERIA_PASSWORD="${HYSTERIA_PASSWORD:-$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9_-' | head -c 24)}"
+    HYSTERIA_OBFS_PASSWORD="${HYSTERIA_OBFS_PASSWORD:-$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9_-' | head -c 24)}"
+
+    install_hysteria_bin || return 1
+    write_hysteria_config || return 1
+    write_hysteria_service || return 1
+    ufw allow "${HYSTERIA_PORT}/udp" comment "Hysteria2 QUIC" >/dev/null 2>&1 || true
+    save_config
+
+    info "Запускаю Hysteria 2..."
+    if systemctl restart hysteria && sleep 2 && systemctl is-active --quiet hysteria; then
+        ok "Hysteria 2 запущен на UDP/${HYSTERIA_PORT}"
+        print_hysteria_client_config
+    else
+        err "Hysteria 2 не запустился. Лог:"
+        journalctl -u hysteria -n 30 --no-pager
+        return 1
+    fi
+}
+
+cmd_hysteria_status() {
+    load_config
+    hr
+    echo -e "${BOLD}  Hysteria 2 статус${RESET}"
+    hr
+    if [[ -x "$HYSTERIA_BIN" ]]; then
+        ok "Бинарь: $("$HYSTERIA_BIN" version 2>/dev/null | head -1 || echo "$HYSTERIA_BIN")"
+    else
+        warn "Бинарь не установлен: $HYSTERIA_BIN"
+    fi
+    [[ -f "$HYSTERIA_CONFIG" ]] && ok "Конфиг: $HYSTERIA_CONFIG" || warn "Конфиг не найден"
+    systemctl is-active --quiet hysteria 2>/dev/null && ok "Сервис: работает" || warn "Сервис: не работает"
+    ss -ulpn 2>/dev/null | grep ":${HYSTERIA_PORT:-8443} " || warn "UDP/${HYSTERIA_PORT:-8443} не слушается"
+    ufw status 2>/dev/null | grep -E "${HYSTERIA_PORT:-8443}/udp|Status" || true
+    hr
+}
+
+cmd_hysteria_logs() {
+    echo -e "${BOLD}Лог Hysteria 2 (Ctrl+C для выхода):${RESET}"
+    journalctl -u hysteria -n 50 -f
+}
+
+cmd_hysteria_remove() {
+    echo -ne "${RED}Удалить Hysteria 2? [y/N]: ${RESET}"
+    read -r ans
+    [[ "${ans,,}" == "y" ]] || return
+    load_config
+    systemctl stop hysteria 2>/dev/null || true
+    systemctl disable hysteria 2>/dev/null || true
+    rm -f "$HYSTERIA_SERVICE" "$HYSTERIA_BIN" "$HYSTERIA_CONFIG"
+    ufw delete allow "${HYSTERIA_PORT:-8443}/udp" >/dev/null 2>&1 || true
+    HYSTERIA_PORT=""
+    HYSTERIA_PASSWORD=""
+    HYSTERIA_OBFS_PASSWORD=""
+    save_config
+    systemctl daemon-reload
+    ok "Hysteria 2 удалён"
+}
+
+cmd_hysteria_menu() {
+    load_config
+    while true; do
+        hr
+        echo -e "${BOLD}  Hysteria 2${RESET}"
+        hr
+        echo -e "  ${BOLD}1)${RESET} Установить / переустановить"
+        echo -e "  ${BOLD}2)${RESET} Клиентский конфиг + QR"
+        echo -e "  ${BOLD}3)${RESET} Статус"
+        echo -e "  ${BOLD}4)${RESET} Логи"
+        echo -e "  ${BOLD}5)${RESET} Удалить Hysteria 2"
+        echo -e "  ${BOLD}0)${RESET} Назад"
+        hr
+        echo -ne "${CYAN}Выбор: ${RESET}"
+        read -r choice
+        case "$choice" in
+            1) cmd_hysteria_install ;;
+            2) print_hysteria_client_config ;;
+            3) cmd_hysteria_status ;;
+            4) cmd_hysteria_logs ;;
+            5) cmd_hysteria_remove ;;
+            0) return ;;
+            *) err "Неверный выбор" ;;
+        esac
+        echo -ne "${DIM}Enter для продолжения...${RESET}"; read -r _
+    done
 }
 
 # ─── Ввод параметров ─────────────────────────────────────────
@@ -3598,6 +3903,11 @@ cmd_status() {
     load_config
     [[ -n "${DOMAIN:-}" ]] && echo -e "\n  Домен:   $DOMAIN"
     echo -e "  Юзеров: $(get_users | wc -l)"
+    if [[ -f "$HYSTERIA_CONFIG" || -x "$HYSTERIA_BIN" ]]; then
+        systemctl is-active --quiet hysteria 2>/dev/null \
+            && ok "Hysteria 2: работает на UDP/${HYSTERIA_PORT:-8443}" \
+            || warn "Hysteria 2: установлен, но не работает"
+    fi
     check_cert "${DOMAIN:-}"
     echo
     info "Последние 10 строк лога:"
@@ -3679,13 +3989,16 @@ cmd_remove() {
 
     systemctl stop caddy    2>/dev/null || true
     systemctl disable caddy 2>/dev/null || true
-    rm -f "$CADDY_SERVICE" "$CADDY_BIN" "$CADDYFILE"
+    systemctl stop hysteria 2>/dev/null || true
+    systemctl disable hysteria 2>/dev/null || true
+    rm -f "$CADDY_SERVICE" "$CADDY_BIN" "$CADDYFILE" "$HYSTERIA_SERVICE" "$HYSTERIA_BIN" "$HYSTERIA_CONFIG"
     [[ -n "${CONFIG_DIR:-}" && "$CONFIG_DIR" != "/" ]] && rm -rf "$CONFIG_DIR"
     systemctl daemon-reload
 
     ufw delete allow 80/tcp  >/dev/null 2>&1 || true
     ufw delete allow 443/tcp >/dev/null 2>&1 || true
     ufw delete allow 443/udp >/dev/null 2>&1 || true
+    ufw delete allow "${HYSTERIA_PORT:-8443}/udp" >/dev/null 2>&1 || true
 
     ( crontab -l 2>/dev/null | grep -v "naiveproxy\|monitor\.sh" || true ) | crontab -
 
@@ -3719,6 +4032,13 @@ show_menu() {
     local ssh_str="${YELLOW}не настроен${RESET}"
     [[ -f "$SSH_HARDENING_DONE" ]] && ssh_str="${GREEN}$(grep SSH_PORT "$SSH_HARDENING_DONE" 2>/dev/null | cut -d= -f2)${RESET}"
     echo -e "   Telegram: ${tg_str}  |  Юзеров: $(get_users | wc -l)  |  SSH порт: ${ssh_str}"
+    local hysteria_str="${YELLOW}не установлен${RESET}"
+    if [[ -f "$HYSTERIA_CONFIG" || -x "$HYSTERIA_BIN" ]]; then
+        systemctl is-active --quiet hysteria 2>/dev/null \
+            && hysteria_str="${GREEN}UDP/${HYSTERIA_PORT:-8443}${RESET}" \
+            || hysteria_str="${RED}остановлен${RESET}"
+    fi
+    echo -e "   Hysteria 2: ${hysteria_str}"
     hr
     echo -e "   ${BOLD}1)${RESET}  Установить NaiveProxy"
     echo -e "   ${BOLD}2)${RESET}  Статус"
@@ -3740,9 +4060,10 @@ show_menu() {
     echo -e "   ${BOLD}14)${RESET} ⬆️  Обновить скрипт
    ${BOLD}15)${RESET} 🎭 Обновить камуфляж"
     echo -e "   ${BOLD}19)${RESET} ♻️  Reload Caddy без разрыва"
+    echo -e "   ${BOLD}20)${RESET} ⚡ Hysteria 2 (UDP/8443, без конфликта)"
     echo -e "   ${BOLD}0)${RESET}  Выход"
     hr
-    echo -ne "${CYAN}Выбор [0-19]: ${RESET}"
+    echo -ne "${CYAN}Выбор [0-20]: ${RESET}"
 }
 
 # ─── MAIN ────────────────────────────────────────────────────
@@ -3763,6 +4084,12 @@ main() {
             logs)      cmd_logs ;;
             monitor)   cmd_monitor ;;
             users)     cmd_users ;;
+            hysteria|hy2) cmd_hysteria_menu ;;
+            hysteria-install|hy2-install) cmd_hysteria_install ;;
+            hysteria-config|hy2-config) print_hysteria_client_config ;;
+            hysteria-status|hy2-status) cmd_hysteria_status ;;
+            hysteria-logs|hy2-logs) cmd_hysteria_logs ;;
+            hysteria-remove|hy2-remove) cmd_hysteria_remove ;;
             tg-stats)      tg_send_stats; ok "Отправлено" ;;
             ssh-hardening) cmd_ssh_hardening ;;
             ssh-rescue)    cmd_ssh_rescue ;;
@@ -3787,7 +4114,7 @@ main() {
                 echo "GitHub:   github.com/ivan-yurich/naiveproxy"
                 ;;
             *) err "Неизвестная команда: $1"
-               echo "Доступные: install status config reload restart update remove logs monitor users tg-stats ssh-hardening ssh-rescue sysupdate cert domains self-update version camouflage"
+               echo "Доступные: install status config reload restart update remove logs monitor users hysteria hy2 tg-stats ssh-hardening ssh-rescue sysupdate cert domains self-update version camouflage"
                exit 1 ;;
         esac
         exit 0
@@ -3820,6 +4147,7 @@ main() {
             17) cmd_dns_menu ;;
             18) cmd_donate ;;
             19) cmd_reload ;;
+            20) cmd_hysteria_menu ;;
             0)  echo -e "${GREEN}Пока!${RESET}"; exit 0 ;;
             *)  warn "Неверный выбор" ;;
         esac

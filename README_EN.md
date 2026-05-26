@@ -26,7 +26,7 @@
 
 ---
 
-[![Version](https://img.shields.io/badge/version-4.2.7-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
+[![Version](https://img.shields.io/badge/version-5.0.0-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
 [![ShellCheck](https://img.shields.io/badge/ShellCheck-passing-3FB950?style=for-the-badge&logo=gnu-bash&logoColor=white)](https://www.shellcheck.net)
 [![Bash](https://img.shields.io/badge/Bash-5.0+-4EAA25?style=for-the-badge&logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-20.04%2B-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://ubuntu.com)
@@ -97,7 +97,7 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 
 ---
 
-## 🎉 What's new in v4.2.7
+## 🎉 What's new in v5.0.0
 
 <table>
 <tr>
@@ -122,6 +122,8 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 
 ### ⚡ New features
 
+⚡ **Hysteria 2** — separate UDP/8443 without conflicting with Caddy
+📱 **hy2:// configs** + QR for mobile clients
 🤖 **16 bot commands** + multi-admin
 🚫 **DNS blocking** ~1.5M domains + DoT
 🔍 **Diagnostics** — 7 blocks, 18+ checks
@@ -309,7 +311,7 @@ Encrypted queries to Cloudflare and Google
 
 ```
 ──────────────────────────────────────────────────────
-   NaiveProxy Manager v4.2.7  [ENG]
+   NaiveProxy Manager v5.0.0  [ENG]
    Status: ● running  │  Domain: proxy.example.com
    Telegram: connected  │  Users: 3  │  SSH: 52847
 ──────────────────────────────────────────────────────
@@ -502,7 +504,7 @@ sudo bash naiveproxy.sh diagnose
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  🔍 Diagnostics NaiveProxy Manager v4.2.7               │
+│  🔍 Diagnostics NaiveProxy Manager v5.0.0               │
 │  2026-05-23 14:32:18 · proxy.example.com               │
 └─────────────────────────────────────────────────────────┘
 
@@ -542,7 +544,7 @@ sudo bash naiveproxy.sh diagnose
   ✅ journald: no critical errors
 
 [7/7] Version and updates
-  ✅ Script up to date: v4.2.7
+  ✅ Script up to date: v5.0.0
   ✅ SSH Hardening done
 
 ══════════════════════════════════════════════════════════
@@ -1178,7 +1180,19 @@ for donors
 ## 📜 Changelog
 
 <details>
-<summary><b>v4.2.7</b> — Client Config Fix ← CURRENT</summary>
+<summary><b>v5.0.0</b> — Hysteria 2 + NaiveProxy ← CURRENT</summary>
+
+**⚡ Hysteria 2 added without conflicting with NaiveProxy:**
+- NaiveProxy stays on `TCP/443` through Caddy
+- Hysteria 2 runs separately on `UDP/8443`
+- Added install, status, logs, removal and client `hy2://` config
+- Hysteria 2 reuses the Caddy TLS certificate for the current domain
+- A dedicated `Hysteria 2` menu entry is available
+
+</details>
+
+<details>
+<summary><b>v4.2.7</b> — Client Config Fix</summary>
 
 **📱 Client config output fixed:**
 - The server stack is shown explicitly: `Caddy 2 + klzgrad/forwardproxy@naive`

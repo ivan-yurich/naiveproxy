@@ -26,7 +26,7 @@
 
 ---
 
-[![Version](https://img.shields.io/badge/version-4.2.7-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
+[![Version](https://img.shields.io/badge/version-5.0.0-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
 [![ShellCheck](https://img.shields.io/badge/ShellCheck-passing-3FB950?style=for-the-badge&logo=gnu-bash&logoColor=white)](https://www.shellcheck.net)
 [![Bash](https://img.shields.io/badge/Bash-5.0+-4EAA25?style=for-the-badge&logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-20.04%2B-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://ubuntu.com)
@@ -97,7 +97,7 @@ NaiveProxy маскирует трафик под обычный Chrome — не
 
 ---
 
-## 🎉 Что нового в v4.2.7
+## 🎉 Что нового в v5.0.0
 
 <table>
 <tr>
@@ -122,6 +122,8 @@ NaiveProxy маскирует трафик под обычный Chrome — не
 
 ### ⚡ Новые возможности
 
+⚡ **Hysteria 2** — отдельный UDP/8443 без конфликта с Caddy
+📱 **hy2:// конфиги** + QR для мобильных клиентов
 🤖 **16 команд бота** + мультиадмины
 🚫 **DNS блокировка** ~1.5М доменов + DoT
 🔍 **Диагностика** — 7 блоков, 18+ проверок
@@ -309,7 +311,7 @@ IT-блог DevStack — для случайных посетителей
 
 ```
 ──────────────────────────────────────────────────────
-   NaiveProxy Manager v4.2.7  [РУС]
+   NaiveProxy Manager v5.0.0  [РУС]
    Статус: ● работает  │  Домен: proxy.example.com
    Telegram: подключён  │  Юзеров: 3  │  SSH: 52847
 ──────────────────────────────────────────────────────
@@ -502,7 +504,7 @@ sudo bash naiveproxy.sh diagnose
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  🔍 Диагностика NaiveProxy Manager v4.2.7               │
+│  🔍 Диагностика NaiveProxy Manager v5.0.0               │
 │  2026-05-23 14:32:18 · proxy.example.com               │
 └─────────────────────────────────────────────────────────┘
 
@@ -542,7 +544,7 @@ sudo bash naiveproxy.sh diagnose
   ✅ journald: нет критических ошибок
 
 [7/7] Версия и обновления
-  ✅ Скрипт актуален: v4.2.7
+  ✅ Скрипт актуален: v5.0.0
   ✅ SSH Hardening выполнен
 
 ══════════════════════════════════════════════════════════
@@ -1180,7 +1182,19 @@ rm -rf /etc/caddy /etc/naiveproxy /etc/unbound
 ## 📜 Changelog
 
 <details>
-<summary><b>v4.2.7</b> — Client Config Fix ← ТЕКУЩАЯ</summary>
+<summary><b>v5.0.0</b> — Hysteria 2 + NaiveProxy ← ТЕКУЩАЯ</summary>
+
+**⚡ Hysteria 2 добавлена без конфликта с NaiveProxy:**
+- NaiveProxy остаётся на `TCP/443` через Caddy
+- Hysteria 2 работает отдельно на `UDP/8443`
+- Добавлены установка, статус, логи, удаление и клиентский `hy2://` конфиг
+- Hysteria 2 использует TLS-сертификат Caddy для текущего домена
+- В меню появился отдельный пункт `Hysteria 2`
+
+</details>
+
+<details>
+<summary><b>v4.2.7</b> — Client Config Fix</summary>
 
 **📱 Исправлена выдача клиентских конфигов:**
 - В конфиге явно указан стек: `Caddy 2 + klzgrad/forwardproxy@naive`
