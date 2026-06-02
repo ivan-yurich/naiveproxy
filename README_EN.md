@@ -26,7 +26,7 @@
 
 ---
 
-[![Version](https://img.shields.io/badge/version-5.5.1-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
+[![Version](https://img.shields.io/badge/version-5.5.2-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
 [![ShellCheck](https://img.shields.io/badge/ShellCheck-passing-3FB950?style=for-the-badge&logo=gnu-bash&logoColor=white)](https://www.shellcheck.net)
 [![Bash](https://img.shields.io/badge/Bash-5.0+-4EAA25?style=for-the-badge&logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-20.04%2B-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://ubuntu.com)
@@ -97,7 +97,7 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 
 ---
 
-## 🎉 What's new in v5.5.1
+## 🎉 What's new in v5.5.2
 
 <table>
 <tr>
@@ -105,6 +105,8 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 
 ### 🐛 Bug fixes
 
+✅ Hysteria 2 password generation under `set -euo pipefail`
+✅ WARP proxy verification now requires `warp=on`
 ✅ Xray REALITY key parsing for newer `xray x25519` output
 ✅ Broken quotes in DNS whitelist
 ✅ `((var++))` → `var=$((var+1))` (set -e safety)
@@ -123,6 +125,8 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 
 ### ⚡ New features
 
+🌀 **Xray via WARP** — when WARP is enabled, Xray uses local WARP HTTP proxy as outbound
+🔐 **Safe token generator** — shared random password generator for install, users, Hysteria and bot
 🔗 **User subscription pages** — per-user `/s/<token>/` secret URL
 🎭 **Private camouflage page** — personal `/p/<token>/` secret URL
 🤖 **Telegram bot v2** — `/sub`, `/devices`, `/xray`, `/diagfix`, `/privatepage`
@@ -319,7 +323,7 @@ Encrypted queries to Cloudflare and Google
 
 ```
 ──────────────────────────────────────────────────────
-   NaiveProxy Manager v5.5.1  [ENG]
+   NaiveProxy Manager v5.5.2  [ENG]
    Status: ● running  │  Domain: proxy.example.com
    Telegram: connected  │  Users: 3  │  SSH: 52847
 ──────────────────────────────────────────────────────
@@ -553,7 +557,7 @@ sudo bash naiveproxy.sh diagnose
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  🔍 Diagnostics NaiveProxy Manager v5.5.1               │
+│  🔍 Diagnostics NaiveProxy Manager v5.5.2               │
 │  2026-05-23 14:32:18 · proxy.example.com               │
 └─────────────────────────────────────────────────────────┘
 
@@ -593,7 +597,7 @@ sudo bash naiveproxy.sh diagnose
   ✅ journald: no critical errors
 
 [7/7] Version and updates
-  ✅ Script up to date: v5.5.1
+  ✅ Script up to date: v5.5.2
   ✅ SSH Hardening done
 
 ══════════════════════════════════════════════════════════
@@ -1229,7 +1233,19 @@ for donors
 ## 📜 Changelog
 
 <details>
-<summary><b>v5.5.1</b> — Xray REALITY Key Parsing ← CURRENT</summary>
+<summary><b>v5.5.2</b> — Hysteria Passwords + WARP Verification ← CURRENT</summary>
+
+**⚡ Hysteria 2 and WARP:**
+- Fixed Hysteria 2 random password generation under `set -euo pipefail`
+- Added a shared safe token generator for auto-created passwords
+- WARP verification now tries HTTP proxy first, then SOCKS5 fallback
+- WARP install now requires confirmed `warp=on`
+- Xray uses the local WARP HTTP proxy as outbound when WARP is enabled
+
+</details>
+
+<details>
+<summary><b>v5.5.1</b> — Xray REALITY Key Parsing</summary>
 
 **🧬 Xray REALITY:**
 - Fixed REALITY key parsing for newer Xray builds

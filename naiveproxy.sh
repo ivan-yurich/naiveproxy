@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-#   NaiveProxy Manager v5.5.1 — by Иван Юрьевич
+#   NaiveProxy Manager v5.5.2 — by Иван Юрьевич
 #   Стек: Caddy 2 + klzgrad/forwardproxy@naive + Hysteria 2 + WARP + Xray Modern
 #   ОС: Ubuntu 20.04 / 22.04 / 24.04
 #
@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-VERSION="5.5.1"
+VERSION="5.5.2"
 LANG_UI="${NAIVEPROXY_LANG:-ru}"  # ru или en — export NAIVEPROXY_LANG=en
 GITHUB_RAW="https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/naiveproxy.sh"
 GITHUB_API="https://api.github.com/repos/ivan-yurich/naiveproxy/releases/latest"
@@ -232,7 +232,7 @@ cmd_ssh_hardening() {
         echo -ne "${CYAN}Пароль для $new_user (Enter = сгенерировать): ${RESET}"
         read -r user_pass
         if [[ -z "$user_pass" ]]; then
-            user_pass=$(openssl rand -base64 16 | tr -dc 'a-zA-Z0-9' | head -c 20)
+            user_pass=$(random_safe_token 20 'a-zA-Z0-9')
             info "Сгенерирован пароль: ${BOLD}${user_pass}${RESET}"
             info "СОХРАНИ ЕГО СЕЙЧАС!"
         fi
@@ -685,6 +685,33 @@ is_valid_local_proxy_port() {
 
 warp_cli() {
     warp-cli --accept-tos "$@" 2>/dev/null || warp-cli "$@"
+}
+
+random_safe_token() {
+    local len="${1:-20}"
+    local alphabet="${2:-a-zA-Z0-9_-}"
+    local token=""
+    local chunk
+    local attempts=0
+
+    if ! [[ "$len" =~ ^[0-9]+$ ]] || [[ "$len" -lt 8 || "$len" -gt 128 ]]; then
+        err "Некорректная длина токена: $len"
+        return 1
+    fi
+
+    while [[ ${#token} -lt "$len" ]]; do
+        attempts=$((attempts + 1))
+        if [[ "$attempts" -gt 20 ]]; then
+            err "Не удалось сгенерировать случайный токен через openssl"
+            return 1
+        fi
+        chunk=$(openssl rand -base64 "$((len * 3))" 2>/dev/null \
+            | LC_ALL=C tr -dc "$alphabet" \
+            | head -c "$len" || true)
+        token="${token}${chunk}"
+    done
+
+    printf '%s\n' "${token:0:len}"
 }
 
 # ─── Конфиг ──────────────────────────────────────────────────
@@ -1945,8 +1972,8 @@ cmd_hysteria_install() {
         [[ "${ans,,}" == "y" ]] || return 1
     fi
 
-    HYSTERIA_PASSWORD="${HYSTERIA_PASSWORD:-$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9_-' | head -c 24)}"
-    HYSTERIA_OBFS_PASSWORD="${HYSTERIA_OBFS_PASSWORD:-$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9_-' | head -c 24)}"
+    [[ -n "${HYSTERIA_PASSWORD:-}" ]] || HYSTERIA_PASSWORD=$(random_safe_token 24)
+    [[ -n "${HYSTERIA_OBFS_PASSWORD:-}" ]] || HYSTERIA_OBFS_PASSWORD=$(random_safe_token 24)
 
     install_hysteria_bin || return 1
     write_hysteria_config || return 1
@@ -2184,7 +2211,7 @@ write_xray_config() {
     reality_port="${XRAY_REALITY_PORT:-$XRAY_REALITY_PORT_DEFAULT}"
     mkcp_port="${XRAY_MKCP_PORT:-$XRAY_MKCP_PORT_DEFAULT}"
     grpc_port="${XRAY_GRPC_PORT:-$XRAY_GRPC_PORT_DEFAULT}"
-    trojan_pass="${XRAY_TROJAN_PASSWORD:-$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9_-' | head -c 24)}"
+    trojan_pass="${XRAY_TROJAN_PASSWORD:-$(random_safe_token 24)}"
     XRAY_TROJAN_PASSWORD="$trojan_pass"
     reality_target="${XRAY_REALITY_TARGET:-www.microsoft.com:443}"
     reality_sni="${XRAY_REALITY_SERVER_NAME:-www.microsoft.com}"
@@ -2327,8 +2354,30 @@ $(xray_clients_json)
     }
   ],
   "outbounds": [
+EOF
+
+    if [[ "${WARP_PROXY_ENABLED:-0}" == "1" ]]; then
+        cat >> "$XRAY_CONFIG" <<EOF
+    {
+      "protocol": "http",
+      "tag": "warp-proxy",
+      "settings": {
+        "servers": [
+          { "address": "127.0.0.1", "port": ${WARP_PROXY_PORT:-$WARP_PROXY_PORT_DEFAULT} }
+        ]
+      }
+    },
     { "protocol": "freedom", "tag": "direct" },
     { "protocol": "blackhole", "tag": "block" }
+EOF
+    else
+        cat >> "$XRAY_CONFIG" <<EOF
+    { "protocol": "freedom", "tag": "direct" },
+    { "protocol": "blackhole", "tag": "block" }
+EOF
+    fi
+
+    cat >> "$XRAY_CONFIG" <<EOF
   ]
 }
 EOF
@@ -2341,6 +2390,9 @@ EOF
     fi
     save_config
     ok "Xray config создан: $XRAY_CONFIG"
+    if [[ "${WARP_PROXY_ENABLED:-0}" == "1" ]]; then
+        ok "Xray outbound направлен через WARP proxy: 127.0.0.1:${WARP_PROXY_PORT:-$WARP_PROXY_PORT_DEFAULT}"
+    fi
 }
 
 print_xray_client_config() {
@@ -2416,7 +2468,7 @@ get_or_create_token_file() {
     mkdir -p "$(dirname "$token_file")"
     chmod 700 "$(dirname "$token_file")" 2>/dev/null || true
     if [[ -s "$token_file" ]]; then
-        token=$(tr -dc 'a-fA-F0-9' < "$token_file" | head -c 48)
+        token=$(tr -dc 'a-fA-F0-9' < "$token_file" | head -c 48 || true)
     fi
     if [[ ! "$token" =~ ^[a-fA-F0-9]{32,64}$ ]]; then
         token=$(openssl rand -hex 24)
@@ -2666,7 +2718,7 @@ cmd_subscription_reset() {
     fi
     local old_token=""
     if [[ -s "${SUBS_DIR}/${user}.token" ]]; then
-        old_token=$(tr -dc 'a-fA-F0-9' < "${SUBS_DIR}/${user}.token" | head -c 48)
+        old_token=$(tr -dc 'a-fA-F0-9' < "${SUBS_DIR}/${user}.token" | head -c 48 || true)
     fi
     reset_token_file "${SUBS_DIR}/${user}.token"
     if [[ "$old_token" =~ ^[a-fA-F0-9]{32,64}$ ]]; then
@@ -2685,7 +2737,7 @@ install_private_camouflage_page() {
     local mode="${1:-}"
     local old_token=""
     if [[ "$mode" == "reset" && -s "$PRIVATE_PAGE_TOKEN_FILE" ]]; then
-        old_token=$(tr -dc 'a-fA-F0-9' < "$PRIVATE_PAGE_TOKEN_FILE" | head -c 48)
+        old_token=$(tr -dc 'a-fA-F0-9' < "$PRIVATE_PAGE_TOKEN_FILE" | head -c 48 || true)
     fi
     [[ "$mode" == "reset" ]] && reset_token_file "$PRIVATE_PAGE_TOKEN_FILE"
     if [[ "$old_token" =~ ^[a-fA-F0-9]{32,64}$ ]]; then
@@ -2941,28 +2993,73 @@ warp_set_proxy_mode() {
     return 1
 }
 
+warp_wait_proxy_ready() {
+    local port="${1:-${WARP_PROXY_PORT:-$WARP_PROXY_PORT_DEFAULT}}"
+    local i status settings
+
+    for i in {1..20}; do
+        status=$(warp_cli status 2>/dev/null || true)
+        settings=$(warp_cli settings 2>/dev/null || true)
+
+        if ss -tlnp 2>/dev/null | grep -Eq "(127\.0\.0\.1|\*):${port}[[:space:]]|:${port}[[:space:]]"; then
+            if echo "$settings" | grep -Eiq "WarpProxy|proxy"; then
+                return 0
+            fi
+        fi
+
+        if echo "$status" | grep -Eiq "connected|соедин"; then
+            ss -tlnp 2>/dev/null | grep -Eq "(127\.0\.0\.1|\*):${port}[[:space:]]|:${port}[[:space:]]" && return 0
+        fi
+        sleep 1
+    done
+
+    warn "WARP proxy порт ${port} не подтвердился за 20 секунд"
+    warp_cli status 2>/dev/null || true
+    warp_cli settings 2>/dev/null | sed -n '1,30p' || true
+    return 1
+}
+
 test_warp_proxy() {
     local port="${1:-${WARP_PROXY_PORT:-$WARP_PROXY_PORT_DEFAULT}}"
-    local trace tmp
+    local trace direct_trace tmp direct_ip proxy_ip proxy_warp method
     tmp=$(mktemp /tmp/warp_trace_XXXXXX)
     trap 'rm -f "${tmp:-}" 2>/dev/null; trap - RETURN' RETURN
 
-    if curl -fsSL --max-time 20 --socks5-hostname "127.0.0.1:${port}" \
+    direct_trace=$(curl -fsSL --connect-timeout 5 --max-time 9 \
+        https://www.cloudflare.com/cdn-cgi/trace 2>/dev/null || true)
+    direct_ip=$(printf '%s\n' "$direct_trace" | awk -F= '$1=="ip"{print $2; exit}')
+
+    if curl -fsSL --connect-timeout 5 --max-time 9 -x "http://127.0.0.1:${port}" \
         https://www.cloudflare.com/cdn-cgi/trace -o "$tmp" 2>/dev/null; then
         trace=$(cat "$tmp")
-    elif curl -fsSL --max-time 20 -x "http://127.0.0.1:${port}" \
+        method="HTTP"
+    elif curl -fsSL --connect-timeout 5 --max-time 9 --socks5-hostname "127.0.0.1:${port}" \
         https://www.cloudflare.com/cdn-cgi/trace -o "$tmp" 2>/dev/null; then
         trace=$(cat "$tmp")
+        method="SOCKS5"
     else
         err "Не удалось пройти через WARP proxy 127.0.0.1:${port}"
+        warn "Проверь: warp-cli status; warp-cli settings; ss -tlnp | grep ${port}"
         return 1
     fi
 
+    proxy_ip=$(printf '%s\n' "$trace" | awk -F= '$1=="ip"{print $2; exit}')
+    proxy_warp=$(printf '%s\n' "$trace" | awk -F= '$1=="warp"{print $2; exit}')
+    [[ -n "$direct_ip" ]] && echo "  direct_ip=${direct_ip}"
+    echo "  proxy_method=${method}"
     echo "$trace" | sed -n 's/^ip=/  ip=/p; s/^colo=/  colo=/p; s/^warp=/  warp=/p; s/^gateway=/  gateway=/p'
-    if echo "$trace" | grep -q '^warp=on'; then
+
+    if [[ "$proxy_warp" == "on" ]]; then
         ok "WARP proxy mode работает"
+        if [[ -n "$direct_ip" && "$direct_ip" == "$proxy_ip" ]]; then
+            warn "IP direct и proxy совпали. Для некоторых VPS это возможно, но проверь повторно."
+        fi
+        return 0
     else
-        warn "Proxy отвечает, но trace не показал warp=on. Проверь warp-cli status/settings."
+        warn "Proxy отвечает, но trace не показал warp=on."
+        warn "Без -x/--proxy общий IP VPS не изменится: WARP local proxy работает только для явно направленного трафика."
+        warn "Если нужен выход через WARP для Xray, включи WARP и пересобери Xray config; NaiveProxy/Caddy не умеет chain-upstream через этот local proxy."
+        return 1
     fi
 }
 
@@ -2993,16 +3090,32 @@ cmd_warp_install() {
     install_warp_client || return 1
     systemctl enable --now warp-svc >/dev/null 2>&1 || systemctl enable --now cloudflare-warp >/dev/null 2>&1 || true
     warp_registration_new || return 1
-    warp_set_proxy_port "$WARP_PROXY_PORT" || return 1
     warp_set_proxy_mode || return 1
+    warp_set_proxy_port "$WARP_PROXY_PORT" || return 1
 
     info "Подключаю WARP..."
     warp_cli connect >/dev/null 2>&1 || true
-    sleep 3
-    WARP_PROXY_ENABLED="1"
+    warp_wait_proxy_ready "$WARP_PROXY_PORT" || true
+
+    if test_warp_proxy "$WARP_PROXY_PORT"; then
+        WARP_PROXY_ENABLED="1"
+    else
+        WARP_PROXY_ENABLED="0"
+        save_config
+        return 1
+    fi
     save_config
+
+    if [[ "${XRAY_ENABLED:-0}" == "1" && -x "$XRAY_BIN" && -f "$XRAY_CONFIG" ]]; then
+        info "Обновляю Xray config, чтобы Xray выходил через WARP proxy..."
+        if write_xray_config && systemctl restart xray; then
+            ok "Xray перезапущен с WARP outbound"
+        else
+            warn "WARP работает, но Xray не удалось пересобрать автоматически. Запусти: sudo bash naiveproxy.sh xray-install"
+        fi
+    fi
+
     cmd_warp_status
-    test_warp_proxy "$WARP_PROXY_PORT" || true
 }
 
 print_warp_proxy_config() {
@@ -3016,8 +3129,11 @@ print_warp_proxy_config() {
     echo
     echo -e "  ${YELLOW}Важно:${RESET} WARP local proxy подходит для приложений с SOCKS5/HTTP proxy."
     echo -e "          Для очень долгих запросов у Cloudflare есть timeout local proxy."
+    echo -e "          NaiveProxy/Caddy не меняет upstream через WARP автоматически."
+    echo -e "          Xray после пересборки использует WARP outbound, если WARP включён."
     echo
     echo -e "${CYAN}  Проверка:${RESET}"
+    echo -e "  curl -x http://127.0.0.1:${port} https://www.cloudflare.com/cdn-cgi/trace"
     echo -e "  curl --socks5-hostname 127.0.0.1:${port} https://www.cloudflare.com/cdn-cgi/trace"
     echo
     echo -e "${CYAN}  Для временного использования в shell:${RESET}"
@@ -3039,7 +3155,7 @@ cmd_warp_status() {
     else
         warn "cloudflare-warp не установлен"
     fi
-    ss -tlnp 2>/dev/null | grep -E "127\.0\.0\.1:${port}\b|:${port}\b" || warn "Локальный порт ${port} не слушается"
+    ss -tlnp 2>/dev/null | grep -E "(127\.0\.0\.1|\*):${port}[[:space:]]|:${port}[[:space:]]" || warn "Локальный порт ${port} не слушается"
     hr
 }
 
@@ -3142,7 +3258,7 @@ prompt_params() {
         echo -ne "${CYAN}Пароль (Enter = случайный): ${RESET}"
         read -r first_pass
         if [[ -z "$first_pass" ]]; then
-            first_pass=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9_-' | head -c 20)
+            first_pass=$(random_safe_token 20)
             info "Сгенерирован пароль: $first_pass"
         fi
         is_valid_proxy_pass "$first_pass" && break
@@ -3284,7 +3400,7 @@ cmd_users() {
                 fi
                 echo -ne "${CYAN}Пароль (Enter = случайный): ${RESET}"; read -r new_pass
                 if [[ -z "$new_pass" ]]; then
-                    new_pass=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9_-' | head -c 20)
+                    new_pass=$(random_safe_token 20)
                     info "Сгенерирован пароль: $new_pass"
                 fi
                 if ! is_valid_proxy_pass "$new_pass"; then
@@ -3325,7 +3441,7 @@ cmd_users() {
                 fi
                 echo -ne "${CYAN}Новый пароль (Enter = случайный): ${RESET}"; read -r chg_pass
                 if [[ -z "$chg_pass" ]]; then
-                    chg_pass=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9_-' | head -c 20)
+                    chg_pass=$(random_safe_token 20)
                     info "Сгенерирован пароль: $chg_pass"
                 fi
                 if ! is_valid_proxy_pass "$chg_pass"; then
@@ -4390,18 +4506,20 @@ cmd_diagnose() {
     if command -v warp-cli &>/dev/null; then
         local warp_port warp_trace
         warp_port="${WARP_PROXY_PORT:-$WARP_PROXY_PORT_DEFAULT}"
-        if ss -tlnp 2>/dev/null | grep -q "127.0.0.1:${warp_port} "; then
+        if ss -tlnp 2>/dev/null | grep -Eq "(127\.0\.0\.1|\*):${warp_port}[[:space:]]|:${warp_port}[[:space:]]"; then
             _ok "WARP proxy слушает локально: 127.0.0.1:${warp_port}"
         else
             _warn "WARP установлен, но локальный proxy порт ${warp_port} не слушается"
         fi
 
-        warp_trace=$(curl -fsSL --max-time 10 --socks5-hostname "127.0.0.1:${warp_port}" \
+        warp_trace=$(curl -fsSL --connect-timeout 5 --max-time 9 -x "http://127.0.0.1:${warp_port}" \
+            https://www.cloudflare.com/cdn-cgi/trace 2>/dev/null || \
+            curl -fsSL --connect-timeout 5 --max-time 9 --socks5-hostname "127.0.0.1:${warp_port}" \
             https://www.cloudflare.com/cdn-cgi/trace 2>/dev/null || true)
         if echo "$warp_trace" | grep -q '^warp=on'; then
             _ok "WARP proxy test: warp=on"
         elif [[ -n "$warp_trace" ]]; then
-            _warn "WARP proxy отвечает, но trace не показал warp=on"
+            _warn "WARP proxy отвечает, но trace не показал warp=on — общий IP VPS в proxy mode не меняется"
         else
             _warn "WARP proxy test не прошёл"
         fi
@@ -4644,7 +4762,7 @@ tg_reply_pre() {
     local chat_id="$1"
     local title="$2"
     local content="$3"
-    content=$(printf '%s' "$content" | sed -r 's/\x1B\[[0-9;]*[mK]//g' | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g' | head -c 3400)
+    content=$(printf '%s' "$content" | sed -r 's/\x1B\[[0-9;]*[mK]//g' | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g' | head -c 3400 || true)
     [[ -z "$content" ]] && content="нет вывода"
     tg_reply "$chat_id" "${title}
 <pre>${content}</pre>"
@@ -4929,7 +5047,7 @@ ${user_list}"
             # Валидация пароля (если указан)
             if [[ -z "${new_pass}" ]]; then
                 # Авто-генерация
-                new_pass=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9_-' | head -c 20)
+                new_pass=$(random_safe_token 20)
                 tg_reply "${chat_id}" "🔑 Пароль не указан, сгенерирован автоматически"
             elif ! is_valid_proxy_pass "${new_pass}"; then
                 tg_reply "${chat_id}" "❌ Неверный пароль
