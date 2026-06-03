@@ -26,7 +26,7 @@
 
 ---
 
-[![Version](https://img.shields.io/badge/version-5.5.2-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
+[![Version](https://img.shields.io/badge/version-5.5.3-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
 [![ShellCheck](https://img.shields.io/badge/ShellCheck-passing-3FB950?style=for-the-badge&logo=gnu-bash&logoColor=white)](https://www.shellcheck.net)
 [![Bash](https://img.shields.io/badge/Bash-5.0+-4EAA25?style=for-the-badge&logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-20.04%2B-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://ubuntu.com)
@@ -97,7 +97,7 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 
 ---
 
-## 🎉 What's new in v5.5.2
+## 🎉 What's new in v5.5.3
 
 <table>
 <tr>
@@ -105,6 +105,8 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 
 ### 🐛 Bug fixes
 
+✅ Hysteria 2 empty or short `obfs.salamander.password`
+✅ Xray mKCP config for newer Xray-core builds without legacy `header`/`seed`
 ✅ Hysteria 2 password generation under `set -euo pipefail`
 ✅ WARP proxy verification now requires `warp=on`
 ✅ Xray REALITY key parsing for newer `xray x25519` output
@@ -323,7 +325,7 @@ Encrypted queries to Cloudflare and Google
 
 ```
 ──────────────────────────────────────────────────────
-   NaiveProxy Manager v5.5.2  [ENG]
+   NaiveProxy Manager v5.5.3  [ENG]
    Status: ● running  │  Domain: proxy.example.com
    Telegram: connected  │  Users: 3  │  SSH: 52847
 ──────────────────────────────────────────────────────
@@ -557,7 +559,7 @@ sudo bash naiveproxy.sh diagnose
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  🔍 Diagnostics NaiveProxy Manager v5.5.2               │
+│  🔍 Diagnostics NaiveProxy Manager v5.5.3               │
 │  2026-05-23 14:32:18 · proxy.example.com               │
 └─────────────────────────────────────────────────────────┘
 
@@ -597,7 +599,7 @@ sudo bash naiveproxy.sh diagnose
   ✅ journald: no critical errors
 
 [7/7] Version and updates
-  ✅ Script up to date: v5.5.2
+  ✅ Script up to date: v5.5.3
   ✅ SSH Hardening done
 
 ══════════════════════════════════════════════════════════
@@ -1233,7 +1235,19 @@ for donors
 ## 📜 Changelog
 
 <details>
-<summary><b>v5.5.2</b> — Hysteria Passwords + WARP Verification ← CURRENT</summary>
+<summary><b>v5.5.3</b> — Hysteria PSK + Xray mKCP Compatibility ← CURRENT</summary>
+
+**⚡ Hysteria 2 and Xray mKCP:**
+- Added Hysteria password and obfs password validation before writing `hysteria.yaml`
+- Empty or too short `obfs.salamander.password` is regenerated automatically
+- Hysteria passwords are written as quoted YAML strings
+- Xray mKCP no longer uses removed legacy `header` / `seed` fields
+- mKCP client links now use `type=mkcp` without `headerType`
+
+</details>
+
+<details>
+<summary><b>v5.5.2</b> — Hysteria Passwords + WARP Verification</summary>
 
 **⚡ Hysteria 2 and WARP:**
 - Fixed Hysteria 2 random password generation under `set -euo pipefail`

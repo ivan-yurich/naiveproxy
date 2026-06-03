@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-#   NaiveProxy Manager v5.5.2 — by Иван Юрьевич
+#   NaiveProxy Manager v5.5.3 — by Иван Юрьевич
 #   Стек: Caddy 2 + klzgrad/forwardproxy@naive + Hysteria 2 + WARP + Xray Modern
 #   ОС: Ubuntu 20.04 / 22.04 / 24.04
 #
@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-VERSION="5.5.2"
+VERSION="5.5.3"
 LANG_UI="${NAIVEPROXY_LANG:-ru}"  # ru или en — export NAIVEPROXY_LANG=en
 GITHUB_RAW="https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/naiveproxy.sh"
 GITHUB_API="https://api.github.com/repos/ivan-yurich/naiveproxy/releases/latest"
@@ -712,6 +712,27 @@ random_safe_token() {
     done
 
     printf '%s\n' "${token:0:len}"
+}
+
+is_valid_hysteria_secret() {
+    [[ "${1:-}" =~ ^[A-Za-z0-9_-]{8,64}$ ]]
+}
+
+ensure_hysteria_secrets() {
+    if ! is_valid_hysteria_secret "${HYSTERIA_PASSWORD:-}"; then
+        HYSTERIA_PASSWORD=$(random_safe_token 24)
+        info "Сгенерирован новый пароль Hysteria 2"
+    fi
+
+    if ! is_valid_hysteria_secret "${HYSTERIA_OBFS_PASSWORD:-}"; then
+        HYSTERIA_OBFS_PASSWORD=$(random_safe_token 24)
+        info "Сгенерирован новый obfs-пароль Hysteria 2"
+    fi
+
+    if ! is_valid_hysteria_secret "${HYSTERIA_PASSWORD:-}" || ! is_valid_hysteria_secret "${HYSTERIA_OBFS_PASSWORD:-}"; then
+        err "Не удалось подготовить безопасные пароли Hysteria 2"
+        return 1
+    fi
 }
 
 # ─── Конфиг ──────────────────────────────────────────────────
@@ -1828,6 +1849,7 @@ install_hysteria_bin() {
 write_hysteria_config() {
     load_config
     local cert_file key_file
+    ensure_hysteria_secrets || return 1
     cert_file=$(find_caddy_cert "${DOMAIN:-}" || true)
     key_file=$(find_caddy_key "${DOMAIN:-}" || true)
 
@@ -1849,12 +1871,12 @@ tls:
 
 auth:
   type: password
-  password: ${HYSTERIA_PASSWORD}
+  password: "${HYSTERIA_PASSWORD}"
 
 obfs:
   type: salamander
   salamander:
-    password: ${HYSTERIA_OBFS_PASSWORD}
+    password: "${HYSTERIA_OBFS_PASSWORD}"
 
 masquerade:
   type: proxy
@@ -1972,8 +1994,7 @@ cmd_hysteria_install() {
         [[ "${ans,,}" == "y" ]] || return 1
     fi
 
-    [[ -n "${HYSTERIA_PASSWORD:-}" ]] || HYSTERIA_PASSWORD=$(random_safe_token 24)
-    [[ -n "${HYSTERIA_OBFS_PASSWORD:-}" ]] || HYSTERIA_OBFS_PASSWORD=$(random_safe_token 24)
+    ensure_hysteria_secrets || return 1
 
     install_hysteria_bin || return 1
     write_hysteria_config || return 1
@@ -2331,7 +2352,19 @@ $(xray_clients_json)
       "port": ${mkcp_port},
       "protocol": "vless",
       "settings": { "clients": [$(xray_clients_json_no_flow)], "decryption": "none" },
-      "streamSettings": { "network": "kcp", "security": "none", "kcpSettings": { "header": { "type": "wechat-video" } } }
+      "streamSettings": {
+        "network": "mkcp",
+        "security": "none",
+        "kcpSettings": {
+          "mtu": 1350,
+          "tti": 50,
+          "uplinkCapacity": 5,
+          "downlinkCapacity": 20,
+          "congestion": false,
+          "readBufferSize": 1,
+          "writeBufferSize": 1
+        }
+      }
     },
     {
       "tag": "vless-grpc-tls",
@@ -2432,7 +2465,7 @@ print_xray_client_config() {
     fi
     echo
     echo -e "${CYAN}  VLESS mKCP:${RESET}"
-    echo "  vless://${uuid}@${DOMAIN}:${XRAY_MKCP_PORT:-$XRAY_MKCP_PORT_DEFAULT}?security=none&type=kcp&headerType=wechat-video#${user}-mkcp"
+    echo "  vless://${uuid}@${DOMAIN}:${XRAY_MKCP_PORT:-$XRAY_MKCP_PORT_DEFAULT}?security=none&type=mkcp#${user}-mkcp"
     echo
     echo -e "${CYAN}  VLESS gRPC TLS:${RESET}"
     echo "  vless://${uuid}@${DOMAIN}:${XRAY_GRPC_PORT:-$XRAY_GRPC_PORT_DEFAULT}?security=tls&type=grpc&serviceName=vless-grpc&sni=${DOMAIN}&fp=chrome#${user}-grpc"
@@ -2567,7 +2600,7 @@ EOF
     grpc_link=""
     if [[ -n "$uuid" ]]; then
         reality_link="vless://${uuid}@${DOMAIN}:${XRAY_REALITY_PORT:-$XRAY_REALITY_PORT_DEFAULT}?security=reality&type=tcp&flow=xtls-rprx-vision&sni=${XRAY_REALITY_SERVER_NAME:-www.microsoft.com}&fp=chrome&pbk=${XRAY_REALITY_PUBLIC_KEY:-PUBLIC_KEY}&sid=${XRAY_REALITY_SHORT_ID:-SHORT_ID}#${user}-reality"
-        mkcp_link="vless://${uuid}@${DOMAIN}:${XRAY_MKCP_PORT:-$XRAY_MKCP_PORT_DEFAULT}?security=none&type=kcp&headerType=wechat-video#${user}-mkcp"
+        mkcp_link="vless://${uuid}@${DOMAIN}:${XRAY_MKCP_PORT:-$XRAY_MKCP_PORT_DEFAULT}?security=none&type=mkcp#${user}-mkcp"
         grpc_link="vless://${uuid}@${DOMAIN}:${XRAY_GRPC_PORT:-$XRAY_GRPC_PORT_DEFAULT}?security=tls&type=grpc&serviceName=vless-grpc&sni=${DOMAIN}&fp=chrome#${user}-grpc"
         if [[ "${XRAY_FALLBACK_ENABLED:-0}" == "1" ]]; then
             vision_link="vless://${uuid}@${DOMAIN}:443?security=tls&type=tcp&flow=xtls-rprx-vision&sni=${DOMAIN}&fp=chrome#${user}-vless-vision"
