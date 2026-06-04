@@ -20,13 +20,13 @@
 
 ### 🚀 Professional secure proxy server manager
 
-**One script. Bare VPS → secure proxy with ad blocking in 10 minutes.**
+**One script. Bare VPS → secure proxy, private DNS and diagnostics in 10 minutes.**
 
-*Caddy 2 · NaiveProxy · Telegram Bot · DNS Ad Blocking · Diagnostics · SSH Hardening*
+*Caddy 2 · NaiveProxy · Telegram Bot · Aurum DNS · Diagnostics · SSH Hardening*
 
 ---
 
-[![Version](https://img.shields.io/badge/version-5.5.10-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
+[![Version](https://img.shields.io/badge/version-5.5.11-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
 [![ShellCheck](https://img.shields.io/badge/ShellCheck-passing-3FB950?style=for-the-badge&logo=gnu-bash&logoColor=white)](https://www.shellcheck.net)
 [![Bash](https://img.shields.io/badge/Bash-5.0+-4EAA25?style=for-the-badge&logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-20.04%2B-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://ubuntu.com)
@@ -58,7 +58,7 @@
 [**⚡ Quick Start**](#-quick-start) ·
 [**✨ Features**](#-features) ·
 [**🤖 Telegram Bot**](#-telegram-bot) ·
-[**🚫 Ad Blocking**](#-dns-ad-blocking) ·
+[**🛡️ Aurum DNS**](#-aurum-dns) ·
 [**🌀 WARP**](#-cloudflare-warp-modes) ·
 [**🔍 Diagnostics**](#-diagnostics) ·
 [**❓ FAQ**](#-faq) ·
@@ -76,7 +76,7 @@
 
 ### 🚀 Speed
 **10 minutes**
-from bare VPS to working proxy with auto TLS, bans and ad blocking
+from bare VPS to working proxy with auto TLS, bans and private DNS
 
 </td>
 <td align="center" width="33%">
@@ -98,7 +98,7 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 
 ---
 
-## 🎉 What's new in v5.5.10
+## 🎉 What's new in v5.5.11
 
 <table>
 <tr>
@@ -112,7 +112,9 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 ✅ Hysteria 2 password generation under `set -euo pipefail`
 ✅ WARP proxy verification now requires `warp=on`
 ✅ Xray REALITY key parsing for newer `xray x25519` output
-✅ Broken quotes in DNS whitelist
+✅ Unbound crash with duplicate DNSSEC trust anchor
+✅ Port 53 conflict with systemd-resolved stub listener
+✅ Removed legacy DNS adblock config that could break Unbound startup
 ✅ `((var++))` → `var=$((var+1))` (set -e safety)
 ✅ `/qr` command — curl conflict fix
 ✅ `/adduser` — login/password validation
@@ -129,12 +131,12 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 
 ### ⚡ New features
 
-🧭 **Recursive Unbound DNS** — own resolver without Google/Cloudflare upstreams
-🔐 **DNSSEC validation** — trust anchor and `dnssec-failed.org` status test
-🚦 **DNS modes** — recursive/forward DoT with adblock on/off
-🔒 **VPN-only DNS access** — expose `:53` only to allowed VPN CIDRs, no open resolver
-🛠️ **Unbound bind fix** — VPN DNS no longer binds `0.0.0.0:53` or conflicts with `systemd-resolved`
-🧩 **Unbound DNS plugin** — DNS blocker is now exposed as a module with `unbound-*` CLI aliases
+🧭 **Aurum DNS** — production-ready Unbound resolver for VPN clients
+🔐 **DNSSEC validation** — recursive DNS with `sigok` / `dnssec-failed` tests
+🔒 **VPN-only DNS access** — port 53 is allowed only from configured VPN CIDRs
+🛠️ **Port 53 fix** — safely disables only the systemd-resolved stub listener when needed
+🧩 **Standalone project** — `aurum-dns/` with install, uninstall, examples and CLI tools
+♻️ **Idempotent installer** — backups before changes and safe repeated runs
 ⚡ **Per-user Hysteria 2** — Hysteria server config now uses `auth.type: userpass` for NaiveProxy users
 ⚙️ **Hysteria port selector** — choose the default UDP/8443 or enter a custom UDP port
 🔗 **Hysteria in subscriptions** — personal pages now include Naive + Hysteria 2 + Xray links when available
@@ -164,14 +166,14 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 ⚡ **Hysteria 2** — separate UDP/8443 without conflicting with Caddy
 📱 **hy2:// configs** + QR for mobile clients
 🤖 **25+ bot commands** + multi-admin
-🚫 **DNS blocking** ~1.5M domains + DoT
+🛡️ **Aurum DNS** private recursive Unbound + DNSSEC
 🔍 **Diagnostics** — 7 blocks, 18+ checks
 🔒 **SSH Hardening** — ED25519, `ssh.socket` fix
 🛡️ **Fail2Ban** 3 levels (iptables-multiport)
 ♻️ **Auto-recovery** — `Restart=on-failure`
 🎨 **ASCII banner** + branding
 💛 **Donate** via DonationAlerts
-🌐 **DNS-over-TLS** — Cloudflare + Google
+🌐 **Private DNS** — no Google/Cloudflare upstream dependency
 📦 **Auto-install** dependencies
 
 </td>
@@ -186,16 +188,16 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 
 **NaiveProxy** disguises traffic as Chrome browser using the real Chromium network stack. DPI systems and censors see legitimate HTTPS/2 — and let it through.
 
-**NaiveProxy Manager** — a single bash script that turns a bare VPS into a fully protected proxy server with ad blocking and Telegram management.
+**NaiveProxy Manager** — a single bash script that turns a bare VPS into a protected proxy server with private DNS and Telegram management.
 
 ```
 ┌─────────────┐     ┌──────────────┐     ┌───────────────────────────┐     ┌──────────┐
 │   Your      │     │  Censor/DPI  │     │      Your VPS             │     │          │
 │   phone     │────▶│              │────▶│  Caddy + NaiveProxy       │────▶│ Internet │
-│   laptop    │     │ Sees Chrome  │     │  unbound DNS blocking     │     │          │
+│   laptop    │     │ Sees Chrome  │     │  Aurum DNS / Unbound      │     │          │
 └─────────────┘     │  HTTPS/2 ✓   │     │  probe_resistance         │     └──────────┘
   Naive client       └──────────────┘     └───────────────────────────┘
-  Chromium stack      Passes through        ads blocked 🚫
+  Chromium stack      Passes through        DNSSEC + cache
 ```
 
 ### 🎯 Who needs this:
@@ -283,23 +285,22 @@ Script won't let you accidentally kill the server
 </td>
 <td width="50%" valign="top">
 
-### 🚫 DNS Ad Blocking
+### 🛡️ Aurum DNS
 
-📊 **~1.5M domains**
-Ads · Trackers · Malware
+🧭 **Own recursive resolver**
+No Google/Cloudflare upstream dependency
 
-⚡ **unbound** — fast local resolver
+🔐 **DNSSEC validation**
+Root hints + package-managed trust anchor
 
-🔐 **DNS-over-TLS**
-Encrypted queries to Cloudflare and Google
+🔒 **VPN-only access**
+Localhost and configured VPN CIDRs only
 
-📦 **3 blocklist sources:**
-- StevenBlack/hosts
-- AdAway
-- Hagezi Pro
+🧯 **No open resolver**
+No `0.0.0.0` bind and no public port 53 rule
 
-✅ **Whitelist** — allow specific domains
-🔄 **Auto-update** lists
+🧰 **CLI tools**
+`aurum-dns-status`, `aurum-dns-test`, `aurum-dns-restart`
 
 ### 🤖 Telegram Bot
 
@@ -350,7 +351,7 @@ Encrypted queries to Cloudflare and Google
 
 ```
 ──────────────────────────────────────────────────────
-   NaiveProxy Manager v5.5.10  [ENG]
+   NaiveProxy Manager v5.5.11  [ENG]
    Status: ● running  │  Domain: proxy.example.com
    Telegram: connected  │  Users: 3  │  SSH: 52847
 ──────────────────────────────────────────────────────
@@ -418,16 +419,14 @@ sudo bash naiveproxy.sh tg-stats       # Stats to Telegram
 sudo bash naiveproxy.sh bot            # Run Telegram bot
 sudo bash naiveproxy.sh bot-install    # Bot as system service
 
-# === DNS blocker ===
-sudo bash naiveproxy.sh dns            # DNS menu
-sudo bash naiveproxy.sh dns-install    # Install blocker
-sudo bash naiveproxy.sh dns-update     # Update blocklists
-sudo bash naiveproxy.sh dns-status     # Blocker status
-sudo bash naiveproxy.sh unbound        # Unbound plugin menu
-sudo bash naiveproxy.sh unbound-install
-sudo bash naiveproxy.sh unbound-mode
-sudo bash naiveproxy.sh unbound-vpn
-sudo bash naiveproxy.sh unbound-status
+# === Aurum DNS / Unbound ===
+sudo bash naiveproxy.sh dns            # Aurum DNS menu
+sudo bash naiveproxy.sh dns-install    # Install private recursive DNS
+sudo bash naiveproxy.sh dns-vpn        # Configure VPN client access
+sudo bash naiveproxy.sh dns-status     # Status, port 53 and DNSSEC tests
+sudo bash naiveproxy.sh dns-restart    # Restart Unbound
+sudo bash naiveproxy.sh aurum-dns      # Alias for DNS menu
+sudo bash naiveproxy.sh aurum-dns-test # Alias for DNS status/test
 
 # === Cloudflare WARP modes ===
 sudo bash naiveproxy.sh warp           # WARP menu
@@ -554,11 +553,20 @@ All commands protected — outsiders get `⛔ Access denied`.
 
 ---
 
-## 🚫 DNS Ad Blocking
+## 🛡️ Aurum DNS
 
-Blocks ads and trackers at DNS level — works for **all devices** connected through the proxy.
+Aurum DNS is a private Unbound resolver for VPN clients. It resolves domains recursively on your server, validates DNSSEC and does not depend on Google DNS or Cloudflare DNS.
 
-### ⚡ Install with one command:
+It is designed to be safe by default:
+
+- listens on `127.0.0.1` and an optional VPN gateway IP only
+- never binds to `0.0.0.0`
+- allows DNS only from localhost and configured VPN CIDRs
+- opens UFW port `53` only for those CIDRs
+- does not log every DNS request by default
+- does not use adblock blocklists in the main manager anymore
+
+### ⚡ Install:
 
 ```bash
 sudo bash naiveproxy.sh dns-install
@@ -567,38 +575,37 @@ sudo bash naiveproxy.sh dns-install
 ### 🔍 How it works:
 
 ```
-Phone → NaiveProxy → unbound (127.0.0.1:5335)
-                          │
-                          ├─ ads.google.com ───── ❌ REFUSE
-                          ├─ doubleclick.net ──── ❌ REFUSE
-                          ├─ youtube.com ──────── ✅ Cloudflare DoT
-                          └─ github.com ───────── ✅ Cloudflare DoT
+VPN client → VPN tunnel → 10.0.0.1:53 → Unbound
+                                      │
+                                      ├─ recursive DNS lookup
+                                      ├─ DNSSEC validation
+                                      └─ cached answers
 ```
-
-### 📊 Blocklist sources (~1.5M domains):
-
-| Source | Size | Blocks |
-|--------|------|--------|
-| 🛡️ **StevenBlack/hosts** | ~150k | Ads + malware |
-| 📱 **AdAway** | ~30k | Mobile ads |
-| ⚡ **Hagezi Pro** | ~600k | Aggressive blocking |
-| **Total after dedup** | ~1.5M | Unique domains |
 
 ### 🛠️ Commands:
 
 ```bash
-sudo bash naiveproxy.sh dns-install    # Install
-sudo bash naiveproxy.sh dns-update     # Update blocklists
-sudo bash naiveproxy.sh dns-status     # Status and test
-sudo bash naiveproxy.sh dns            # Menu
+sudo bash naiveproxy.sh dns-install    # Install / reinstall Aurum DNS
+sudo bash naiveproxy.sh dns-vpn        # Configure DNS for VPN clients
+sudo bash naiveproxy.sh dns-status     # Status, port 53 and DNSSEC tests
+sudo bash naiveproxy.sh dns-restart    # Restart Unbound
+sudo bash naiveproxy.sh dns-remove     # Remove created DNS config and commands
 ```
 
-### 🆘 If something broke — whitelist:
+The standalone project is also included in [`aurum-dns/`](aurum-dns/):
 
 ```bash
-sudo bash naiveproxy.sh dns
-# → 4) Allow domain → enter problem domain
+sudo bash aurum-dns/install-dns.sh
+aurum-dns-status
+aurum-dns-test
+sudo aurum-dns-restart
 ```
+
+### 🔒 Open resolver protection:
+
+Do not enter `0.0.0.0/0` as a VPN CIDR. The installer rejects it. Use only your real tunnel network, for example `10.0.0.0/24`.
+
+If port `53` is busy by `systemd-resolved`, the installer disables only the local stub listener through `/etc/systemd/resolved.conf.d/no-stub.conf`. It does not rewrite `/etc/resolv.conf` unless Ubuntu already manages it.
 
 ---
 
@@ -636,7 +643,7 @@ sudo bash naiveproxy.sh diagnose
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  🔍 Diagnostics NaiveProxy Manager v5.5.10              │
+│  🔍 Diagnostics NaiveProxy Manager v5.5.11              │
 │  2026-05-23 14:32:18 · proxy.example.com               │
 └─────────────────────────────────────────────────────────┘
 
@@ -676,7 +683,7 @@ sudo bash naiveproxy.sh diagnose
   ✅ journald: no critical errors
 
 [7/7] Version and updates
-  ✅ Script up to date: v5.5.10
+  ✅ Script up to date: v5.5.11
   ✅ SSH Hardening done
 
 ══════════════════════════════════════════════════════════
@@ -874,16 +881,18 @@ For servers
 ├── users.conf                                 ← Users (chmod 600)
 ├── ssh_private_key                            ← SSH key ED25519
 ├── ssh_public_key
-├── dns_stats                                  ← DNS statistics
 ├── monitor.sh
 ├── .ssh_hardened                              ← SSH hardening marker
 ├── .sysupdate_done
 └── backups/                                   ← Config backups
 
 /etc/unbound/
-├── unbound.conf.d/naiveproxy-dns.conf         ← DNS config
-├── blocklist.conf                             ← ~1.5M domains
-└── whitelist.txt                              ← Allowed domains
+└── unbound.conf.d/aurum-vpn.conf              ← Aurum DNS config
+
+/usr/local/bin/
+├── aurum-dns-status                           ← DNS status and logs
+├── aurum-dns-test                             ← DNSSEC and resolve tests
+└── aurum-dns-restart                          ← Safe Unbound restart
 
 /etc/fail2ban/jail.local                       ← Fail2Ban rules
 
@@ -1088,37 +1097,33 @@ sudo bash naiveproxy.sh
 
 </details>
 
-### 🚫 DNS Blocking
+### 🛡️ Aurum DNS
 
 <details>
-<summary><b>DNS blocking broke a website — how to fix</b></summary>
+<summary><b>DNS does not answer for VPN clients — how to check</b></summary>
 
 ```bash
-# Method 1 — add to whitelist
-sudo bash naiveproxy.sh dns
-# → 4) Allow domain → enter domain
+# Check Unbound, port 53 and DNSSEC
+sudo bash naiveproxy.sh dns-status
+aurum-dns-test
 
-# Method 2 — temporarily disable
-sudo systemctl stop unbound
+# Reconfigure VPN client access
+sudo bash naiveproxy.sh dns-vpn
 
-# Method 3 — completely remove
-sudo bash naiveproxy.sh dns
-# → 5) Remove blocker
+# Restart safely
+sudo bash naiveproxy.sh dns-restart
 ```
+
+Make sure the configured gateway IP exists on the server interface and the VPN CIDR matches your real tunnel network.
 
 </details>
 
 <details>
-<summary><b>YouTube ads not fully blocked</b></summary>
+<summary><b>Can Aurum DNS block ads?</b></summary>
 
-This is **normal**! YouTube embeds ads in the video stream from the same domain (`googlevideo.com`) as the video itself.
+The main manager no longer ships DNS adblock lists. Aurum DNS is focused on a safe private recursive resolver for VPN clients.
 
-**What works:**
-- ✅ YouTube banners (on homepage)
-- ✅ Pre-roll ads (sometimes)
-- ❌ Ads inside videos — not blocked
-
-**Solutions for YouTube:** YouTube Premium or NewPipe (Android).
+This avoids the previous startup problems caused by legacy blocklist/trust-anchor combinations and keeps the DNS role clean.
 
 </details>
 
@@ -1225,7 +1230,7 @@ rm -rf /etc/caddy /etc/naiveproxy /etc/unbound
 <tr><td>SSH Hardening + sshd_config.d/</td><td align="center">✅</td><td align="center">❌</td><td align="center">❌</td></tr>
 <tr><td>SSH key auto-save</td><td align="center">✅</td><td align="center">❌</td><td align="center">❌</td></tr>
 <tr><td>QR code</td><td align="center">✅</td><td align="center">❌</td><td align="center">⚠️</td></tr>
-<tr><td><strong>DNS Ad Blocking</strong></td><td align="center">✅ ~1.5M</td><td align="center">❌</td><td align="center">❌</td></tr>
+<tr><td><strong>Private Unbound DNS</strong></td><td align="center">✅ DNSSEC</td><td align="center">❌</td><td align="center">❌</td></tr>
 <tr><td><strong>Telegram bot with commands</strong></td><td align="center">✅ 25+ cmds</td><td align="center">⚠️ basic</td><td align="center">⚠️ basic</td></tr>
 <tr><td>System diagnostics (7 blocks)</td><td align="center">✅</td><td align="center">❌</td><td align="center">❌</td></tr>
 <tr><td>Fail2Ban 3 levels</td><td align="center">✅</td><td align="center">❌</td><td align="center">❌</td></tr>
@@ -1312,7 +1317,21 @@ for donors
 ## 📜 Changelog
 
 <details>
-<summary><b>v5.5.10</b> — Unbound VPN DNS bind fix ← CURRENT</summary>
+<summary><b>v5.5.11</b> — Aurum DNS without legacy adblock ← CURRENT</summary>
+
+**🛡️ Aurum DNS:**
+- Replaced the old DNS adblock module with a safer private Unbound resolver
+- Added standalone `aurum-dns/` project with install, uninstall, examples and CLI tools
+- Removed blocklist/whitelist generation from the main manager
+- Fixed duplicate DNSSEC trust-anchor startup failures on Ubuntu packages
+- Added safe `systemd-resolved` stub handling through `resolved.conf.d/no-stub.conf`
+- Port 53 is opened only for configured VPN CIDRs, never for the public internet
+- Added `dns-restart`, `aurum-dns`, `aurum-dns-test` aliases
+
+</details>
+
+<details>
+<summary><b>v5.5.10</b> — Unbound VPN DNS bind fix</summary>
 
 **🛠️ DNS bind fix:**
 - Fixed Unbound startup when VPN DNS access is enabled

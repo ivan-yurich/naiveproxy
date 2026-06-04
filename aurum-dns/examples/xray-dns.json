@@ -1,0 +1,19 @@
+{
+  "dns": {
+    "queryStrategy": "UseIPv4",
+    "servers": [
+      "10.0.0.1"
+    ]
+  },
+  "routing": {
+    "domainStrategy": "IPIfNonMatch",
+    "rules": [
+      {
+        "type": "field",
+        "network": "udp,tcp",
+        "port": 53,
+        "outboundTag": "direct"
+      }
+    ]
+  }
+}

@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-#   NaiveProxy Manager v5.5.10 — by Иван Юрьевич
+#   NaiveProxy Manager v5.5.11 — by Иван Юрьевич
 #   Стек: Caddy 2 + klzgrad/forwardproxy@naive + Hysteria 2 + WARP + Xray Modern
 #   ОС: Ubuntu 20.04 / 22.04 / 24.04
 #
@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-VERSION="5.5.10"
+VERSION="5.5.11"
 LANG_UI="${NAIVEPROXY_LANG:-ru}"  # ru или en — export NAIVEPROXY_LANG=en
 GITHUB_RAW="https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/naiveproxy.sh"
 GITHUB_API="https://api.github.com/repos/ivan-yurich/naiveproxy/releases/latest"
@@ -774,10 +774,11 @@ save_config() {
         printf 'HYSTERIA_PASSWORD=%q\n' "${HYSTERIA_PASSWORD:-}"
         printf 'HYSTERIA_OBFS_PASSWORD=%q\n' "${HYSTERIA_OBFS_PASSWORD:-}"
         printf 'UNBOUND_ENABLED=%q\n' "${UNBOUND_ENABLED:-0}"
-        printf 'UNBOUND_MODE=%q\n' "${UNBOUND_MODE:-forward}"
-        printf 'UNBOUND_ADBLOCK=%q\n' "${UNBOUND_ADBLOCK:-1}"
+        printf 'UNBOUND_MODE=%q\n' "${UNBOUND_MODE:-recursive}"
+        printf 'UNBOUND_ADBLOCK=%q\n' "${UNBOUND_ADBLOCK:-0}"
+        printf 'UNBOUND_GATEWAY_IP=%q\n' "${UNBOUND_GATEWAY_IP:-}"
         printf 'UNBOUND_VPN_ENABLED=%q\n' "${UNBOUND_VPN_ENABLED:-0}"
-        printf 'UNBOUND_VPN_CIDRS=%q\n' "${UNBOUND_VPN_CIDRS:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}"
+        printf 'UNBOUND_VPN_CIDRS=%q\n' "${UNBOUND_VPN_CIDRS:-10.0.0.0/24}"
         printf 'WARP_PROXY_PORT=%q\n' "${WARP_PROXY_PORT:-$WARP_PROXY_PORT_DEFAULT}"
         printf 'WARP_PROXY_ENABLED=%q\n' "${WARP_PROXY_ENABLED:-0}"
         printf 'WARP_MODE=%q\n' "${WARP_MODE:-off}"
@@ -5257,27 +5258,25 @@ cmd_diagnose() {
         _warn "Fail2Ban не запущен — SSH не защищён от брутфорса"
     fi
 
-    # Unbound DNS plugin
+    # Aurum DNS / Unbound
     if command -v unbound &>/dev/null; then
         if systemctl is-active --quiet unbound 2>/dev/null; then
-            local blocked_domains=0
-            [[ -f "${DNS_BLOCKLIST:-/etc/unbound/blocklist.conf}" ]] && blocked_domains=$(grep -c "^local-zone" "${DNS_BLOCKLIST:-/etc/unbound/blocklist.conf}" 2>/dev/null || echo 0)
-            _ok "Unbound DNS plugin: $(unbound_mode_label), adblock=${UNBOUND_ADBLOCK:-1}, blocked=${blocked_domains}"
+            _ok "Aurum DNS: $(unbound_mode_label), gateway=${UNBOUND_GATEWAY_IP:-127.0.0.1}, vpn=${UNBOUND_VPN_ENABLED:-0}"
         else
-            _warn "Unbound DNS plugin установлен, но сервис не активен"
+            _warn "Aurum DNS установлен, но сервис не активен"
         fi
-        if [[ -f "${DNS_CONF:-/etc/unbound/unbound.conf.d/naiveproxy-dns.conf}" ]] && unbound-checkconf "${DNS_CONF:-/etc/unbound/unbound.conf.d/naiveproxy-dns.conf}" >/dev/null 2>&1; then
+        if [[ -f "${DNS_CONF:-/etc/unbound/unbound.conf.d/aurum-vpn.conf}" ]] && unbound-checkconf "${DNS_CONF:-/etc/unbound/unbound.conf.d/aurum-vpn.conf}" >/dev/null 2>&1; then
             _ok "Unbound config валиден"
         else
             _warn "Unbound config не найден или содержит ошибку"
         fi
-        if command -v dig >/dev/null 2>&1 && dig "@127.0.0.1" -p 5335 google.com +short +time=2 +tries=1 2>/dev/null | grep -Eq '^[0-9a-fA-F:.]+$'; then
-            _ok "Unbound resolver отвечает на 127.0.0.1:5335"
+        if command -v dig >/dev/null 2>&1 && dig "@127.0.0.1" google.com +short +time=2 +tries=1 2>/dev/null | grep -Eq '^[0-9a-fA-F:.]+$'; then
+            _ok "Aurum DNS отвечает на 127.0.0.1:53"
         else
-            _warn "Unbound resolver test не прошёл"
+            _warn "Aurum DNS test не прошёл"
         fi
     else
-        _info "Unbound DNS plugin не установлен (меню → 17)"
+        _info "Aurum DNS не установлен (меню → 17)"
     fi
 
     # WARP modes — proxy/full-tunnel
@@ -6513,33 +6512,41 @@ tg_send_stats_to() {
 
 
 # ══════════════════════════════════════════════════════════════
-#   DNS БЛОКИРОВКА РЕКЛАМЫ (unbound + blocklists)
+#   AURUM DNS (Unbound recursive resolver for VPN clients)
 # ══════════════════════════════════════════════════════════════
 
-DNS_CONF="/etc/unbound/unbound.conf.d/naiveproxy-dns.conf"
-DNS_BLOCKLIST="/etc/unbound/blocklist.conf"
-DNS_WHITELIST="/etc/unbound/whitelist.txt"
+DNS_CONF="/etc/unbound/unbound.conf.d/aurum-vpn.conf"
+DNS_LEGACY_CONF="/etc/unbound/unbound.conf.d/naiveproxy-dns.conf"
+DNS_LEGACY_BLOCKLIST="/etc/unbound/blocklist.conf"
+DNS_LEGACY_WHITELIST="/etc/unbound/whitelist.txt"
+DNS_RESOLVED_NO_STUB="/etc/systemd/resolved.conf.d/no-stub.conf"
+DNS_DEFAULT_VPN_CIDRS="10.0.0.0/24"
 DNS_STATS_FILE="/etc/naiveproxy/dns_stats"
 
-# Источники blocklists (совместимы с unbound)
-BLOCKLIST_SOURCES=(
-    "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
-    "https://adaway.org/hosts.txt"
-    "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/hosts/pro.txt"
-)
+is_valid_ipv4() {
+    local ip="$1" part
+    local -a oct
+    [[ "$ip" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || return 1
+    IFS='.' read -r -a oct <<< "$ip"
+    for part in "${oct[@]}"; do
+        [[ "$part" =~ ^[0-9]+$ && "$part" -ge 0 && "$part" -le 255 ]] || return 1
+    done
+}
 
 is_valid_cidr4() {
-    local cidr="$1" ip mask oct
+    local cidr="$1" ip part
+    local -a oct
     [[ "$cidr" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}/([0-9]|[1-2][0-9]|3[0-2])$ ]] || return 1
     ip="${cidr%/*}"
     IFS='.' read -r -a oct <<< "$ip"
-    for mask in "${oct[@]}"; do
-        [[ "$mask" =~ ^[0-9]+$ && "$mask" -ge 0 && "$mask" -le 255 ]] || return 1
+    for part in "${oct[@]}"; do
+        [[ "$part" =~ ^[0-9]+$ && "$part" -ge 0 && "$part" -le 255 ]] || return 1
     done
 }
 
 normalize_cidr_list() {
     local raw="$1" item out=""
+    local -a cidrs
     raw="${raw// /}"
     IFS=',' read -ra cidrs <<< "$raw"
     for item in "${cidrs[@]}"; do
@@ -6554,10 +6561,13 @@ normalize_cidr_list() {
 }
 
 unbound_mode_label() {
-    case "${UNBOUND_MODE:-forward}" in
-        recursive) echo "recursive DNSSEC" ;;
-        *) echo "forward DoT" ;;
-    esac
+    echo "Aurum recursive DNSSEC"
+}
+
+dns_config_backup() {
+    local file="$1"
+    [[ -f "$file" ]] || return 0
+    cp -a "$file" "${file}.bak.$(date '+%Y%m%d-%H%M%S')" 2>/dev/null || true
 }
 
 get_unbound_vpn_bind_ips() {
@@ -6567,50 +6577,83 @@ get_unbound_vpn_bind_ips() {
         | sort -u
 }
 
+ip_is_on_server() {
+    local ip_addr="$1"
+    [[ "$ip_addr" == "127.0.0.1" ]] && return 0
+    get_unbound_vpn_bind_ips | grep -Fxq "$ip_addr"
+}
+
+detect_private_dns_gateway() {
+    get_unbound_vpn_bind_ips \
+        | awk '/^10\./ || /^192\.168\./ || /^172\.(1[6-9]|2[0-9]|3[0-1])\./ { print; exit }'
+}
+
+disable_resolved_stub_if_needed() {
+    if ! command -v systemctl >/dev/null 2>&1 || ! systemctl cat systemd-resolved.service >/dev/null 2>&1; then
+        return 0
+    fi
+    if port53_listeners | grep -qi 'systemd-resolve'; then
+        info "Порт 53 занят systemd-resolved stub, отключаю DNSStubListener..."
+        mkdir -p "$(dirname "$DNS_RESOLVED_NO_STUB")"
+        dns_config_backup "$DNS_RESOLVED_NO_STUB"
+        cat > "$DNS_RESOLVED_NO_STUB" <<'EOF'
+[Resolve]
+DNSStubListener=no
+EOF
+        systemctl restart systemd-resolved 2>/dev/null || true
+        sleep 1
+        ok "systemd-resolved DNSStubListener отключён без изменения /etc/resolv.conf"
+    fi
+}
+
+port53_listeners() {
+    ss -H -lntup 2>/dev/null | awk '$5 ~ /:53$/ || $5 ~ /:53%/ {print}'
+}
+
+check_port53_for_aurum_dns() {
+    local conflicts
+    conflicts=$(port53_listeners | grep -Ev 'unbound|systemd-resolve|systemd-resolved' || true)
+    if [[ -n "$conflicts" ]]; then
+        err "Порт 53 занят другим сервисом. Aurum DNS не будет ломать его автоматически:"
+        echo "$conflicts"
+        return 1
+    fi
+}
+
+cleanup_legacy_dns_files() {
+    local file
+    for file in "$DNS_LEGACY_CONF" "$DNS_LEGACY_BLOCKLIST" "$DNS_LEGACY_WHITELIST"; do
+        if [[ -f "$file" ]]; then
+            dns_config_backup "$file"
+            rm -f "$file"
+        fi
+    done
+}
+
 write_unbound_config() {
-    mkdir -p "$(dirname "$DNS_CONF")" "$(dirname "$DNS_BLOCKLIST")" /var/lib/unbound
-    [[ -f "$DNS_BLOCKLIST" ]] || : > "$DNS_BLOCKLIST"
-    [[ -f "$DNS_WHITELIST" ]] || : > "$DNS_WHITELIST"
+    mkdir -p "$(dirname "$DNS_CONF")" /var/lib/unbound
+    dns_config_backup "$DNS_CONF"
 
-    local mode="${UNBOUND_MODE:-forward}"
-    local adblock="${UNBOUND_ADBLOCK:-1}"
     local vpn_enabled="${UNBOUND_VPN_ENABLED:-0}"
-    local vpn_cidrs="${UNBOUND_VPN_CIDRS:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}"
-    local bind_ip
-    local bind_ips=()
-
-    [[ "$mode" == "recursive" ]] || mode="forward"
-    [[ "$adblock" == "1" ]] || adblock="0"
+    local vpn_cidrs="${UNBOUND_VPN_CIDRS:-$DNS_DEFAULT_VPN_CIDRS}"
+    local gateway_ip="${UNBOUND_GATEWAY_IP:-}"
+    local cidr
+    local -a cidrs
 
     cat > "$DNS_CONF" <<EOF
 server:
-    # Local resolver for the server and local services.
-    interface: 127.0.0.1@5335
-    interface: 127.0.0.1@53
+    # Aurum VPN DNS: local recursive resolver.
+    # Never bind 0.0.0.0. VPN access is bound to the gateway IP only.
+    interface: 127.0.0.1
 EOF
 
-    if [[ "$vpn_enabled" == "1" ]]; then
-        mapfile -t bind_ips < <(get_unbound_vpn_bind_ips)
-        if [[ "${#bind_ips[@]}" -gt 0 ]]; then
-            cat >> "$DNS_CONF" <<'EOF'
-
-    # VPN DNS: bind concrete server/VPN interface addresses only.
-    # Do not bind 0.0.0.0:53 because it conflicts with systemd-resolved and can become unsafe.
-EOF
-            for bind_ip in "${bind_ips[@]}"; do
-                printf '    interface: %s@53\n' "$bind_ip" >> "$DNS_CONF"
-            done
-        else
-            cat >> "$DNS_CONF" <<'EOF'
-
-    # VPN DNS was enabled, but no non-loopback IPv4 interface was detected.
-    # Local DNS remains available on 127.0.0.1.
-EOF
-        fi
+    if [[ "$vpn_enabled" == "1" && -n "$gateway_ip" ]]; then
+        printf '    interface: %s\n' "$gateway_ip" >> "$DNS_CONF"
     fi
 
     cat >> "$DNS_CONF" <<'EOF'
 
+    port: 53
     do-ip4: yes
     do-ip6: no
     do-udp: yes
@@ -6640,7 +6683,10 @@ EOF
     qname-minimisation: yes
     aggressive-nsec: yes
     val-clean-additional: yes
-    auto-trust-anchor-file: "/var/lib/unbound/root.key"
+
+    # DNSSEC root trust anchor is managed by Ubuntu's Unbound package.
+    # Do not repeat auto-trust-anchor-file here, or Unbound can fail with:
+    # "trust anchor presented twice".
     root-hints: "/usr/share/dns/root.hints"
 
     # Cache and speed.
@@ -6656,34 +6702,11 @@ EOF
     # Logs are off by default to preserve privacy.
     log-queries: no
     statistics-interval: 0
+    verbosity: 1
+
+    # Recursive mode: no Google/Cloudflare forwarders here.
+    # Unbound queries root and authoritative DNS servers directly.
 EOF
-
-    if [[ "$adblock" == "1" ]]; then
-        cat >> "$DNS_CONF" <<EOF
-
-    # Optional ad/tracker blocking.
-    include: "${DNS_BLOCKLIST}"
-EOF
-    fi
-
-    if [[ "$mode" == "forward" ]]; then
-        cat >> "$DNS_CONF" <<'EOF'
-
-    # Forward mode: encrypted upstream DNS-over-TLS.
-    forward-zone:
-        name: "."
-        forward-addr: 1.1.1.1@853#cloudflare-dns.com
-        forward-addr: 1.0.0.1@853#cloudflare-dns.com
-        forward-addr: 8.8.8.8@853#dns.google
-        forward-tls-upstream: yes
-EOF
-    else
-        cat >> "$DNS_CONF" <<'EOF'
-
-    # Recursive mode: no Google/Cloudflare forwarders.
-    # Unbound queries root and authoritative DNS servers directly and validates DNSSEC.
-EOF
-    fi
 
     chown -R unbound:unbound /var/lib/unbound 2>/dev/null || true
 }
@@ -6705,8 +6728,27 @@ restart_unbound_checked() {
     fi
 }
 
+install_aurum_dns_cli_commands() {
+    local script_path="${SCRIPT_PATH:-/usr/local/bin/naiveproxy.sh}"
+    cat > /usr/local/bin/aurum-dns-status <<EOF
+#!/bin/sh
+exec /bin/bash "$script_path" unbound-status
+EOF
+    cat > /usr/local/bin/aurum-dns-test <<EOF
+#!/bin/sh
+exec /bin/bash "$script_path" unbound-test
+EOF
+    cat > /usr/local/bin/aurum-dns-restart <<EOF
+#!/bin/sh
+exec /bin/bash "$script_path" unbound-restart
+EOF
+    chmod +x /usr/local/bin/aurum-dns-status /usr/local/bin/aurum-dns-test /usr/local/bin/aurum-dns-restart
+}
+
 apply_unbound_ufw_rules() {
     local cidr
+    local -a cidrs
+    command -v ufw >/dev/null 2>&1 || return 0
     if [[ "${UNBOUND_VPN_ENABLED:-0}" == "1" ]]; then
         remove_unbound_ufw_rules
         IFS=',' read -ra cidrs <<< "${UNBOUND_VPN_CIDRS:-}"
@@ -6721,6 +6763,8 @@ apply_unbound_ufw_rules() {
 
 remove_unbound_ufw_rules() {
     local cidr candidates extra_cidrs="${1:-}"
+    local -a cidrs
+    command -v ufw >/dev/null 2>&1 || return 0
     candidates="${extra_cidrs},${UNBOUND_VPN_CIDRS:-},10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
     IFS=',' read -ra cidrs <<< "$candidates"
     for cidr in "${cidrs[@]}"; do
@@ -6732,48 +6776,58 @@ remove_unbound_ufw_rules() {
 
 cmd_dns_install() {
     hr
-    echo -e "${BOLD}  🚫 Установка Unbound DNS plugin${RESET}"
+    echo -e "${BOLD}  🛡️ Установка Aurum DNS (Unbound)${RESET}"
     hr
 
-    info "Устанавливаю unbound..."
+    info "Обновляю apt cache и устанавливаю зависимости..."
+    apt-get update -qq
     apt-get install -y -q unbound unbound-anchor dnsutils dns-root-data ca-certificates curl
 
-    mkdir -p /var/lib/unbound
+    cleanup_legacy_dns_files
+    disable_resolved_stub_if_needed
+    check_port53_for_aurum_dns || return 1
+    mkdir -p /var/lib/unbound "$(dirname "$DNS_CONF")"
     unbound-anchor -a /var/lib/unbound/root.key >/dev/null 2>&1 || true
 
     echo
-    echo -e "${CYAN}Режим Unbound:${RESET}"
-    echo -e "  ${BOLD}1)${RESET} Собственный recursive DNS + adblock ${DIM}(рекомендуется)${RESET}"
-    echo -e "  ${BOLD}2)${RESET} Собственный recursive DNS без adblock"
-    echo -e "  ${BOLD}3)${RESET} Forward DoT через Cloudflare/Google + adblock"
-    echo -e "  ${BOLD}4)${RESET} Forward DoT без adblock"
-    echo -ne "${CYAN}Выбор [1-4] (Enter = 1): ${RESET}"
-    read -r dns_mode_choice
-    case "$dns_mode_choice" in
-        1|"") UNBOUND_MODE="recursive"; UNBOUND_ADBLOCK="1" ;;
-        2) UNBOUND_MODE="recursive"; UNBOUND_ADBLOCK="0" ;;
-        3) UNBOUND_MODE="forward"; UNBOUND_ADBLOCK="1" ;;
-        4) UNBOUND_MODE="forward"; UNBOUND_ADBLOCK="0" ;;
-        *) err "Неверный выбор"; return 1 ;;
-    esac
+    echo -e "${CYAN}Aurum DNS работает как recursive Unbound без рекламных blocklists.${RESET}"
+    echo -e "${DIM}Если нужен DNS для VPN-клиентов, укажи IP gateway на VPN-интерфейсе, например 10.0.0.1.${RESET}"
+    local detected_gateway gateway_input vpn_cidrs
+    detected_gateway=$(detect_private_dns_gateway || true)
+    echo -ne "${CYAN}VPN gateway IP [${detected_gateway:-Enter = только 127.0.0.1}]: ${RESET}"
+    read -r gateway_input
+    gateway_input="${gateway_input:-$detected_gateway}"
 
-    echo -ne "${CYAN}Разрешить DNS для VPN-клиентов? [y/N]: ${RESET}"
-    read -r vpn_ans
-    if [[ "${vpn_ans,,}" == "y" ]]; then
+    UNBOUND_MODE="recursive"
+    UNBOUND_ADBLOCK="0"
+    if [[ -n "$gateway_input" ]]; then
+        if ! is_valid_ipv4 "$gateway_input"; then
+            err "Некорректный IPv4: $gateway_input"
+            return 1
+        fi
+        if ! ip_is_on_server "$gateway_input"; then
+            err "IP $gateway_input не найден на интерфейсах сервера. Сначала подними VPN-интерфейс с этим gateway IP."
+            return 1
+        fi
+        UNBOUND_GATEWAY_IP="$gateway_input"
         UNBOUND_VPN_ENABLED="1"
-        echo -ne "${CYAN}VPN CIDR через запятую [${UNBOUND_VPN_CIDRS:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}]: ${RESET}"
+        echo -ne "${CYAN}VPN CIDR через запятую [${UNBOUND_VPN_CIDRS:-$DNS_DEFAULT_VPN_CIDRS}]: ${RESET}"
         read -r vpn_cidrs
-        UNBOUND_VPN_CIDRS=$(normalize_cidr_list "${vpn_cidrs:-${UNBOUND_VPN_CIDRS:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}}") || return 1
+        UNBOUND_VPN_CIDRS=$(normalize_cidr_list "${vpn_cidrs:-${UNBOUND_VPN_CIDRS:-$DNS_DEFAULT_VPN_CIDRS}}") || return 1
+        if [[ "$UNBOUND_VPN_CIDRS" == *"0.0.0.0/0"* ]]; then
+            err "Open resolver запрещён: 0.0.0.0/0 использовать нельзя"
+            return 1
+        fi
     else
+        UNBOUND_GATEWAY_IP=""
         UNBOUND_VPN_ENABLED="0"
+        UNBOUND_VPN_CIDRS="${UNBOUND_VPN_CIDRS:-$DNS_DEFAULT_VPN_CIDRS}"
     fi
 
     write_unbound_config
     restart_unbound_checked || return 1
     apply_unbound_ufw_rules
-
-    # Интегрируем с Caddyfile — добавляем DNS
-    _dns_integrate_caddy
+    install_aurum_dns_cli_commands
 
     # Статистика
     mkdir -p "$(dirname "${DNS_STATS_FILE}")"
@@ -6781,140 +6835,42 @@ cmd_dns_install() {
     UNBOUND_ENABLED="1"
     save_config
 
-    if [[ "${UNBOUND_ADBLOCK:-1}" == "1" ]]; then
-        cmd_dns_update
-    fi
-
-    ok "Unbound DNS plugin установлен!"
-    tg_send "🚫 <b>Unbound DNS plugin установлен</b>
+    ok "Aurum DNS установлен!"
+    tg_send "🛡️ <b>Aurum DNS установлен</b>
 🖥 Сервер: <code>$(hostname)</code>
-🔒 Режим: $(unbound_mode_label), adblock=${UNBOUND_ADBLOCK:-1}, VPN=${UNBOUND_VPN_ENABLED:-0}
+🔒 Режим: recursive DNSSEC, gateway=${UNBOUND_GATEWAY_IP:-127.0.0.1}, VPN=${UNBOUND_VPN_ENABLED:-0}
 🕐 $(date '+%Y-%m-%d %H:%M:%S')"
 }
 
-# Интеграция с Caddy — передаём DNS через unbound
-_dns_integrate_caddy() {
-    # Добавляем локальный DNS резолвер в системный
-    if ! grep -q "127.0.0.1" /etc/resolv.conf; then
-        # Бэкап
-        cp /etc/resolv.conf /etc/resolv.conf.bak 2>/dev/null || true
-        echo "nameserver 127.0.0.1" > /tmp/resolv_new
-        echo "nameserver 1.1.1.1" >> /tmp/resolv_new
-        cat /etc/resolv.conf >> /tmp/resolv_new
-        cp /tmp/resolv_new /etc/resolv.conf
-        ok "DNS: добавлен 127.0.0.1 в /etc/resolv.conf"
-    fi
+# Старый adblock/blocklists режим удалён: Aurum DNS теперь только безопасный resolver.
+cmd_dns_update() {
+    hr
+    echo -e "${BOLD}  🛡️ Aurum DNS${RESET}"
+    hr
+    warn "Блокировка рекламы временно удалена из скрипта."
+    info "Aurum DNS не скачивает blocklists и не логирует DNS-запросы."
+    info "Для проверки используй: меню 17 → 3 или команду unbound-test"
 }
 
-# Обновление blocklists
-cmd_dns_update() {
+cmd_dns_restart() {
     load_config
     hr
-    echo -e "${BOLD}  🔄 Обновление DNS blocklists${RESET}"
+    echo -e "${BOLD}  🔄 Restart Aurum DNS${RESET}"
     hr
-
     if ! command -v unbound &>/dev/null; then
-        err "unbound не установлен. Сначала: меню → DNS блокировщик → Установить"
+        err "unbound не установлен"
         return 1
     fi
-    if [[ "${UNBOUND_ADBLOCK:-1}" != "1" ]]; then
-        warn "Adblock выключен в текущем режиме Unbound. Включи режим с adblock через меню → 17 → 2."
-        : > "$DNS_BLOCKLIST"
-        write_unbound_config
-        restart_unbound_checked || return 1
-        return 0
-    fi
-
-    info "Скачиваю blocklists..."
-    local tmp_hosts
-    tmp_hosts=$(mktemp)
-    trap 'rm -f "${tmp_hosts}" 2>/dev/null' RETURN
-
-    local total=0
-    local blocked=0
-
-    for url in "${BLOCKLIST_SOURCES[@]}"; do
-        info "  → ${url##*/}"
-        if curl -fsSL --max-time 30 "${url}" >> "${tmp_hosts}" 2>/dev/null; then
-            ok "  Загружено"
-        else
-            warn "  Не удалось загрузить"
-        fi
-    done
-
-    # Парсим hosts формат и конвертируем в unbound
-    info "Конвертирую в формат unbound..."
-
-    # Читаем whitelist
-    local whitelist_domains=""
-    if [[ -f "${DNS_WHITELIST}" ]]; then
-        whitelist_domains=$(grep -v '^#' "${DNS_WHITELIST}" | tr '\n' '|' | sed 's/|$//')
-    fi
-
-    python3 << PYEOF2
-import sys
-
-hosts_file = "${tmp_hosts}"
-output_file = "${DNS_BLOCKLIST}"
-whitelist = "${whitelist_domains}"
-wl_set = set(whitelist.split('|')) if whitelist else set()
-
-blocked = 0
-seen = set()
-
-with open(hosts_file, 'r', encoding='utf-8', errors='ignore') as f,      open(output_file, 'w') as out:
-    out.write("# NaiveProxy DNS Blocklist - обновлено $(date '+%Y-%m-%d %H:%M:%S')\n")
-    for line in f:
-        line = line.strip()
-        if not line or line.startswith('#'):
-            continue
-        parts = line.split()
-        if len(parts) >= 2 and parts[0] in ('0.0.0.0', '127.0.0.1'):
-            domain = parts[1].lower().strip()
-            # Фильтруем мусор
-            if domain in ('localhost', '0.0.0.0', '127.0.0.1', '::1', 'local'):
-                continue
-            if '.' not in domain:
-                continue
-            if domain in seen:
-                continue
-            if domain in wl_set:
-                continue
-            seen.add(domain)
-            out.write(f'local-zone: "{domain}" refuse\n')
-            blocked += 1
-
-print(f"blocked={blocked}")
-PYEOF2
-
-    # Считаем заблокированных
-    blocked=$(grep -c "^local-zone" "${DNS_BLOCKLIST}" 2>/dev/null || echo 0)
-
     write_unbound_config
-    if ! restart_unbound_checked; then
-        err "Ошибка в blocklist — откат"
-        echo "" > "${DNS_BLOCKLIST}"
-        write_unbound_config
-        restart_unbound_checked || true
-        return 1
-    fi
-
-    # Сохраняем статистику
-    echo "${blocked}" > "${DNS_STATS_FILE}"
-
-    ok "Blocklist обновлён: ${blocked} доменов заблокировано"
-    info "Последнее обновление: $(date '+%Y-%m-%d %H:%M:%S')"
-
-    tg_send "🚫 <b>DNS Blocklist обновлён</b>
-🔒 Заблокировано доменов: <b>${blocked}</b>
-🕐 $(date '+%Y-%m-%d %H:%M:%S')"
+    restart_unbound_checked || return 1
+    ok "Aurum DNS перезапущен"
 }
 
-# Статус DNS блокировщика
+# Статус и тест Aurum DNS
 cmd_dns_status() {
     load_config
     hr
-    echo -e "${BOLD}  🚫 Unbound DNS plugin${RESET}"
+    echo -e "${BOLD}  🛡️ Aurum DNS (Unbound)${RESET}"
     hr
 
     if ! command -v unbound &>/dev/null; then
@@ -6928,47 +6884,25 @@ cmd_dns_status() {
         err "unbound: остановлен"
     fi
 
-    local blocked=0
-    [[ -f "${DNS_STATS_FILE}" ]] && blocked=$(cat "${DNS_STATS_FILE}")
-    [[ -f "${DNS_BLOCKLIST}" ]] && blocked=$(grep -c "^local-zone" "${DNS_BLOCKLIST}" 2>/dev/null || echo 0)
-
     echo -e "  Режим: ${CYAN}$(unbound_mode_label)${RESET}"
-    echo -e "  Adblock: ${CYAN}${UNBOUND_ADBLOCK:-1}${RESET}"
-    echo -e "  Local DNS: ${CYAN}127.0.0.1:53${RESET}, ${CYAN}127.0.0.1:5335${RESET}"
+    echo -e "  Local DNS: ${CYAN}127.0.0.1:53${RESET}"
     if [[ "${UNBOUND_VPN_ENABLED:-0}" == "1" ]]; then
-        local bind_ips_label
-        bind_ips_label=$(get_unbound_vpn_bind_ips | paste -sd ',' - 2>/dev/null || true)
-        [[ -n "$bind_ips_label" ]] || bind_ips_label="нет внешних IPv4"
-        echo -e "  VPN DNS: ${CYAN}${bind_ips_label}:53${RESET} только для ${CYAN}${UNBOUND_VPN_CIDRS}${RESET}"
+        echo -e "  VPN DNS: ${CYAN}${UNBOUND_GATEWAY_IP:-не задан}:53${RESET} только для ${CYAN}${UNBOUND_VPN_CIDRS:-$DNS_DEFAULT_VPN_CIDRS}${RESET}"
     else
         echo -e "  VPN DNS: ${YELLOW}выключен${RESET}"
     fi
-    echo -e "  Заблокировано доменов: ${CYAN}${blocked}${RESET}"
     [[ -f "$DNS_CONF" ]] && unbound-checkconf "$DNS_CONF" >/dev/null 2>&1 && ok "Конфиг Unbound валиден" || warn "Конфиг Unbound не прошёл проверку"
 
     echo
-    if [[ "${UNBOUND_ADBLOCK:-1}" == "1" ]]; then
-        info "Тест блокировки рекламных доменов..."
-        local test_domains=("ads.google.com" "tracking.google.com" "doubleclick.net" "googlesyndication.com")
-        for domain in "${test_domains[@]}"; do
-            local blocked_result
-            blocked_result=$(dig "@127.0.0.1" -p 5335 "${domain}" +short +time=2 +tries=1 2>/dev/null || true)
-            if [[ -z "$blocked_result" ]]; then
-                echo -e "  ${GREEN}✅ ${domain} — ЗАБЛОКИРОВАН${RESET}"
-            else
-                echo -e "  ${YELLOW}⚠️  ${domain} — не заблокирован${RESET}"
-            fi
-        done
-    else
-        info "Adblock выключен — тест блокировки пропущен"
-    fi
+    info "Порт 53:"
+    port53_listeners || true
 
     echo
-    info "Тест пропуска нормальных доменов..."
-    local ok_domains=("google.com" "youtube.com" "github.com")
+    info "Тест DNS-запросов..."
+    local ok_domains=("google.com" "cloudflare.com")
     for domain in "${ok_domains[@]}"; do
         local result
-        result=$(dig "@127.0.0.1" -p 5335 "${domain}" +short +time=3 +tries=1 2>/dev/null | head -1)
+        result=$(dig "@127.0.0.1" "${domain}" +short +time=3 +tries=1 2>/dev/null | head -1)
         if [[ -n "${result}" ]]; then
             echo -e "  ${GREEN}✅ ${domain} → ${result}${RESET}"
         else
@@ -6978,133 +6912,136 @@ cmd_dns_status() {
 
     echo
     info "DNSSEC test..."
-    if dig "@127.0.0.1" -p 5335 dnssec-failed.org A +time=3 +tries=1 2>/dev/null | grep -q "status: SERVFAIL"; then
-        echo -e "  ${GREEN}✅ DNSSEC validation работает: dnssec-failed.org отклонён${RESET}"
+    if dig "@127.0.0.1" sigok.verteiltesysteme.net A +time=4 +tries=1 2>/dev/null | grep -q "status: NOERROR"; then
+        echo -e "  ${GREEN}✅ DNSSEC valid domain: OK${RESET}"
     else
-        echo -e "  ${YELLOW}⚠️ DNSSEC test не подтвердил SERVFAIL для dnssec-failed.org${RESET}"
+        echo -e "  ${YELLOW}⚠️ DNSSEC valid test не дал NOERROR${RESET}"
     fi
+    if dig "@127.0.0.1" dnssec-failed.org A +time=4 +tries=1 2>/dev/null | grep -q "status: SERVFAIL"; then
+        echo -e "  ${GREEN}✅ DNSSEC invalid domain отклонён${RESET}"
+    else
+        echo -e "  ${YELLOW}⚠️ DNSSEC invalid test не подтвердил SERVFAIL${RESET}"
+    fi
+    echo
+    info "Последние логи Unbound:"
+    journalctl -u unbound -n 20 --no-pager 2>/dev/null || true
     hr
 }
 
 cmd_dns_set_mode() {
     load_config
     hr
-    echo -e "${BOLD}  🧩 Режим Unbound DNS${RESET}"
+    echo -e "${BOLD}  🛡️ Aurum DNS mode${RESET}"
     hr
-    echo -e "  ${BOLD}1)${RESET} Собственный recursive DNS + adblock ${DIM}(без Google/Cloudflare)${RESET}"
-    echo -e "  ${BOLD}2)${RESET} Собственный recursive DNS без adblock"
-    echo -e "  ${BOLD}3)${RESET} Forward DoT через Cloudflare/Google + adblock"
-    echo -e "  ${BOLD}4)${RESET} Forward DoT без adblock"
-    echo -ne "${CYAN}Выбор [1-4]: ${RESET}"
-    read -r choice
-    case "$choice" in
-        1) UNBOUND_MODE="recursive"; UNBOUND_ADBLOCK="1" ;;
-        2) UNBOUND_MODE="recursive"; UNBOUND_ADBLOCK="0" ;;
-        3) UNBOUND_MODE="forward"; UNBOUND_ADBLOCK="1" ;;
-        4) UNBOUND_MODE="forward"; UNBOUND_ADBLOCK="0" ;;
-        *) err "Неверный выбор"; return 1 ;;
-    esac
-
+    warn "Forward/adblock режимы удалены. Aurum DNS работает только как безопасный recursive resolver."
+    UNBOUND_MODE="recursive"
+    UNBOUND_ADBLOCK="0"
     UNBOUND_ENABLED="1"
     save_config
-    write_unbound_config
-    if [[ "${UNBOUND_ADBLOCK:-1}" == "1" ]]; then
-        cmd_dns_update
-    else
-        : > "$DNS_BLOCKLIST"
+    if command -v unbound &>/dev/null; then
+        write_unbound_config
         restart_unbound_checked || return 1
+        ok "Режим применён: $(unbound_mode_label)"
+    else
+        info "Unbound ещё не установлен. Запусти меню 17 → 1."
     fi
-    save_config
-    ok "Режим Unbound применён: $(unbound_mode_label), adblock=${UNBOUND_ADBLOCK}"
 }
 
 cmd_dns_vpn_access() {
     load_config
     local old_unbound_vpn_cidrs="${UNBOUND_VPN_CIDRS:-}"
+    local old_unbound_gateway="${UNBOUND_GATEWAY_IP:-}"
     hr
     echo -e "${BOLD}  🔐 DNS доступ для VPN-клиентов${RESET}"
     hr
-    echo -e "  Сейчас: VPN=${CYAN}${UNBOUND_VPN_ENABLED:-0}${RESET}, CIDR=${CYAN}${UNBOUND_VPN_CIDRS:-нет}${RESET}"
+    echo -e "  Сейчас: VPN=${CYAN}${UNBOUND_VPN_ENABLED:-0}${RESET}, gateway=${CYAN}${UNBOUND_GATEWAY_IP:-нет}${RESET}, CIDR=${CYAN}${UNBOUND_VPN_CIDRS:-нет}${RESET}"
     echo
     warn "Не включай DNS для 0.0.0.0/0. Скрипт откажется делать open resolver."
-    echo -e "  ${BOLD}1)${RESET} Включить DNS для VPN CIDR"
+    echo -e "  ${BOLD}1)${RESET} Включить / изменить VPN DNS"
     echo -e "  ${BOLD}2)${RESET} Выключить VPN DNS"
     echo -e "  ${BOLD}0)${RESET} Назад"
     echo -ne "${CYAN}Выбор: ${RESET}"
     read -r choice
     case "$choice" in
         1)
-            local cidrs
-            echo -ne "${CYAN}VPN CIDR через запятую [${UNBOUND_VPN_CIDRS:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}]: ${RESET}"
+            local cidrs gateway_input detected_gateway
+            detected_gateway=$(detect_private_dns_gateway || true)
+            echo -ne "${CYAN}VPN gateway IP [${UNBOUND_GATEWAY_IP:-${detected_gateway:-10.0.0.1}}]: ${RESET}"
+            read -r gateway_input
+            gateway_input="${gateway_input:-${UNBOUND_GATEWAY_IP:-${detected_gateway:-10.0.0.1}}}"
+            if ! is_valid_ipv4 "$gateway_input"; then
+                err "Некорректный IPv4: $gateway_input"
+                return 1
+            fi
+            if ! ip_is_on_server "$gateway_input"; then
+                err "IP $gateway_input не найден на интерфейсах сервера. Сначала подними VPN-интерфейс с этим gateway IP."
+                return 1
+            fi
+            echo -ne "${CYAN}VPN CIDR через запятую [${UNBOUND_VPN_CIDRS:-$DNS_DEFAULT_VPN_CIDRS}]: ${RESET}"
             read -r cidrs
-            UNBOUND_VPN_CIDRS=$(normalize_cidr_list "${cidrs:-${UNBOUND_VPN_CIDRS:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}}") || return 1
+            UNBOUND_VPN_CIDRS=$(normalize_cidr_list "${cidrs:-${UNBOUND_VPN_CIDRS:-$DNS_DEFAULT_VPN_CIDRS}}") || return 1
             if [[ "$UNBOUND_VPN_CIDRS" == *"0.0.0.0/0"* ]]; then
                 err "Open resolver запрещён: 0.0.0.0/0 использовать нельзя"
                 return 1
             fi
+            UNBOUND_GATEWAY_IP="$gateway_input"
             UNBOUND_VPN_ENABLED="1"
             ;;
         2)
             UNBOUND_VPN_ENABLED="0"
+            UNBOUND_GATEWAY_IP=""
             remove_unbound_ufw_rules "$old_unbound_vpn_cidrs"
             ;;
         0) return 0 ;;
         *) err "Неверный выбор"; return 1 ;;
     esac
 
+    UNBOUND_MODE="recursive"
+    UNBOUND_ADBLOCK="0"
     write_unbound_config
     restart_unbound_checked || return 1
     remove_unbound_ufw_rules "$old_unbound_vpn_cidrs"
     apply_unbound_ufw_rules
     save_config
+    [[ "$old_unbound_gateway" != "${UNBOUND_GATEWAY_IP:-}" ]] && info "Gateway изменён: ${old_unbound_gateway:-нет} → ${UNBOUND_GATEWAY_IP:-нет}"
     ok "VPN DNS настройки применены"
 }
 
-# Добавить домен в whitelist (разрешить)
+# Совместимость со старым пунктом whitelist.
 cmd_dns_whitelist() {
     hr
-    echo -e "${BOLD}  ✅ Whitelist (разрешить домен)${RESET}"
+    echo -e "${BOLD}  🛡️ Aurum DNS${RESET}"
     hr
-
-    echo -ne "${CYAN}Домен для разрешения: ${RESET}"
-    read -r wl_domain
-    if [[ -z "${wl_domain}" ]]; then
-        warn "Домен не указан"
-        return
-    fi
-
-    # Убираем из blocklist
-    if grep -q "\"${wl_domain}\"" "${DNS_BLOCKLIST}" 2>/dev/null; then
-        grep -v "\"${wl_domain}\"" "${DNS_BLOCKLIST}" > "${DNS_BLOCKLIST}.tmp" \
-            && mv "${DNS_BLOCKLIST}.tmp" "${DNS_BLOCKLIST}"
-        ok "${wl_domain} удалён из blocklist"
-    fi
-
-    # Добавляем в whitelist файл
-    echo "${wl_domain}" >> "${DNS_WHITELIST}"
-    ok "${wl_domain} добавлен в whitelist"
-
-    systemctl restart unbound
-    ok "unbound перезапущен"
+    warn "Whitelist больше не нужен: блокировка рекламы удалена."
+    info "Aurum DNS только резолвит DNS для сервера/VPN и не блокирует домены."
 }
 
-# Удалить DNS блокировщик
+# Удалить Aurum DNS
 cmd_dns_remove() {
-    echo -ne "${YELLOW}Удалить DNS блокировщик? [y/N]: ${RESET}"
+    echo -ne "${YELLOW}Удалить Aurum DNS конфиг и команды? [y/N]: ${RESET}"
     read -r ans
     [[ "${ans,,}" != "y" ]] && return
 
     systemctl stop unbound 2>/dev/null || true
     systemctl disable unbound 2>/dev/null || true
     remove_unbound_ufw_rules
-    rm -f "${DNS_CONF}" "${DNS_BLOCKLIST}" "${DNS_WHITELIST}"
+    cleanup_legacy_dns_files
+    dns_config_backup "$DNS_CONF"
+    rm -f "$DNS_CONF"
+    rm -f /usr/local/bin/aurum-dns-status /usr/local/bin/aurum-dns-test /usr/local/bin/aurum-dns-restart 2>/dev/null || true
+    if [[ -f "$DNS_RESOLVED_NO_STUB" ]]; then
+        dns_config_backup "$DNS_RESOLVED_NO_STUB"
+        rm -f "$DNS_RESOLVED_NO_STUB"
+        systemctl restart systemd-resolved 2>/dev/null || true
+    fi
     UNBOUND_ENABLED="0"
+    UNBOUND_GATEWAY_IP=""
+    UNBOUND_VPN_ENABLED="0"
+    UNBOUND_ADBLOCK="0"
     save_config
+    systemctl daemon-reload 2>/dev/null || true
 
-    # Восстанавливаем resolv.conf
-    [[ -f /etc/resolv.conf.bak ]] && cp /etc/resolv.conf.bak /etc/resolv.conf
-
-    ok "Unbound DNS plugin удалён"
+    ok "Aurum DNS удалён. Пакеты unbound/dnsutils не удалял."
 }
 
 # ─── Донат ─────────────────────────────────────────────────────
@@ -7150,32 +7087,29 @@ cmd_donate() {
     read -r
 }
 
-# Меню DNS блокировщика
+# Меню Aurum DNS
 cmd_dns_menu() {
     while true; do
         load_config
         hr
-        echo -e "${BOLD}  🚫 Unbound DNS plugin${RESET}"
+        echo -e "${BOLD}  🛡️ Aurum DNS (Unbound)${RESET}"
         hr
 
-        local blocked=0
-        [[ -f "${DNS_BLOCKLIST}" ]] && blocked=$(grep -c "^local-zone" "${DNS_BLOCKLIST}" 2>/dev/null || echo 0)
         local dns_status="${RED}не установлен${RESET}"
         if command -v unbound &>/dev/null; then
             dns_status="${YELLOW}установлен, не запущен${RESET}"
-            systemctl is-active --quiet unbound 2>/dev/null && dns_status="${GREEN}активен (${blocked} доменов)${RESET}"
+            systemctl is-active --quiet unbound 2>/dev/null && dns_status="${GREEN}активен${RESET}"
         fi
 
         echo -e "  Статус: ${dns_status}"
-        echo -e "  Режим: ${CYAN}$(unbound_mode_label)${RESET} | Adblock: ${CYAN}${UNBOUND_ADBLOCK:-1}${RESET} | VPN: ${CYAN}${UNBOUND_VPN_ENABLED:-0}${RESET}"
+        echo -e "  Режим: ${CYAN}$(unbound_mode_label)${RESET}"
+        echo -e "  VPN DNS: ${CYAN}${UNBOUND_VPN_ENABLED:-0}${RESET} | Gateway: ${CYAN}${UNBOUND_GATEWAY_IP:-нет}${RESET} | CIDR: ${CYAN}${UNBOUND_VPN_CIDRS:-$DNS_DEFAULT_VPN_CIDRS}${RESET}"
         echo
-        echo -e "  ${BOLD}1)${RESET} Установить / переустановить Unbound plugin"
-        echo -e "  ${BOLD}2)${RESET} Выбрать режим DNS"
-        echo -e "  ${BOLD}3)${RESET} DNS для VPN-клиентов"
-        echo -e "  ${BOLD}4)${RESET} Обновить blocklists"
-        echo -e "  ${BOLD}5)${RESET} Статус, DNSSEC и тесты"
-        echo -e "  ${BOLD}6)${RESET} Разрешить домен (whitelist)"
-        echo -e "  ${BOLD}7)${RESET} Удалить Unbound plugin"
+        echo -e "  ${BOLD}1)${RESET} Установить / переустановить Aurum DNS"
+        echo -e "  ${BOLD}2)${RESET} Настроить DNS для VPN-клиентов"
+        echo -e "  ${BOLD}3)${RESET} Статус, порт 53, DNSSEC и тесты"
+        echo -e "  ${BOLD}4)${RESET} Перезапустить Aurum DNS"
+        echo -e "  ${BOLD}5)${RESET} Удалить Aurum DNS"
         echo -e "  ${BOLD}0)${RESET} Назад"
         hr
         echo -ne "${CYAN}Выбор: ${RESET}"
@@ -7183,12 +7117,10 @@ cmd_dns_menu() {
 
         case "${choice}" in
             1) cmd_dns_install ;;
-            2) cmd_dns_set_mode ;;
-            3) cmd_dns_vpn_access ;;
-            4) cmd_dns_update ;;
-            5) cmd_dns_status ;;
-            6) cmd_dns_whitelist ;;
-            7) cmd_dns_remove ;;
+            2) cmd_dns_vpn_access ;;
+            3) cmd_dns_status ;;
+            4) cmd_dns_restart ;;
+            5) cmd_dns_remove ;;
             0) break ;;
             *) warn "Неверный выбор" ;;
         esac
@@ -7236,11 +7168,9 @@ cmd_status() {
         warn "Лимит устройств: выключен"
     fi
     if command -v unbound &>/dev/null; then
-        local blocked=0
-        [[ -f "${DNS_BLOCKLIST:-/etc/unbound/blocklist.conf}" ]] && blocked=$(grep -c "^local-zone" "${DNS_BLOCKLIST:-/etc/unbound/blocklist.conf}" 2>/dev/null || echo 0)
         systemctl is-active --quiet unbound 2>/dev/null \
-            && ok "Unbound DNS plugin: $(unbound_mode_label), adblock=${UNBOUND_ADBLOCK:-1}, blocked=${blocked}" \
-            || warn "Unbound DNS plugin: установлен, но не работает"
+            && ok "Aurum DNS: $(unbound_mode_label), gateway=${UNBOUND_GATEWAY_IP:-127.0.0.1}, vpn=${UNBOUND_VPN_ENABLED:-0}" \
+            || warn "Aurum DNS: установлен, но не работает"
     fi
     check_cert "${DOMAIN:-}"
     echo
@@ -7399,14 +7329,12 @@ show_menu() {
     local unbound_str="${YELLOW}не установлен${RESET}"
     if command -v unbound &>/dev/null; then
         if systemctl is-active --quiet unbound 2>/dev/null; then
-            local blocked_domains=0
-            [[ -f "${DNS_BLOCKLIST:-/etc/unbound/blocklist.conf}" ]] && blocked_domains=$(grep -c "^local-zone" "${DNS_BLOCKLIST:-/etc/unbound/blocklist.conf}" 2>/dev/null || echo 0)
-            unbound_str="${GREEN}$(unbound_mode_label) (${blocked_domains})${RESET}"
+            unbound_str="${GREEN}active${RESET} ${CYAN}${UNBOUND_GATEWAY_IP:-127.0.0.1}${RESET}"
         else
             unbound_str="${RED}остановлен${RESET}"
         fi
     fi
-    echo -e "   Unbound DNS: ${unbound_str}"
+    echo -e "   Aurum DNS: ${unbound_str}"
     local device_str="${YELLOW}выкл${RESET}"
     if [[ "${DEVICE_LIMIT_ENABLED:-0}" == "1" ]]; then
         device_str="${GREEN}${DEVICE_LIMIT:-$DEVICE_LIMIT_DEFAULT}/${DEVICE_WINDOW_HOURS:-$DEVICE_WINDOW_HOURS_DEFAULT}ч ${DEVICE_LIMIT_MODE:-alert}${RESET}"
@@ -7425,7 +7353,7 @@ show_menu() {
     echo -e "   ${BOLD}10)${RESET} Логи"
     echo -e "   ${BOLD}11)${RESET} Удалить NaiveProxy"
     echo -e "   ${BOLD}16)${RESET} 🔍 Диагностика системы"
-    echo -e "   ${BOLD}17)${RESET} 🚫 Unbound DNS plugin"
+    echo -e "   ${BOLD}17)${RESET} 🛡️ Aurum DNS (Unbound)"
     echo -e "   ${BOLD}18)${RESET} 💛 Поддержать проект (донат)"
     echo -e "   ──────────────────────────"
     echo -e "   ${BOLD}12)${RESET} 🔒 SSH Hardening"
@@ -7506,13 +7434,14 @@ main() {
             qr)          load_config; print_client_config ;;
             ssh-key)     cat "${CONFIG_DIR}/ssh_private_key" 2>/dev/null || err "Ключ не найден: ${CONFIG_DIR}/ssh_private_key" ;;
             diagnose)    cmd_diagnose "${2:-}" ;;
-            dns|unbound)                 cmd_unbound_plugin ;;
-            dns-install|unbound-install) cmd_dns_install ;;
-            dns-mode|unbound-mode)       cmd_dns_set_mode ;;
-            dns-vpn|unbound-vpn)         cmd_dns_vpn_access ;;
-            dns-update|unbound-update)   cmd_dns_update ;;
-            dns-status|unbound-status)   cmd_dns_status ;;
-            dns-remove|unbound-remove)   cmd_dns_remove ;;
+            dns|unbound|aurum-dns)                         cmd_unbound_plugin ;;
+            dns-install|unbound-install|aurum-dns-install) cmd_dns_install ;;
+            dns-mode|unbound-mode)                         cmd_dns_set_mode ;;
+            dns-vpn|unbound-vpn|aurum-dns-vpn)             cmd_dns_vpn_access ;;
+            dns-update|unbound-update)                     cmd_dns_update ;;
+            dns-status|unbound-status|unbound-test|aurum-dns-status|aurum-dns-test) cmd_dns_status ;;
+            dns-restart|unbound-restart|aurum-dns-restart) cmd_dns_restart ;;
+            dns-remove|unbound-remove|aurum-dns-remove)     cmd_dns_remove ;;
             bot)         load_config; cmd_bot ;;
             bot-install) load_config; install_bot_service ;;
             self-update)  load_config; cmd_self_update ;;
@@ -7524,7 +7453,7 @@ main() {
                 echo "GitHub:   github.com/ivan-yurich/naiveproxy"
                 ;;
             *) err "Неизвестная команда: $1"
-               echo "Доступные: install status config [user] reload restart update remove logs monitor users hysteria hy2 hysteria-port warp warp-proxy warp-full warp-protocol xray xray-add-user [user] devices subscription private-page tg-stats ssh-hardening ssh-rescue sysupdate cert domains dns unbound unbound-mode unbound-vpn self-update version camouflage"
+               echo "Доступные: install status config [user] reload restart update remove logs monitor users hysteria hy2 hysteria-port warp warp-proxy warp-full warp-protocol xray xray-add-user [user] devices subscription private-page tg-stats ssh-hardening ssh-rescue sysupdate cert domains dns unbound aurum-dns aurum-dns-status aurum-dns-restart self-update version camouflage"
                exit 1 ;;
         esac
         exit 0

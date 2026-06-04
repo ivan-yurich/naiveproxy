@@ -1,0 +1,22 @@
+{
+  "dns": {
+    "servers": [
+      {
+        "tag": "aurum-dns",
+        "address": "udp://10.0.0.1",
+        "detour": "direct"
+      }
+    ],
+    "final": "aurum-dns",
+    "strategy": "ipv4_only",
+    "disable_cache": false
+  },
+  "route": {
+    "rules": [
+      {
+        "protocol": "dns",
+        "outbound": "direct"
+      }
+    ]
+  }
+}

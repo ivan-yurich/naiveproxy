@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CONF="/etc/unbound/unbound.conf.d/aurum-vpn.conf"
+ENV_FILE="/etc/aurum-dns/aurum-dns.env"
+
+[[ -f "$ENV_FILE" ]] && source "$ENV_FILE"
+
+echo "===== Aurum DNS status ====="
+systemctl status unbound --no-pager || true
+echo
+echo "===== Port 53 listeners ====="
+ss -H -lntup 2>/dev/null | awk '$5 ~ /:53$/ || $5 ~ /:53%/ {print}' || true
+echo
+echo "===== Config check ====="
+if [[ -f "$CONF" ]]; then
+    unbound-checkconf "$CONF" || true
+else
+    echo "Config not found: $CONF"
+fi
+echo
+echo "===== Config summary ====="
+echo "Gateway: ${AURUM_DNS_GATEWAY:-127.0.0.1}"
+echo "CIDRs:   ${AURUM_DNS_CIDRS:-unknown}"
+echo
+echo "===== Last logs ====="
+journalctl -u unbound -n 40 --no-pager || true

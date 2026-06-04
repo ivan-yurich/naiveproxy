@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "===== dig google.com ====="
+dig @127.0.0.1 google.com +time=3 +tries=1
+echo
+echo "===== dig cloudflare.com ====="
+dig @127.0.0.1 cloudflare.com +time=3 +tries=1
+echo
+echo "===== DNSSEC valid test ====="
+dig @127.0.0.1 sigok.verteiltesysteme.net A +time=4 +tries=1
+echo
+echo "===== DNSSEC invalid test should SERVFAIL ====="
+dig @127.0.0.1 dnssec-failed.org A +time=4 +tries=1 || true
