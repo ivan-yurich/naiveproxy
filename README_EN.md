@@ -26,7 +26,7 @@
 
 ---
 
-[![Version](https://img.shields.io/badge/version-5.5.13-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
+[![Version](https://img.shields.io/badge/version-5.5.14-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
 [![ShellCheck](https://img.shields.io/badge/ShellCheck-passing-3FB950?style=for-the-badge&logo=gnu-bash&logoColor=white)](https://www.shellcheck.net)
 [![Bash](https://img.shields.io/badge/Bash-5.0+-4EAA25?style=for-the-badge&logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-20.04%2B-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://ubuntu.com)
@@ -98,7 +98,7 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 
 ---
 
-## 🎉 What's new in v5.5.13
+## 🎉 What's new in v5.5.14
 
 <table>
 <tr>
@@ -115,6 +115,7 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 ✅ Unbound crash with duplicate DNSSEC trust anchor
 ✅ Port 53 conflict with systemd-resolved stub listener
 ✅ Telegram Menu button did not show the command list automatically
+✅ Telegram bot `/menu` polling failed because `allowed_updates` was not sent as a JSON array
 ✅ `((var++))` → `var=$((var+1))` (set -e safety)
 ✅ `/qr` command — curl conflict fix
 ✅ `/adduser` — login/password validation
@@ -140,6 +141,7 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 ♻️ **Idempotent installer** — backups before changes and safe repeated runs
 📱 **Client configs** — sing-box Android VPN/TUN examples include Aurum DNS automatically
 🧭 **Telegram Menu** — Bot API `setMyCommands` + `setChatMenuButton`
+🤖 **Bot service helper** — Telegram setup can install and start `naiveproxy-bot.service` immediately
 🛠️ **bot-menu CLI** — refresh the Telegram command menu manually
 ⚡ **Per-user Hysteria 2** — Hysteria server config now uses `auth.type: userpass` for NaiveProxy users
 ⚙️ **Hysteria port selector** — choose the default UDP/8443 or enter a custom UDP port
@@ -355,7 +357,7 @@ No `0.0.0.0` bind and no public port 53 rule
 
 ```
 ──────────────────────────────────────────────────────
-   NaiveProxy Manager v5.5.13  [ENG]
+   NaiveProxy Manager v5.5.14  [ENG]
    Status: ● running  │  Domain: proxy.example.com
    Telegram: connected  │  Users: 3  │  SSH: 52847
 ──────────────────────────────────────────────────────
@@ -658,7 +660,7 @@ sudo bash naiveproxy.sh diagnose
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  🔍 Diagnostics NaiveProxy Manager v5.5.13              │
+│  🔍 Diagnostics NaiveProxy Manager v5.5.14              │
 │  2026-05-23 14:32:18 · proxy.example.com               │
 └─────────────────────────────────────────────────────────┘
 
@@ -698,7 +700,7 @@ sudo bash naiveproxy.sh diagnose
   ✅ journald: no critical errors
 
 [7/7] Version and updates
-  ✅ Script up to date: v5.5.13
+  ✅ Script up to date: v5.5.14
   ✅ SSH Hardening done
 
 ══════════════════════════════════════════════════════════
@@ -1332,7 +1334,18 @@ for donors
 ## 📜 Changelog
 
 <details>
-<summary><b>v5.5.13</b> — Telegram Menu button commands ← CURRENT</summary>
+<summary><b>v5.5.14</b> — Telegram bot polling and service startup ← CURRENT</summary>
+
+**🤖 Telegram bot runtime:**
+- Fixed Telegram long polling: `allowed_updates` is now sent as a JSON array
+- Telegram setup can install and start `naiveproxy-bot.service` immediately
+- `bot-install` checks `/usr/local/bin/naiveproxy.sh` and restores it before writing the systemd unit
+- `/start`, `/help` and `/menu` are now documented as requiring the running bot service
+
+</details>
+
+<details>
+<summary><b>v5.5.13</b> — Telegram Menu button commands</summary>
 
 **🧭 Telegram bot UX:**
 - Added Bot API `setMyCommands` for the Telegram `Menu` command list

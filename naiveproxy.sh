@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-#   NaiveProxy Manager v5.5.13 — by Иван Юрьевич
+#   NaiveProxy Manager v5.5.14 — by Иван Юрьевич
 #   Стек: Caddy 2 + klzgrad/forwardproxy@naive + Hysteria 2 + WARP + Xray Modern
 #   ОС: Ubuntu 20.04 / 22.04 / 24.04
 #
@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-VERSION="5.5.13"
+VERSION="5.5.14"
 LANG_UI="${NAIVEPROXY_LANG:-ru}"  # ru или en — export NAIVEPROXY_LANG=en
 GITHUB_RAW="https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/naiveproxy.sh"
 GITHUB_API="https://api.github.com/repos/ivan-yurich/naiveproxy/releases/latest"
@@ -970,6 +970,16 @@ setup_telegram() {
 • статус — bash naiveproxy.sh tg-stats
 • мониторинг — каждые 5 минут автоматически"
     ok "Тестовое сообщение отправлено"
+
+    echo
+    warn "Чтобы бот отвечал на /start, /menu и кнопки, нужен systemd сервис naiveproxy-bot."
+    echo -ne "${YELLOW}Установить и запустить Telegram bot service сейчас? [Y/n]: ${RESET}"
+    read -r bot_service_answer
+    if [[ ! "${bot_service_answer}" =~ ^[Nn]$ ]]; then
+        install_bot_service
+    else
+        warn "Бот-меню применено, но ответы на /menu заработают после: sudo bash ${SCRIPT_PATH} bot-install"
+    fi
 }
 
 # ─── Watchdog (cron) ─────────────────────────────────────────
@@ -5640,6 +5650,7 @@ tg_bot_commands_json() {
   {"command":"stats","description":"Статистика ресурсов и трафика"},
   {"command":"diagnose","description":"Диагностика системы"},
   {"command":"logs","description":"Последние логи Caddy"},
+  {"command":"cert","description":"Статус TLS сертификата"},
   {"command":"users","description":"Список пользователей"},
   {"command":"adduser","description":"Добавить пользователя"},
   {"command":"deluser","description":"Удалить пользователя"},
@@ -6563,7 +6574,9 @@ cmd_bot() {
     while true; do
         # Получаем обновления
         local response
-        response=$(curl -s --max-time 35             "https://api.telegram.org/bot${TG_TOKEN}/getUpdates?offset=${offset}&timeout=30&allowed_updates=message"             2>/dev/null || echo "")
+        response=$(curl -s --max-time 35 \
+            "https://api.telegram.org/bot${TG_TOKEN}/getUpdates?offset=${offset}&timeout=30&allowed_updates=%5B%22message%22%5D" \
+            2>/dev/null || echo "")
 
         if [[ -z "${response}" ]]; then
             sleep 5
@@ -6605,6 +6618,22 @@ except: pass
 # Запуск бота как systemd сервиса
 install_bot_service() {
     local script_path="${SCRIPT_PATH:-/usr/local/bin/naiveproxy.sh}"
+    local running_script
+
+    running_script=$(realpath "$0" 2>/dev/null || echo "")
+    if [[ ! -f "$script_path" ]]; then
+        if [[ -n "$running_script" && -f "$running_script" && "$running_script" != /dev/fd/* && "$running_script" != /proc/* ]]; then
+            cp "$running_script" "$script_path" 2>/dev/null || true
+        else
+            curl -fsSL --max-time 30 "$GITHUB_RAW" -o "$script_path" 2>/dev/null || true
+        fi
+    fi
+
+    if [[ ! -f "$script_path" ]]; then
+        err "Не найден ${script_path}. Сначала обнови скрипт: sudo bash naiveproxy.sh self-update"
+        return 1
+    fi
+    chmod +x "$script_path" 2>/dev/null || true
 
     cat > /etc/systemd/system/naiveproxy-bot.service << EOF
 [Unit]
