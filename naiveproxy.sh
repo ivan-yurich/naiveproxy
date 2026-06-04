@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-#   NaiveProxy Manager v5.5.12 — by Иван Юрьевич
+#   NaiveProxy Manager v5.5.13 — by Иван Юрьевич
 #   Стек: Caddy 2 + klzgrad/forwardproxy@naive + Hysteria 2 + WARP + Xray Modern
 #   ОС: Ubuntu 20.04 / 22.04 / 24.04
 #
@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-VERSION="5.5.12"
+VERSION="5.5.13"
 LANG_UI="${NAIVEPROXY_LANG:-ru}"  # ru или en — export NAIVEPROXY_LANG=en
 GITHUB_RAW="https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/naiveproxy.sh"
 GITHUB_API="https://api.github.com/repos/ivan-yurich/naiveproxy/releases/latest"
@@ -959,6 +959,7 @@ setup_telegram() {
     TG_TOKEN="$input_token"
     TG_CHAT_ID="$input_chat_id"
     save_config
+    tg_apply_bot_menu || warn "Команды Telegram Menu можно применить позже: sudo bash naiveproxy.sh bot-menu"
 
     tg_send "🤖 <b>NaiveProxy Manager подключён!</b>
 ✅ Telegram-уведомления настроены
@@ -5629,6 +5630,78 @@ tg_reply() {
     curl -s --max-time 10         -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage"         --data-urlencode "chat_id=${chat_id}"         --data-urlencode "parse_mode=HTML"         --data-urlencode "text=${message}"         >/dev/null 2>&1 || true
 }
 
+tg_bot_commands_json() {
+    cat <<'EOF'
+[
+  {"command":"start","description":"Открыть меню"},
+  {"command":"help","description":"Помощь и список команд"},
+  {"command":"menu","description":"Показать кнопки управления"},
+  {"command":"status","description":"Статус сервера"},
+  {"command":"stats","description":"Статистика ресурсов и трафика"},
+  {"command":"diagnose","description":"Диагностика системы"},
+  {"command":"logs","description":"Последние логи Caddy"},
+  {"command":"users","description":"Список пользователей"},
+  {"command":"adduser","description":"Добавить пользователя"},
+  {"command":"deluser","description":"Удалить пользователя"},
+  {"command":"qr","description":"QR и ссылка пользователя"},
+  {"command":"sub","description":"Страница подписки"},
+  {"command":"subreset","description":"Перевыпустить подписку"},
+  {"command":"devices","description":"Лимит устройств"},
+  {"command":"lockuser","description":"Отключить пользователя"},
+  {"command":"unlockuser","description":"Включить пользователя"},
+  {"command":"xray","description":"Xray ссылки пользователя"},
+  {"command":"xrayadduser","description":"Создать Xray пользователя"},
+  {"command":"xraystatus","description":"Статус Xray"},
+  {"command":"hysteria","description":"Статус Hysteria 2"},
+  {"command":"warp","description":"Статус WARP"},
+  {"command":"restart","description":"Перезапустить Caddy"},
+  {"command":"update","description":"Обновить Caddy"},
+  {"command":"selfupdate","description":"Обновить скрипт"},
+  {"command":"diagfix","description":"Автофикс проблем"},
+  {"command":"privatepage","description":"Личная фейковая страница"},
+  {"command":"admins","description":"Список администраторов"},
+  {"command":"addadmin","description":"Добавить администратора"},
+  {"command":"deladmin","description":"Удалить администратора"},
+  {"command":"donate","description":"Поддержать проект"}
+]
+EOF
+}
+
+tg_apply_bot_menu() {
+    [[ -z "${TG_TOKEN:-}" ]] && { err "Telegram не настроен"; return 1; }
+
+    local commands menu_button resp_cmd resp_menu
+    commands=$(tg_bot_commands_json | tr -d '\n')
+    menu_button='{"type":"commands"}'
+
+    resp_cmd=$(curl -s --max-time 15 \
+        -X POST "https://api.telegram.org/bot${TG_TOKEN}/setMyCommands" \
+        --data-urlencode "commands=${commands}" \
+        2>/dev/null || echo "{}")
+
+    if ! echo "$resp_cmd" | grep -q '"ok":true'; then
+        err "Не удалось установить Telegram commands menu"
+        echo "$resp_cmd"
+        return 1
+    fi
+
+    resp_menu=$(curl -s --max-time 15 \
+        -X POST "https://api.telegram.org/bot${TG_TOKEN}/setChatMenuButton" \
+        --data-urlencode "menu_button=${menu_button}" \
+        2>/dev/null || echo "{}")
+
+    if echo "$resp_menu" | grep -q '"ok":true'; then
+        ok "Telegram Menu button включён"
+    else
+        warn "Команды установлены, но Menu button не подтвердился"
+        echo "$resp_menu"
+    fi
+}
+
+tg_apply_bot_menu_silent() {
+    tg_apply_bot_menu >/dev/null 2>&1 || true
+}
+
 tg_main_menu_markup() {
     cat <<'EOF'
 {"keyboard":[[{"text":"📊 Статус"},{"text":"👥 Пользователи"}],[{"text":"➕ Добавить пользователя"},{"text":"🗑 Удалить пользователя"}],[{"text":"📱 QR / ссылка"},{"text":"🔗 Подписка"}],[{"text":"🧬 Xray"},{"text":"⚡ Hysteria"},{"text":"🌀 WARP"}],[{"text":"🔍 Диагностика"},{"text":"📄 Логи"}],[{"text":"♻️ Restart Caddy"},{"text":"🛠 Автофикс"}],[{"text":"💛 Донат"},{"text":"❓ Помощь"}]],"resize_keyboard":true,"one_time_keyboard":false,"is_persistent":true}
@@ -6479,8 +6552,9 @@ ${admin_list}"
 cmd_bot() {
     [[ -z "${TG_TOKEN:-}" ]] && err "Telegram не настроен. Запусти: sudo bash naiveproxy.sh" && return 1
 
+    tg_apply_bot_menu_silent
     info "Запускаю Telegram бот..."
-    info "Бот работает. Напиши /help в Telegram."
+    info "Бот работает. Нажми Menu или напиши /menu в Telegram."
     info "Для остановки: Ctrl+C"
     echo
 
@@ -6551,6 +6625,7 @@ EOF
 
     systemctl daemon-reload
     systemctl enable naiveproxy-bot --quiet
+    tg_apply_bot_menu || warn "Команды Telegram Menu можно применить позже: sudo bash naiveproxy.sh bot-menu"
     systemctl restart naiveproxy-bot
     ok "Telegram бот установлен как системный сервис"
     ok "Статус: systemctl status naiveproxy-bot"
@@ -7608,6 +7683,7 @@ main() {
             dns-remove|unbound-remove|aurum-dns-remove)     cmd_dns_remove ;;
             bot)         load_config; cmd_bot ;;
             bot-install) load_config; install_bot_service ;;
+            bot-menu)    load_config; tg_apply_bot_menu ;;
             self-update)  load_config; cmd_self_update ;;
             camouflage)   install_camouflage_page ;;
             version)
@@ -7617,7 +7693,7 @@ main() {
                 echo "GitHub:   github.com/ivan-yurich/naiveproxy"
                 ;;
             *) err "Неизвестная команда: $1"
-               echo "Доступные: install status config [user] reload restart update remove logs monitor users hysteria hy2 hysteria-port warp warp-proxy warp-full warp-protocol xray xray-add-user [user] devices subscription private-page tg-stats ssh-hardening ssh-rescue sysupdate cert domains dns unbound aurum-dns aurum-dns-status aurum-dns-restart self-update version camouflage"
+               echo "Доступные: install status config [user] reload restart update remove logs monitor users hysteria hy2 hysteria-port warp warp-proxy warp-full warp-protocol xray xray-add-user [user] devices subscription private-page tg-stats bot-menu ssh-hardening ssh-rescue sysupdate cert domains dns unbound aurum-dns aurum-dns-status aurum-dns-restart self-update version camouflage"
                exit 1 ;;
         esac
         exit 0
