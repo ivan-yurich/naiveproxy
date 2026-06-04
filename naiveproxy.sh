@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-#   NaiveProxy Manager v5.5.7 — by Иван Юрьевич
+#   NaiveProxy Manager v5.5.8 — by Иван Юрьевич
 #   Стек: Caddy 2 + klzgrad/forwardproxy@naive + Hysteria 2 + WARP + Xray Modern
 #   ОС: Ubuntu 20.04 / 22.04 / 24.04
 #
@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-VERSION="5.5.7"
+VERSION="5.5.8"
 LANG_UI="${NAIVEPROXY_LANG:-ru}"  # ru или en — export NAIVEPROXY_LANG=en
 GITHUB_RAW="https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/naiveproxy.sh"
 GITHUB_API="https://api.github.com/repos/ivan-yurich/naiveproxy/releases/latest"
@@ -773,6 +773,7 @@ save_config() {
         printf 'HYSTERIA_PORT=%q\n' "${HYSTERIA_PORT:-8443}"
         printf 'HYSTERIA_PASSWORD=%q\n' "${HYSTERIA_PASSWORD:-}"
         printf 'HYSTERIA_OBFS_PASSWORD=%q\n' "${HYSTERIA_OBFS_PASSWORD:-}"
+        printf 'UNBOUND_ENABLED=%q\n' "${UNBOUND_ENABLED:-0}"
         printf 'WARP_PROXY_PORT=%q\n' "${WARP_PROXY_PORT:-$WARP_PROXY_PORT_DEFAULT}"
         printf 'WARP_PROXY_ENABLED=%q\n' "${WARP_PROXY_ENABLED:-0}"
         printf 'WARP_MODE=%q\n' "${WARP_MODE:-off}"
@@ -1787,6 +1788,33 @@ EOF
   }
 EOF
 
+    if [[ ( -f "$HYSTERIA_CONFIG" || -x "$HYSTERIA_BIN" ) && -n "${HYSTERIA_OBFS_PASSWORD:-}" ]]; then
+        local hy2_uri hy2_auth
+        hy2_uri=$(hysteria_uri_for_user "$first_user" 2>/dev/null || true)
+        hy2_auth=$(hysteria_user_auth "$first_user" 2>/dev/null || true)
+        if [[ -n "$hy2_uri" && -n "$hy2_auth" ]]; then
+            echo
+            echo -e "${CYAN}  Hysteria 2 (персональный UDP/QUIC):${RESET}"
+            echo -e "  ${hy2_uri}"
+            echo
+            echo -e "${CYAN}  JSON (sing-box outbound, Hysteria 2):${RESET}"
+            cat <<EOF
+  {
+    "type": "hysteria2",
+    "tag": "hysteria2-out",
+    "server": "${DOMAIN}",
+    "server_port": ${HYSTERIA_PORT:-8443},
+    "password": "${hy2_auth}",
+    "obfs": {
+      "type": "salamander",
+      "password": "${HYSTERIA_OBFS_PASSWORD}"
+    },
+    "tls": { "enabled": true, "server_name": "${DOMAIN}" }
+  }
+EOF
+        fi
+    fi
+
     local count; count=$(get_users | wc -l)
     if [[ -z "$selected_user" && $count -gt 1 ]]; then
         echo
@@ -1850,10 +1878,12 @@ install_hysteria_bin() {
 
 write_hysteria_config() {
     load_config
-    local cert_file key_file
+    load_users
+    local cert_file key_file users_for_hysteria
     ensure_hysteria_secrets || return 1
     cert_file=$(find_caddy_cert "${DOMAIN:-}" || true)
     key_file=$(find_caddy_key "${DOMAIN:-}" || true)
+    users_for_hysteria=$(get_users 2>/dev/null || true)
 
     if [[ -z "$cert_file" || -z "$key_file" ]]; then
         err "Не нашёл TLS сертификат Caddy для ${DOMAIN:-не задан}"
@@ -1872,8 +1902,24 @@ tls:
   key: ${key_file}
 
 auth:
+EOF
+    if [[ -n "$users_for_hysteria" ]]; then
+        cat >> "$HYSTERIA_CONFIG" <<EOF
+  type: userpass
+  userpass:
+EOF
+        while IFS=: read -r h_user h_pass; do
+            [[ -z "$h_user" || -z "$h_pass" ]] && continue
+            printf '    "%s": "%s"\n' "$h_user" "$h_pass" >> "$HYSTERIA_CONFIG"
+        done <<< "$users_for_hysteria"
+    else
+        cat >> "$HYSTERIA_CONFIG" <<EOF
   type: password
   password: "${HYSTERIA_PASSWORD}"
+EOF
+    fi
+
+    cat >> "$HYSTERIA_CONFIG" <<EOF
 
 obfs:
   type: salamander
@@ -1916,19 +1962,80 @@ EOF
     ok "systemd сервис Hysteria 2 настроен"
 }
 
+hysteria_user_auth() {
+    local selected_user="${1:-}" selected_pass first_user first_pass
+    load_users
+
+    if [[ -n "$selected_user" ]]; then
+        if ! is_valid_proxy_user "$selected_user" || ! selected_pass=$(get_user_pass "$selected_user" 2>/dev/null); then
+            err "Пользователь $selected_user не найден для Hysteria"
+            return 1
+        fi
+        printf '%s:%s\n' "$selected_user" "$selected_pass"
+        return 0
+    fi
+
+    first_user=$(get_users | head -1 | cut -d: -f1)
+    first_pass=$(get_users | head -1 | cut -d: -f2)
+    if [[ -n "$first_user" && -n "$first_pass" ]]; then
+        printf '%s:%s\n' "$first_user" "$first_pass"
+        return 0
+    fi
+
+    printf '%s\n' "${HYSTERIA_PASSWORD:-}"
+}
+
+hysteria_uri_for_user() {
+    local selected_user="${1:-}" auth
+    auth=$(hysteria_user_auth "$selected_user") || return 1
+    [[ -z "$auth" ]] && return 1
+    printf 'hy2://%s@%s:%s/?sni=%s&obfs=salamander&obfs-password=%s' \
+        "$auth" "${DOMAIN}" "${HYSTERIA_PORT:-8443}" "${DOMAIN}" "${HYSTERIA_OBFS_PASSWORD}"
+    if [[ -n "$selected_user" ]]; then
+        printf '#%s-hy2' "$selected_user"
+    fi
+    printf '\n'
+}
+
+sync_hysteria_users_if_active() {
+    load_config
+    if [[ -f "$HYSTERIA_CONFIG" || -x "$HYSTERIA_BIN" ]]; then
+        info "Обновляю Hysteria 2 userpass по текущим пользователям..."
+        if write_hysteria_config && systemctl restart hysteria 2>/dev/null; then
+            ok "Hysteria 2 обновлён для пользователей"
+            return 0
+        fi
+        warn "Hysteria 2 не удалось обновить автоматически. Проверь: sudo bash naiveproxy.sh hysteria-status"
+        return 1
+    fi
+    return 0
+}
+
 print_hysteria_client_config() {
     load_config
-    if [[ -z "${DOMAIN:-}" || -z "${HYSTERIA_PASSWORD:-}" || -z "${HYSTERIA_OBFS_PASSWORD:-}" ]]; then
+    local selected_user="${1:-}"
+    if [[ -z "${DOMAIN:-}" || -z "${HYSTERIA_OBFS_PASSWORD:-}" ]]; then
         warn "Hysteria 2 ещё не настроен. Запусти: sudo bash naiveproxy.sh hysteria"
         return 1
     fi
 
-    local hy2_uri
-    hy2_uri="hy2://${HYSTERIA_PASSWORD}@${DOMAIN}:${HYSTERIA_PORT:-8443}/?sni=${DOMAIN}&obfs=salamander&obfs-password=${HYSTERIA_OBFS_PASSWORD}"
+    local hy2_uri hy2_auth auth_label
+    hy2_auth=$(hysteria_user_auth "$selected_user") || return 1
+    if [[ -z "$hy2_auth" ]]; then
+        warn "Нет Hysteria auth. Добавь пользователя или переустанови Hysteria 2."
+        return 1
+    fi
+    hy2_uri=$(hysteria_uri_for_user "$selected_user") || return 1
+    if [[ "$hy2_auth" == *:* ]]; then
+        auth_label="userpass (${hy2_auth%%:*})"
+    else
+        auth_label="общий password"
+    fi
     hr
     echo -e "${BOLD}${GREEN}  Клиентский конфиг Hysteria 2${RESET}"
     hr
     echo -e "${CYAN}  Стек:${RESET} Hysteria 2 / QUIC / UDP ${HYSTERIA_PORT:-8443}"
+    echo -e "${CYAN}  Auth:${RESET} ${auth_label}"
     echo -e "${YELLOW}  Не конфликтует с NaiveProxy:${RESET} Caddy остаётся на TCP/443, Hysteria 2 на UDP/${HYSTERIA_PORT:-8443}"
     echo
     echo -e "${CYAN}  URI:${RESET}"
@@ -1941,7 +2048,7 @@ print_hysteria_client_config() {
     "tag": "hysteria2-out",
     "server": "${DOMAIN}",
     "server_port": ${HYSTERIA_PORT:-8443},
-    "password": "${HYSTERIA_PASSWORD}",
+    "password": "${hy2_auth}",
     "obfs": {
       "type": "salamander",
       "password": "${HYSTERIA_OBFS_PASSWORD}"
@@ -1961,6 +2068,53 @@ EOF
     hr
 }
 
+choose_hysteria_port() {
+    local current_port="${HYSTERIA_PORT:-8443}" choice custom_port next_port ans
+
+    echo -e "${CYAN}Порт Hysteria 2:${RESET}"
+    echo -e "  ${BOLD}1)${RESET} По умолчанию UDP/8443 ${DIM}(рекомендуется)${RESET}"
+    echo -e "  ${BOLD}2)${RESET} Указать вручную"
+    echo -ne "${CYAN}Выбор [1/2] (Enter = 1): ${RESET}"
+    read -r choice
+
+    case "$choice" in
+        1|"")
+            next_port="8443"
+            ;;
+        2|m|M|manual|Manual|ручной)
+            echo -ne "${CYAN}UDP порт Hysteria 2 [${current_port}]: ${RESET}"
+            read -r custom_port
+            next_port="${custom_port:-$current_port}"
+            ;;
+        *)
+            err "Неверный выбор"
+            return 1
+            ;;
+    esac
+
+    if ! is_valid_port "$next_port"; then
+        err "Неверный порт: $next_port"
+        return 1
+    fi
+
+    if [[ "$next_port" == "443" ]]; then
+        warn "UDP/443 может конфликтовать с Caddy HTTP/3. Рекомендую 8443."
+        echo -ne "${YELLOW}Оставить UDP/443? [y/N]: ${RESET}"
+        read -r ans
+        [[ "${ans,,}" == "y" ]] || next_port="8443"
+    fi
+
+    if [[ "$next_port" != "$current_port" ]] && ss -ulpn 2>/dev/null | grep -q ":${next_port} "; then
+        warn "UDP порт ${next_port} уже слушается. Проверь: ss -ulpn | grep ':${next_port}'"
+        echo -ne "${YELLOW}Продолжить всё равно? [y/N]: ${RESET}"
+        read -r ans
+        [[ "${ans,,}" == "y" ]] || return 1
+    fi
+
+    HYSTERIA_PORT="$next_port"
+    ok "Hysteria 2 порт: UDP/${HYSTERIA_PORT}"
+}
+
 cmd_hysteria_install() {
     load_config
     if [[ -z "${DOMAIN:-}" ]]; then
@@ -1972,29 +2126,10 @@ cmd_hysteria_install() {
     echo -e "${BOLD}  Установка Hysteria 2${RESET}"
     hr
     echo -e "  NaiveProxy остаётся: ${CYAN}TCP/443${RESET}"
-    echo -e "  Hysteria 2 будет:   ${CYAN}UDP/8443${RESET} по умолчанию"
+    echo -e "  Hysteria 2 будет:   ${CYAN}UDP/${HYSTERIA_PORT:-8443}${RESET} или ручной порт"
     echo
 
-    echo -ne "${CYAN}UDP порт Hysteria 2 [8443]: ${RESET}"
-    read -r HYSTERIA_PORT
-    HYSTERIA_PORT="${HYSTERIA_PORT:-8443}"
-    if ! is_valid_port "$HYSTERIA_PORT"; then
-        err "Неверный порт: $HYSTERIA_PORT"
-        return 1
-    fi
-    if [[ "$HYSTERIA_PORT" == "443" ]]; then
-        warn "UDP/443 может конфликтовать с Caddy HTTP/3. Рекомендую 8443."
-        echo -ne "${YELLOW}Оставить UDP/443? [y/N]: ${RESET}"
-        read -r ans
-        [[ "${ans,,}" == "y" ]] || HYSTERIA_PORT="8443"
-    fi
-
-    if ss -ulpn 2>/dev/null | grep -q ":${HYSTERIA_PORT} "; then
-        warn "UDP порт ${HYSTERIA_PORT} уже слушается. Проверь: ss -ulpn | grep ':${HYSTERIA_PORT}'"
-        echo -ne "${YELLOW}Продолжить всё равно? [y/N]: ${RESET}"
-        read -r ans
-        [[ "${ans,,}" == "y" ]] || return 1
-    fi
+    choose_hysteria_port || return 1
 
     ensure_hysteria_secrets || return 1
 
@@ -2015,6 +2150,37 @@ cmd_hysteria_install() {
     fi
 }
 
+cmd_hysteria_change_port() {
+    load_config
+    local old_port="${HYSTERIA_PORT:-8443}"
+    hr
+    echo -e "${BOLD}  Смена UDP порта Hysteria 2${RESET}"
+    hr
+    echo -e "  Текущий порт: ${CYAN}UDP/${old_port}${RESET}"
+    echo
+
+    choose_hysteria_port || return 1
+    if [[ "$old_port" == "${HYSTERIA_PORT}" ]]; then
+        ok "Порт не изменился"
+        save_config
+        return 0
+    fi
+
+    save_config
+    if [[ -f "$HYSTERIA_CONFIG" || -x "$HYSTERIA_BIN" ]]; then
+        write_hysteria_config || return 1
+        ufw delete allow "${old_port}/udp" >/dev/null 2>&1 || true
+        ufw allow "${HYSTERIA_PORT}/udp" comment "Hysteria2 QUIC" >/dev/null 2>&1 || true
+        if systemctl restart hysteria && sleep 2 && systemctl is-active --quiet hysteria; then
+            ok "Hysteria 2 перезапущен на UDP/${HYSTERIA_PORT}"
+        else
+            err "Hysteria 2 не запустился после смены порта. Лог:"
+            journalctl -u hysteria -n 30 --no-pager
+            return 1
+        fi
+    fi
+}
+
 cmd_hysteria_status() {
     load_config
     hr
@@ -2026,6 +2192,13 @@ cmd_hysteria_status() {
         warn "Бинарь не установлен: $HYSTERIA_BIN"
     fi
     [[ -f "$HYSTERIA_CONFIG" ]] && ok "Конфиг: $HYSTERIA_CONFIG" || warn "Конфиг не найден"
+    if [[ -f "$HYSTERIA_CONFIG" ]]; then
+        if grep -q 'type: userpass' "$HYSTERIA_CONFIG"; then
+            ok "Auth: userpass ($(grep -c '^    \".*\":' "$HYSTERIA_CONFIG" 2>/dev/null || echo 0) пользователей)"
+        else
+            warn "Auth: общий password"
+        fi
+    fi
     systemctl is-active --quiet hysteria 2>/dev/null && ok "Сервис: работает" || warn "Сервис: не работает"
     ss -ulpn 2>/dev/null | grep ":${HYSTERIA_PORT:-8443} " || warn "UDP/${HYSTERIA_PORT:-8443} не слушается"
     ufw status 2>/dev/null | grep -E "${HYSTERIA_PORT:-8443}/udp|Status" || true
@@ -2060,21 +2233,29 @@ cmd_hysteria_menu() {
         hr
         echo -e "${BOLD}  Hysteria 2${RESET}"
         hr
+        echo -e "  Текущий порт: ${CYAN}UDP/${HYSTERIA_PORT:-8443}${RESET}"
+        echo
         echo -e "  ${BOLD}1)${RESET} Установить / переустановить"
         echo -e "  ${BOLD}2)${RESET} Клиентский конфиг + QR"
         echo -e "  ${BOLD}3)${RESET} Статус"
         echo -e "  ${BOLD}4)${RESET} Логи"
         echo -e "  ${BOLD}5)${RESET} Удалить Hysteria 2"
+        echo -e "  ${BOLD}6)${RESET} Изменить UDP порт"
         echo -e "  ${BOLD}0)${RESET} Назад"
         hr
         echo -ne "${CYAN}Выбор: ${RESET}"
         read -r choice
         case "$choice" in
             1) cmd_hysteria_install ;;
-            2) print_hysteria_client_config ;;
+            2)
+                echo -ne "${CYAN}Пользователь (Enter = первый/общий): ${RESET}"
+                read -r hy_user
+                print_hysteria_client_config "$hy_user"
+                ;;
             3) cmd_hysteria_status ;;
             4) cmd_hysteria_logs ;;
             5) cmd_hysteria_remove ;;
+            6) cmd_hysteria_change_port ;;
             0) return ;;
             *) err "Неверный выбор" ;;
         esac
@@ -2628,7 +2809,7 @@ generate_subscription_page() {
 
     ensure_web_privacy_files
 
-    local token token_file page_dir links_file naive_pass naive_uri naive_json
+    local token token_file page_dir links_file naive_pass naive_uri naive_json hy2_uri hy2_json
     token_file="${SUBS_DIR}/${user}.token"
     token=$(get_or_create_token_file "$token_file")
     page_dir="${SUBS_WEB_DIR}/${token}"
@@ -2648,6 +2829,32 @@ generate_subscription_page() {
 }
 EOF
 )
+    fi
+
+    hy2_uri=""
+    hy2_json=""
+    if [[ -n "$naive_pass" && -n "${HYSTERIA_OBFS_PASSWORD:-}" && ( -f "$HYSTERIA_CONFIG" || -x "$HYSTERIA_BIN" ) ]]; then
+        hy2_uri=$(hysteria_uri_for_user "$user" 2>/dev/null || true)
+        if [[ -n "$hy2_uri" ]]; then
+            hy2_json=$(cat <<EOF
+{
+  "type": "hysteria2",
+  "tag": "hysteria2-out",
+  "server": "${DOMAIN}",
+  "server_port": ${HYSTERIA_PORT:-8443},
+  "password": "${user}:${naive_pass}",
+  "obfs": {
+    "type": "salamander",
+    "password": "${HYSTERIA_OBFS_PASSWORD}"
+  },
+  "tls": {
+    "enabled": true,
+    "server_name": "${DOMAIN}"
+  }
+}
+EOF
+)
+        fi
     fi
 
     local uuid reality_link vision_link ws_link hu_link xhttp_link trojan_link mkcp_link grpc_link
@@ -2675,6 +2882,7 @@ EOF
 
     {
         [[ -n "$naive_uri" ]] && printf '%s\n' "$naive_uri"
+        [[ -n "$hy2_uri" ]] && printf '%s\n' "$hy2_uri"
         [[ -n "$reality_link" ]] && printf '%s\n' "$reality_link"
         [[ -n "$vision_link" ]] && printf '%s\n' "$vision_link"
         [[ -n "$ws_link" ]] && printf '%s\n' "$ws_link"
@@ -2686,7 +2894,7 @@ EOF
     } > "$links_file"
     chmod 644 "$links_file"
 
-    local sub_url links_url title safe_user safe_domain safe_naive_uri safe_naive_json
+    local sub_url links_url title safe_user safe_domain safe_naive_uri safe_naive_json safe_hy2_uri safe_hy2_json
     sub_url="https://${DOMAIN}/s/${token}/"
     links_url="${sub_url}links.txt"
     title="Subscription for ${user}"
@@ -2694,6 +2902,8 @@ EOF
     safe_domain=$(html_escape_text "$DOMAIN")
     safe_naive_uri=$(html_escape_text "$naive_uri")
     safe_naive_json=$(html_escape_text "$naive_json")
+    safe_hy2_uri=$(html_escape_text "$hy2_uri")
+    safe_hy2_json=$(html_escape_text "$hy2_json")
 
     local safe_reality safe_vision safe_ws safe_hu safe_xhttp safe_trojan safe_mkcp safe_grpc safe_links_url
     safe_reality=$(html_escape_text "$reality_link")
@@ -2744,6 +2954,11 @@ EOF
       <pre>${safe_naive_uri:-Naive пользователь не найден}</pre>
       <h3>naive-client JSON</h3>
       <pre>${safe_naive_json:-Naive конфиг недоступен}</pre>
+      <h2>Hysteria 2</h2>
+      <p class="muted">Персональный UDP/QUIC профиль для этого же пользователя, если Hysteria 2 установлен.</p>
+      <pre>${safe_hy2_uri:-Hysteria 2 не установлен или пользователь недоступен}</pre>
+      <h3>sing-box outbound</h3>
+      <pre>${safe_hy2_json:-Hysteria 2 outbound недоступен}</pre>
     </div>
     <div class="card">
       <h2>Xray Modern</h2>
@@ -3223,6 +3438,107 @@ warp_wait_connected() {
     return 1
 }
 
+warp_current_ssh_client_ip() {
+    local ip=""
+    if [[ -n "${SSH_CLIENT:-}" ]]; then
+        ip=$(awk '{print $1}' <<< "$SSH_CLIENT")
+    elif [[ -n "${SSH_CONNECTION:-}" ]]; then
+        ip=$(awk '{print $1}' <<< "$SSH_CONNECTION")
+    fi
+    if [[ -z "$ip" ]]; then
+        ip=$(who -m 2>/dev/null | sed -n 's/.*(\([^)]*\)).*/\1/p' | head -1 || true)
+    fi
+    printf '%s\n' "$ip"
+}
+
+warp_route_cidr_for_ip() {
+    local ip="$1"
+    [[ -z "$ip" ]] && return 1
+    if [[ "$ip" == *:* ]]; then
+        printf '%s/128\n' "$ip"
+    else
+        printf '%s/32\n' "$ip"
+    fi
+}
+
+warp_add_excluded_route() {
+    local cidr="$1"
+    [[ -z "$cidr" ]] && return 1
+
+    if warp_cli tunnel ip add-range "$cidr" >/dev/null 2>&1; then
+        ok "WARP exclude route добавлен: ${cidr}"
+        return 0
+    fi
+    if warp_cli tunnel ip add "$cidr" >/dev/null 2>&1; then
+        ok "WARP exclude route добавлен: ${cidr}"
+        return 0
+    fi
+    if warp_cli add-excluded-route "$cidr" >/dev/null 2>&1; then
+        ok "WARP exclude route добавлен: ${cidr}"
+        return 0
+    fi
+    if warp_cli tunnel exclude-routes "$cidr" >/dev/null 2>&1; then
+        ok "WARP exclude route добавлен: ${cidr}"
+        return 0
+    fi
+
+    warn "Не удалось автоматически добавить WARP exclude route: ${cidr}"
+    warn "Если SSH отвалится, используй консоль провайдера: sudo bash naiveproxy.sh warp-disable"
+    return 1
+}
+
+warp_prepare_ssh_safety() {
+    local ssh_ip ssh_cidr public_ip public_cidr route
+    ssh_ip=$(warp_current_ssh_client_ip)
+    if [[ -n "$ssh_ip" ]]; then
+        ssh_cidr=$(warp_route_cidr_for_ip "$ssh_ip" || true)
+        [[ -n "$ssh_cidr" ]] && warp_add_excluded_route "$ssh_cidr" || true
+    else
+        warn "Не смог определить IP текущей SSH-сессии через SSH_CLIENT/SSH_CONNECTION"
+    fi
+
+    for route in 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 169.254.0.0/16; do
+        warp_add_excluded_route "$route" >/dev/null 2>&1 || true
+    done
+
+    public_ip=$(curl -4 -fsSL --connect-timeout 5 --max-time 8 https://api.ipify.org 2>/dev/null || true)
+    if [[ "$public_ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        public_cidr="${public_ip}/32"
+        warp_add_excluded_route "$public_cidr" >/dev/null 2>&1 || true
+    fi
+}
+
+warp_arm_rollback() {
+    local marker="/run/naiveproxy-warp-full-pending" unit_name
+    unit_name="naiveproxy-warp-rollback-$(date +%s)"
+    echo "$(date '+%F %T')" > "$marker" 2>/dev/null || true
+    if command -v systemd-run >/dev/null 2>&1; then
+        systemd-run --unit="$unit_name" --on-active=2m \
+            /bin/bash -lc 'if [[ -f /run/naiveproxy-warp-full-pending ]]; then warp-cli disconnect >/dev/null 2>&1 || true; rm -f /run/naiveproxy-warp-full-pending; logger -t naiveproxy "WARP full tunnel rollback: disconnected after missing confirmation"; fi' \
+            >/dev/null 2>&1 || true
+        warn "Аварийный rollback WARP включён на 2 минуты. Подтверди доступ после подключения."
+    else
+        warn "systemd-run не найден — автоматический rollback WARP недоступен"
+    fi
+}
+
+warp_disarm_rollback() {
+    rm -f /run/naiveproxy-warp-full-pending 2>/dev/null || true
+}
+
+warp_confirm_access_or_keep_rollback() {
+    echo
+    warn "Проверка безопасности: если SSH/панель живы, нажми Enter в течение 90 секунд."
+    warn "Если доступ уже пропал, ничего не нажимай — через 2 минуты WARP отключится rollback-сервисом."
+    if read -r -t 90 _; then
+        warp_disarm_rollback
+        ok "Доступ подтверждён, rollback снят"
+        return 0
+    fi
+    warn "Подтверждения нет. Rollback оставлен активным, WARP будет отключён автоматически."
+    return 1
+}
+
 warp_wait_proxy_ready() {
     local port="${1:-${WARP_PROXY_PORT:-$WARP_PROXY_PORT_DEFAULT}}"
     local i status settings
@@ -3412,6 +3728,8 @@ cmd_warp_full_install() {
     install_warp_client || return 1
     systemctl enable --now warp-svc >/dev/null 2>&1 || systemctl enable --now cloudflare-warp >/dev/null 2>&1 || true
     warp_registration_new || return 1
+    warp_prepare_ssh_safety
+    warp_arm_rollback
 
     local tried="" proto
     if [[ "$proto_ans" == "auto" ]]; then
@@ -3425,24 +3743,30 @@ cmd_warp_full_install() {
                 WARP_MODE="$full_mode"
                 WARP_PROTOCOL="$proto"
                 WARP_PROXY_ENABLED="0"
-                save_config
                 tried="ok"
                 break
             fi
             warn "protocol=${proto} не подтвердил warp=on"
         done
-        [[ "$tried" == "ok" ]] || { err "Full-tunnel WARP не заработал ни на MASQUE, ни на WireGuard"; return 1; }
+        [[ "$tried" == "ok" ]] || { err "Full-tunnel WARP не заработал ни на MASQUE, ни на WireGuard"; warp_cli disconnect >/dev/null 2>&1 || true; warp_disarm_rollback; return 1; }
     else
         warp_set_tunnel_protocol "$proto_ans" || return 1
         warp_set_mode "$full_mode" || return 1
         warp_cli connect >/dev/null 2>&1 || true
         warp_wait_connected || true
-        test_warp_full || return 1
+        test_warp_full || { warp_cli disconnect >/dev/null 2>&1 || true; warp_disarm_rollback; return 1; }
         WARP_MODE="$full_mode"
         WARP_PROTOCOL="$proto_ans"
         WARP_PROXY_ENABLED="0"
-        save_config
     fi
+
+    if ! warp_confirm_access_or_keep_rollback; then
+        WARP_MODE="off"
+        WARP_PROXY_ENABLED="0"
+        save_config
+        return 1
+    fi
+    save_config
 
     if [[ "${XRAY_ENABLED:-0}" == "1" && -x "$XRAY_BIN" && -f "$XRAY_CONFIG" ]]; then
         info "Пересобираю Xray config: full-tunnel использует системный маршрут WARP, без local proxy outbound..."
@@ -3544,6 +3868,7 @@ cmd_warp_logs() {
 
 cmd_warp_disable() {
     load_config
+    warp_disarm_rollback
     warp_cli disconnect >/dev/null 2>&1 || true
     WARP_PROXY_ENABLED="0"
     WARP_MODE="off"
@@ -3799,6 +4124,12 @@ cmd_users() {
                 rewrite_caddyfile_current
                 systemctl reload caddy 2>/dev/null || systemctl restart caddy
                 ok "Пользователь $new_user добавлен"
+                local hy_added=0
+                if [[ -f "$HYSTERIA_CONFIG" || -x "$HYSTERIA_BIN" ]]; then
+                    if sync_hysteria_users_if_active; then
+                        hy_added=1
+                    fi
+                fi
                 local xray_added=0
                 if [[ "${XRAY_ENABLED:-0}" == "1" && -x "$XRAY_BIN" && -f "$XRAY_CONFIG" ]]; then
                     echo -ne "${CYAN}Создать Xray/VLESS конфиги для ${new_user} тоже? [Y/n]: ${RESET}"
@@ -3821,6 +4152,9 @@ cmd_users() {
                     warn "Страница подписки не создана автоматически. Проверь: sudo bash naiveproxy.sh subscription ${new_user}"
                 fi
                 print_client_config "$new_user"
+                if [[ "$hy_added" -eq 1 ]]; then
+                    print_hysteria_client_config "$new_user"
+                fi
                 if [[ "$xray_added" -eq 1 ]]; then
                     print_xray_client_config "$new_user"
                 fi
@@ -3843,6 +4177,7 @@ cmd_users() {
                 awk -F: -v user="${del_user}" '$1 != user' "$USERS_FILE" > "${USERS_FILE}.tmp" && mv "${USERS_FILE}.tmp" "$USERS_FILE" || true
                 rewrite_caddyfile_current
                 systemctl reload caddy 2>/dev/null || systemctl restart caddy
+                sync_hysteria_users_if_active >/dev/null 2>&1 || true
                 ok "Пользователь $del_user удалён"
                 ok "Страница подписки $del_user удалена"
                 tg_send "🗑 <b>Пользователь удалён: ${del_user}</b>
@@ -3877,6 +4212,8 @@ cmd_users() {
                 done < "$USERS_FILE" > "$tmp_users" && mv "$tmp_users" "$USERS_FILE"
                 rewrite_caddyfile_current
                 systemctl reload caddy 2>/dev/null || systemctl restart caddy
+                sync_hysteria_users_if_active >/dev/null 2>&1 || true
+                generate_subscription_page "$chg_user" >/dev/null 2>&1 || true
                 ok "Пароль $chg_user изменён"
                 ;;
             5)
@@ -4916,6 +5253,29 @@ cmd_diagnose() {
         _warn "Fail2Ban не запущен — SSH не защищён от брутфорса"
     fi
 
+    # Unbound DNS plugin
+    if command -v unbound &>/dev/null; then
+        if systemctl is-active --quiet unbound 2>/dev/null; then
+            local blocked_domains=0
+            [[ -f "${DNS_BLOCKLIST:-/etc/unbound/blocklist.conf}" ]] && blocked_domains=$(grep -c "^local-zone" "${DNS_BLOCKLIST:-/etc/unbound/blocklist.conf}" 2>/dev/null || echo 0)
+            _ok "Unbound DNS plugin: активен (${blocked_domains} доменов)"
+        else
+            _warn "Unbound DNS plugin установлен, но сервис не активен"
+        fi
+        if [[ -f "${DNS_CONF:-/etc/unbound/unbound.conf.d/naiveproxy-dns.conf}" ]] && unbound-checkconf "${DNS_CONF:-/etc/unbound/unbound.conf.d/naiveproxy-dns.conf}" >/dev/null 2>&1; then
+            _ok "Unbound config валиден"
+        else
+            _warn "Unbound config не найден или содержит ошибку"
+        fi
+        if command -v dig >/dev/null 2>&1 && dig "@127.0.0.1" -p 5335 google.com +short +time=2 +tries=1 2>/dev/null | grep -Eq '^[0-9a-fA-F:.]+$'; then
+            _ok "Unbound resolver отвечает на 127.0.0.1:5335"
+        else
+            _warn "Unbound resolver test не прошёл"
+        fi
+    else
+        _info "Unbound DNS plugin не установлен (меню → 17)"
+    fi
+
     # WARP modes — proxy/full-tunnel
     if command -v warp-cli &>/dev/null; then
         local warp_port warp_trace warp_mode
@@ -5268,6 +5628,29 @@ tg_send_naive_qr() {
     return 1
 }
 
+tg_send_hysteria_qr() {
+    local chat_id="$1"
+    local user="$2"
+    local uri="$3"
+
+    if ! command -v qrencode &>/dev/null; then
+        tg_reply "${chat_id}" "📦 Устанавливаю qrencode для Hysteria QR..."
+        apt-get install -y -q qrencode >/dev/null 2>&1 || true
+    fi
+
+    if command -v qrencode &>/dev/null; then
+        local qr_file="/tmp/hysteria_qr_${user}_$$.png"
+        if qrencode -o "${qr_file}" -s 8 "${uri}" 2>/dev/null && [[ -s "${qr_file}" ]]; then
+            tg_send_photo "${chat_id}" "${qr_file}" "⚡ Hysteria 2 QR для ${user}@${DOMAIN}"
+            rm -f "${qr_file}"
+            return 0
+        fi
+        rm -f "${qr_file}"
+    fi
+
+    return 1
+}
+
 # Обработка одной команды
 tg_handle_command() {
     local chat_id="$1"
@@ -5566,9 +5949,21 @@ ${user_list}"
             if rewrite_caddyfile_current 2>/dev/null; then
                 systemctl reload caddy 2>/dev/null || systemctl restart caddy 2>/dev/null
                 local uri="naive+https://${new_user}:${new_pass}@${DOMAIN}:443"
-                local sub_url sub_links xray_note xray_tmp xray_ok
+                local sub_url sub_links xray_note xray_tmp xray_ok hy_note hy_uri hy_ok
                 xray_note=""
                 xray_ok=0
+                hy_note=""
+                hy_uri=""
+                hy_ok=0
+                if [[ -f "$HYSTERIA_CONFIG" || -x "$HYSTERIA_BIN" ]]; then
+                    if sync_hysteria_users_if_active >/dev/null 2>&1; then
+                        hy_ok=1
+                        hy_uri=$(hysteria_uri_for_user "${new_user}" 2>/dev/null || true)
+                        hy_note="⚡ Hysteria 2: создан персональный профиль"
+                    else
+                        hy_note="⚠️ Hysteria 2: пользователь создан, но конфиг не обновился"
+                    fi
+                fi
                 if [[ "${XRAY_ENABLED:-0}" == "1" && -x "$XRAY_BIN" && -f "$XRAY_CONFIG" ]]; then
                     xray_tmp=$(mktemp)
                     if provision_xray_user "${new_user}" > "$xray_tmp" 2>&1; then
@@ -5583,9 +5978,13 @@ ${user_list}"
                 tg_reply "${chat_id}" "✅ <b>Пользователь добавлен</b>
 👤 Логин: <code>${new_user}</code>
 🔑 Пароль: <code>${new_pass}</code>
+${hy_note}
 ${xray_note}
 🌐 URI:
 <code>${uri}</code>
+
+⚡ Hysteria 2:
+<code>${hy_uri:-не создано}</code>
 
 📄 Страница:
 <code>${sub_url:-не создана автоматически}</code>
@@ -5594,6 +5993,9 @@ Raw links:
 <code>${sub_links:-не создано}</code>"
                 if ! tg_send_naive_qr "${chat_id}" "${new_user}" "${uri}"; then
                     tg_reply "${chat_id}" "⚠️ QR не удалось создать автоматически. URI выше рабочий."
+                fi
+                if [[ "$hy_ok" -eq 1 && -n "$hy_uri" ]]; then
+                    tg_send_hysteria_qr "${chat_id}" "${new_user}" "$hy_uri" || true
                 fi
                 if [[ "$xray_ok" -eq 1 ]]; then
                     local x_links
@@ -5628,6 +6030,7 @@ Raw links:
             awk -F: -v user="${del_user}" '$1 != user' "${USERS_FILE}" > "${USERS_FILE}.tmp"                 && mv "${USERS_FILE}.tmp" "${USERS_FILE}"
             rewrite_caddyfile_current
             systemctl reload caddy 2>/dev/null || systemctl restart caddy
+            sync_hysteria_users_if_active >/dev/null 2>&1 || true
 
             tg_reply "${chat_id}" "🗑 Пользователь <code>${del_user}</code> удалён
 📄 Страница подписки тоже удалена"
@@ -6123,7 +6526,7 @@ BLOCKLIST_SOURCES=(
 
 cmd_dns_install() {
     hr
-    echo -e "${BOLD}  🚫 Установка DNS блокировщика рекламы${RESET}"
+    echo -e "${BOLD}  🚫 Установка Unbound DNS plugin${RESET}"
     hr
 
     # Устанавливаем unbound
@@ -6208,9 +6611,11 @@ UNBOUNDEOF
     # Статистика
     mkdir -p "$(dirname "${DNS_STATS_FILE}")"
     echo "0" > "${DNS_STATS_FILE}"
+    UNBOUND_ENABLED="1"
+    save_config
 
-    ok "DNS блокировщик установлен!"
-    tg_send "🚫 <b>DNS блокировщик установлен</b>
+    ok "Unbound DNS plugin установлен!"
+    tg_send "🚫 <b>Unbound DNS plugin установлен</b>
 🖥 Сервер: <code>$(hostname)</code>
 🔒 Режим: unbound + blocklists
 🕐 $(date '+%Y-%m-%d %H:%M:%S')"
@@ -6334,7 +6739,7 @@ PYEOF2
 # Статус DNS блокировщика
 cmd_dns_status() {
     hr
-    echo -e "${BOLD}  🚫 DNS Блокировщик${RESET}"
+    echo -e "${BOLD}  🚫 Unbound DNS plugin${RESET}"
     hr
 
     if ! command -v unbound &>/dev/null; then
@@ -6418,11 +6823,13 @@ cmd_dns_remove() {
     systemctl stop unbound 2>/dev/null || true
     systemctl disable unbound 2>/dev/null || true
     rm -f "${DNS_CONF}" "${DNS_BLOCKLIST}" "${DNS_WHITELIST}"
+    UNBOUND_ENABLED="0"
+    save_config
 
     # Восстанавливаем resolv.conf
     [[ -f /etc/resolv.conf.bak ]] && cp /etc/resolv.conf.bak /etc/resolv.conf
 
-    ok "DNS блокировщик удалён"
+    ok "Unbound DNS plugin удалён"
 }
 
 # ─── Донат ─────────────────────────────────────────────────────
@@ -6472,7 +6879,7 @@ cmd_donate() {
 cmd_dns_menu() {
     while true; do
         hr
-        echo -e "${BOLD}  🚫 DNS Блокировщик рекламы${RESET}"
+        echo -e "${BOLD}  🚫 Unbound DNS plugin${RESET}"
         hr
 
         local blocked=0
@@ -6482,11 +6889,11 @@ cmd_dns_menu() {
 
         echo -e "  Статус: ${dns_status}"
         echo
-        echo -e "  ${BOLD}1)${RESET} Установить блокировщик"
+        echo -e "  ${BOLD}1)${RESET} Установить Unbound plugin"
         echo -e "  ${BOLD}2)${RESET} Обновить blocklists"
         echo -e "  ${BOLD}3)${RESET} Статус и тест"
         echo -e "  ${BOLD}4)${RESET} Разрешить домен (whitelist)"
-        echo -e "  ${BOLD}5)${RESET} Удалить блокировщик"
+        echo -e "  ${BOLD}5)${RESET} Удалить Unbound plugin"
         echo -e "  ${BOLD}0)${RESET} Назад"
         hr
         echo -ne "${CYAN}Выбор: ${RESET}"
@@ -6504,6 +6911,10 @@ cmd_dns_menu() {
 
         echo -ne "${YELLOW}Enter для продолжения...${RESET}"; read -r
     done
+}
+
+cmd_unbound_plugin() {
+    cmd_dns_menu
 }
 
 # ─── СТАТУС ──────────────────────────────────────────────────
@@ -6539,6 +6950,13 @@ cmd_status() {
         ok "Лимит устройств: ${DEVICE_LIMIT:-$DEVICE_LIMIT_DEFAULT} IP / ${DEVICE_WINDOW_HOURS:-$DEVICE_WINDOW_HOURS_DEFAULT} ч (${DEVICE_LIMIT_MODE:-alert})"
     else
         warn "Лимит устройств: выключен"
+    fi
+    if command -v unbound &>/dev/null; then
+        local blocked=0
+        [[ -f "${DNS_BLOCKLIST:-/etc/unbound/blocklist.conf}" ]] && blocked=$(grep -c "^local-zone" "${DNS_BLOCKLIST:-/etc/unbound/blocklist.conf}" 2>/dev/null || echo 0)
+        systemctl is-active --quiet unbound 2>/dev/null \
+            && ok "Unbound DNS plugin: активен (${blocked} доменов)" \
+            || warn "Unbound DNS plugin: установлен, но не работает"
     fi
     check_cert "${DOMAIN:-}"
     echo
@@ -6694,6 +7112,17 @@ show_menu() {
         [[ "${XRAY_FALLBACK_ENABLED:-0}" == "1" ]] && xray_str="${xray_str} ${CYAN}443-fallback${RESET}"
     fi
     echo -e "   Xray Modern: ${xray_str}"
+    local unbound_str="${YELLOW}не установлен${RESET}"
+    if command -v unbound &>/dev/null; then
+        if systemctl is-active --quiet unbound 2>/dev/null; then
+            local blocked_domains=0
+            [[ -f "${DNS_BLOCKLIST:-/etc/unbound/blocklist.conf}" ]] && blocked_domains=$(grep -c "^local-zone" "${DNS_BLOCKLIST:-/etc/unbound/blocklist.conf}" 2>/dev/null || echo 0)
+            unbound_str="${GREEN}active (${blocked_domains})${RESET}"
+        else
+            unbound_str="${RED}остановлен${RESET}"
+        fi
+    fi
+    echo -e "   Unbound DNS: ${unbound_str}"
     local device_str="${YELLOW}выкл${RESET}"
     if [[ "${DEVICE_LIMIT_ENABLED:-0}" == "1" ]]; then
         device_str="${GREEN}${DEVICE_LIMIT:-$DEVICE_LIMIT_DEFAULT}/${DEVICE_WINDOW_HOURS:-$DEVICE_WINDOW_HOURS_DEFAULT}ч ${DEVICE_LIMIT_MODE:-alert}${RESET}"
@@ -6712,7 +7141,7 @@ show_menu() {
     echo -e "   ${BOLD}10)${RESET} Логи"
     echo -e "   ${BOLD}11)${RESET} Удалить NaiveProxy"
     echo -e "   ${BOLD}16)${RESET} 🔍 Диагностика системы"
-    echo -e "   ${BOLD}17)${RESET} 🚫 DNS блокировщик рекламы"
+    echo -e "   ${BOLD}17)${RESET} 🚫 Unbound DNS plugin"
     echo -e "   ${BOLD}18)${RESET} 💛 Поддержать проект (донат)"
     echo -e "   ──────────────────────────"
     echo -e "   ${BOLD}12)${RESET} 🔒 SSH Hardening"
@@ -6720,7 +7149,7 @@ show_menu() {
     echo -e "   ${BOLD}14)${RESET} ⬆️  Обновить скрипт"
     echo -e "   ${BOLD}15)${RESET} 🎭 Обновить камуфляж"
     echo -e "   ${BOLD}19)${RESET} ♻️  Reload Caddy без разрыва"
-    echo -e "   ${BOLD}20)${RESET} ⚡ Hysteria 2 (UDP/8443, без конфликта)"
+    echo -e "   ${BOLD}20)${RESET} ⚡ Hysteria 2 (UDP порт на выбор)"
     echo -e "   ${BOLD}21)${RESET} 🌀 WARP modes (proxy/full tunnel)"
     echo -e "   ${BOLD}22)${RESET} 📱 Лимит устройств / анти-шаринг"
     echo -e "   ${BOLD}23)${RESET} 🧬 Xray VLESS/Trojan/REALITY fallback"
@@ -6752,9 +7181,10 @@ main() {
             users)     cmd_users ;;
             hysteria|hy2) cmd_hysteria_menu ;;
             hysteria-install|hy2-install) cmd_hysteria_install ;;
-            hysteria-config|hy2-config) print_hysteria_client_config ;;
+            hysteria-config|hy2-config) print_hysteria_client_config "${2:-}" ;;
             hysteria-status|hy2-status) cmd_hysteria_status ;;
             hysteria-logs|hy2-logs) cmd_hysteria_logs ;;
+            hysteria-port|hy2-port) cmd_hysteria_change_port ;;
             hysteria-remove|hy2-remove) cmd_hysteria_remove ;;
             warp) cmd_warp_menu ;;
             warp-install|warp-proxy) cmd_warp_install ;;
@@ -6792,10 +7222,11 @@ main() {
             qr)          load_config; print_client_config ;;
             ssh-key)     cat "${CONFIG_DIR}/ssh_private_key" 2>/dev/null || err "Ключ не найден: ${CONFIG_DIR}/ssh_private_key" ;;
             diagnose)    cmd_diagnose "${2:-}" ;;
-            dns)         cmd_dns_menu ;;
-            dns-install) cmd_dns_install ;;
-            dns-update)  cmd_dns_update ;;
-            dns-status)  cmd_dns_status ;;
+            dns|unbound)                 cmd_unbound_plugin ;;
+            dns-install|unbound-install) cmd_dns_install ;;
+            dns-update|unbound-update)   cmd_dns_update ;;
+            dns-status|unbound-status)   cmd_dns_status ;;
+            dns-remove|unbound-remove)   cmd_dns_remove ;;
             bot)         load_config; cmd_bot ;;
             bot-install) load_config; install_bot_service ;;
             self-update)  load_config; cmd_self_update ;;
@@ -6807,7 +7238,7 @@ main() {
                 echo "GitHub:   github.com/ivan-yurich/naiveproxy"
                 ;;
             *) err "Неизвестная команда: $1"
-               echo "Доступные: install status config [user] reload restart update remove logs monitor users hysteria hy2 warp warp-proxy warp-full warp-protocol xray xray-add-user [user] devices subscription private-page tg-stats ssh-hardening ssh-rescue sysupdate cert domains self-update version camouflage"
+               echo "Доступные: install status config [user] reload restart update remove logs monitor users hysteria hy2 hysteria-port warp warp-proxy warp-full warp-protocol xray xray-add-user [user] devices subscription private-page tg-stats ssh-hardening ssh-rescue sysupdate cert domains dns unbound self-update version camouflage"
                exit 1 ;;
         esac
         exit 0

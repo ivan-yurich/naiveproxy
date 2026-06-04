@@ -26,7 +26,7 @@
 
 ---
 
-[![Version](https://img.shields.io/badge/version-5.5.7-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
+[![Version](https://img.shields.io/badge/version-5.5.8-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
 [![ShellCheck](https://img.shields.io/badge/ShellCheck-passing-3FB950?style=for-the-badge&logo=gnu-bash&logoColor=white)](https://www.shellcheck.net)
 [![Bash](https://img.shields.io/badge/Bash-5.0+-4EAA25?style=for-the-badge&logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-20.04%2B-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://ubuntu.com)
@@ -98,7 +98,7 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 
 ---
 
-## 🎉 What's new in v5.5.7
+## 🎉 What's new in v5.5.8
 
 <table>
 <tr>
@@ -129,6 +129,11 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 
 ### ⚡ New features
 
+🧩 **Unbound DNS plugin** — DNS blocker is now exposed as a module with `unbound-*` CLI aliases
+⚡ **Per-user Hysteria 2** — Hysteria server config now uses `auth.type: userpass` for NaiveProxy users
+⚙️ **Hysteria port selector** — choose the default UDP/8443 or enter a custom UDP port
+🔗 **Hysteria in subscriptions** — personal pages now include Naive + Hysteria 2 + Xray links when available
+🛟 **WARP SSH-safe full tunnel** — full tunnel adds split-tunnel excludes for the current SSH IP and arms rollback
 🌀 **WARP full tunnel** — route all outgoing VPS traffic through Cloudflare WARP with `warp` / `warp+doh`
 🧭 **WARP protocol picker** — `auto`, `MASQUE`, or `WireGuard`; auto tries MASQUE first, then WireGuard
 🔌 **WARP local proxy mode** — still available on `127.0.0.1:40000` for apps that support SOCKS5/HTTP proxy
@@ -340,7 +345,7 @@ Encrypted queries to Cloudflare and Google
 
 ```
 ──────────────────────────────────────────────────────
-   NaiveProxy Manager v5.5.7  [ENG]
+   NaiveProxy Manager v5.5.8  [ENG]
    Status: ● running  │  Domain: proxy.example.com
    Telegram: connected  │  Users: 3  │  SSH: 52847
 ──────────────────────────────────────────────────────
@@ -389,6 +394,14 @@ sudo bash naiveproxy.sh xray-config    # Show Xray links
 sudo bash naiveproxy.sh xray-status    # Xray status
 sudo bash naiveproxy.sh xray-remove    # Remove Xray / return Caddy
 
+# === Hysteria 2 ===
+sudo bash naiveproxy.sh hysteria       # Hysteria menu
+sudo bash naiveproxy.sh hysteria-install
+sudo bash naiveproxy.sh hysteria-config USER
+sudo bash naiveproxy.sh hysteria-port  # Default UDP/8443 or custom UDP port
+sudo bash naiveproxy.sh hysteria-status
+sudo bash naiveproxy.sh hysteria-remove
+
 # === Subscriptions and pages ===
 sudo bash naiveproxy.sh subscription ivan       # User subscription page
 sudo bash naiveproxy.sh subscription-reset ivan # Rotate secret URL
@@ -405,6 +418,9 @@ sudo bash naiveproxy.sh dns            # DNS menu
 sudo bash naiveproxy.sh dns-install    # Install blocker
 sudo bash naiveproxy.sh dns-update     # Update blocklists
 sudo bash naiveproxy.sh dns-status     # Blocker status
+sudo bash naiveproxy.sh unbound        # Unbound plugin menu
+sudo bash naiveproxy.sh unbound-install
+sudo bash naiveproxy.sh unbound-status
 
 # === Cloudflare WARP modes ===
 sudo bash naiveproxy.sh warp           # WARP menu
@@ -613,7 +629,7 @@ sudo bash naiveproxy.sh diagnose
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  🔍 Diagnostics NaiveProxy Manager v5.5.7               │
+│  🔍 Diagnostics NaiveProxy Manager v5.5.8               │
 │  2026-05-23 14:32:18 · proxy.example.com               │
 └─────────────────────────────────────────────────────────┘
 
@@ -653,7 +669,7 @@ sudo bash naiveproxy.sh diagnose
   ✅ journald: no critical errors
 
 [7/7] Version and updates
-  ✅ Script up to date: v5.5.7
+  ✅ Script up to date: v5.5.8
   ✅ SSH Hardening done
 
 ══════════════════════════════════════════════════════════
@@ -1289,7 +1305,20 @@ for donors
 ## 📜 Changelog
 
 <details>
-<summary><b>v5.5.7</b> — WARP Full Tunnel Modes ← CURRENT</summary>
+<summary><b>v5.5.8</b> — Unbound Plugin + Per-user Hysteria + SSH-safe WARP ← CURRENT</summary>
+
+**🧩 Modules and safety:**
+- Added `unbound`, `unbound-install`, `unbound-status`, `unbound-update` aliases
+- Hysteria 2 now uses `userpass` auth for NaiveProxy users
+- Hysteria 2 install now lets you choose default UDP/8443 or a custom UDP port
+- New users automatically get personal Hysteria 2 links and QR when Hysteria is installed
+- Subscription pages now include Hysteria 2 URI and sing-box outbound
+- WARP full tunnel now adds SSH split-tunnel exclusions and a rollback timer before connecting
+
+</details>
+
+<details>
+<summary><b>v5.5.7</b> — WARP Full Tunnel Modes</summary>
 
 **🌀 Cloudflare WARP modes:**
 - Added full tunnel mode for all outgoing VPS traffic: `warp` / `warp+doh`
