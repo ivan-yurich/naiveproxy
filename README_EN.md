@@ -26,7 +26,7 @@
 
 ---
 
-[![Version](https://img.shields.io/badge/version-5.5.9-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
+[![Version](https://img.shields.io/badge/version-5.5.10-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
 [![ShellCheck](https://img.shields.io/badge/ShellCheck-passing-3FB950?style=for-the-badge&logo=gnu-bash&logoColor=white)](https://www.shellcheck.net)
 [![Bash](https://img.shields.io/badge/Bash-5.0+-4EAA25?style=for-the-badge&logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-20.04%2B-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://ubuntu.com)
@@ -98,7 +98,7 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 
 ---
 
-## 🎉 What's new in v5.5.9
+## 🎉 What's new in v5.5.10
 
 <table>
 <tr>
@@ -133,6 +133,7 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 🔐 **DNSSEC validation** — trust anchor and `dnssec-failed.org` status test
 🚦 **DNS modes** — recursive/forward DoT with adblock on/off
 🔒 **VPN-only DNS access** — expose `:53` only to allowed VPN CIDRs, no open resolver
+🛠️ **Unbound bind fix** — VPN DNS no longer binds `0.0.0.0:53` or conflicts with `systemd-resolved`
 🧩 **Unbound DNS plugin** — DNS blocker is now exposed as a module with `unbound-*` CLI aliases
 ⚡ **Per-user Hysteria 2** — Hysteria server config now uses `auth.type: userpass` for NaiveProxy users
 ⚙️ **Hysteria port selector** — choose the default UDP/8443 or enter a custom UDP port
@@ -349,7 +350,7 @@ Encrypted queries to Cloudflare and Google
 
 ```
 ──────────────────────────────────────────────────────
-   NaiveProxy Manager v5.5.9  [ENG]
+   NaiveProxy Manager v5.5.10  [ENG]
    Status: ● running  │  Domain: proxy.example.com
    Telegram: connected  │  Users: 3  │  SSH: 52847
 ──────────────────────────────────────────────────────
@@ -635,7 +636,7 @@ sudo bash naiveproxy.sh diagnose
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  🔍 Diagnostics NaiveProxy Manager v5.5.9               │
+│  🔍 Diagnostics NaiveProxy Manager v5.5.10              │
 │  2026-05-23 14:32:18 · proxy.example.com               │
 └─────────────────────────────────────────────────────────┘
 
@@ -675,7 +676,7 @@ sudo bash naiveproxy.sh diagnose
   ✅ journald: no critical errors
 
 [7/7] Version and updates
-  ✅ Script up to date: v5.5.9
+  ✅ Script up to date: v5.5.10
   ✅ SSH Hardening done
 
 ══════════════════════════════════════════════════════════
@@ -1311,7 +1312,20 @@ for donors
 ## 📜 Changelog
 
 <details>
-<summary><b>v5.5.9</b> — Recursive Unbound DNS + VPN DNS Access ← CURRENT</summary>
+<summary><b>v5.5.10</b> — Unbound VPN DNS bind fix ← CURRENT</summary>
+
+**🛠️ DNS bind fix:**
+- Fixed Unbound startup when VPN DNS access is enabled
+- Removed `0.0.0.0:53` bind to avoid conflicts with `systemd-resolved`
+- VPN DNS now binds concrete server/VPN IPv4 interface addresses only
+- DNS menu now shows `installed, not running` when the package exists but the service failed
+- Unbound restart now runs `systemctl reset-failed` to recover from the previous start-limit state
+- Reduced `so-rcvbuf` to avoid noisy warnings on stock Ubuntu kernels
+
+</details>
+
+<details>
+<summary><b>v5.5.9</b> — Recursive Unbound DNS + VPN DNS Access</summary>
 
 **🧭 DNS resolver modes:**
 - Added recursive Unbound mode without Google/Cloudflare upstreams

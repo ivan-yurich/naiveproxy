@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-#   NaiveProxy Manager v5.5.9 — by Иван Юрьевич
+#   NaiveProxy Manager v5.5.10 — by Иван Юрьевич
 #   Стек: Caddy 2 + klzgrad/forwardproxy@naive + Hysteria 2 + WARP + Xray Modern
 #   ОС: Ubuntu 20.04 / 22.04 / 24.04
 #
@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-VERSION="5.5.9"
+VERSION="5.5.10"
 LANG_UI="${NAIVEPROXY_LANG:-ru}"  # ru или en — export NAIVEPROXY_LANG=en
 GITHUB_RAW="https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/naiveproxy.sh"
 GITHUB_API="https://api.github.com/repos/ivan-yurich/naiveproxy/releases/latest"
@@ -6560,6 +6560,13 @@ unbound_mode_label() {
     esac
 }
 
+get_unbound_vpn_bind_ips() {
+    command -v ip >/dev/null 2>&1 || return 0
+    ip -o -4 addr show scope global up 2>/dev/null \
+        | awk '{split($4, a, "/"); if (a[1] != "" && a[1] !~ /^127\./ && a[1] !~ /^169\.254\./) print a[1]}' \
+        | sort -u
+}
+
 write_unbound_config() {
     mkdir -p "$(dirname "$DNS_CONF")" "$(dirname "$DNS_BLOCKLIST")" /var/lib/unbound
     [[ -f "$DNS_BLOCKLIST" ]] || : > "$DNS_BLOCKLIST"
@@ -6569,17 +6576,41 @@ write_unbound_config() {
     local adblock="${UNBOUND_ADBLOCK:-1}"
     local vpn_enabled="${UNBOUND_VPN_ENABLED:-0}"
     local vpn_cidrs="${UNBOUND_VPN_CIDRS:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}"
-    local listen_public="127.0.0.1@53"
+    local bind_ip
+    local bind_ips=()
 
     [[ "$mode" == "recursive" ]] || mode="forward"
     [[ "$adblock" == "1" ]] || adblock="0"
-    [[ "$vpn_enabled" == "1" ]] && listen_public="0.0.0.0@53"
 
     cat > "$DNS_CONF" <<EOF
 server:
     # Local resolver for the server and local services.
     interface: 127.0.0.1@5335
-    interface: ${listen_public}
+    interface: 127.0.0.1@53
+EOF
+
+    if [[ "$vpn_enabled" == "1" ]]; then
+        mapfile -t bind_ips < <(get_unbound_vpn_bind_ips)
+        if [[ "${#bind_ips[@]}" -gt 0 ]]; then
+            cat >> "$DNS_CONF" <<'EOF'
+
+    # VPN DNS: bind concrete server/VPN interface addresses only.
+    # Do not bind 0.0.0.0:53 because it conflicts with systemd-resolved and can become unsafe.
+EOF
+            for bind_ip in "${bind_ips[@]}"; do
+                printf '    interface: %s@53\n' "$bind_ip" >> "$DNS_CONF"
+            done
+        else
+            cat >> "$DNS_CONF" <<'EOF'
+
+    # VPN DNS was enabled, but no non-loopback IPv4 interface was detected.
+    # Local DNS remains available on 127.0.0.1.
+EOF
+        fi
+    fi
+
+    cat >> "$DNS_CONF" <<'EOF'
+
     do-ip4: yes
     do-ip6: no
     do-udp: yes
@@ -6616,7 +6647,7 @@ EOF
     prefetch: yes
     prefetch-key: yes
     num-threads: 2
-    so-rcvbuf: 1m
+    so-rcvbuf: 256k
     msg-cache-size: 64m
     rrset-cache-size: 128m
     cache-min-ttl: 300
@@ -6664,6 +6695,7 @@ restart_unbound_checked() {
         return 1
     fi
     systemctl enable unbound --quiet
+    systemctl reset-failed unbound 2>/dev/null || true
     systemctl restart unbound
     sleep 2
     if ! systemctl is-active --quiet unbound; then
@@ -6676,6 +6708,7 @@ restart_unbound_checked() {
 apply_unbound_ufw_rules() {
     local cidr
     if [[ "${UNBOUND_VPN_ENABLED:-0}" == "1" ]]; then
+        remove_unbound_ufw_rules
         IFS=',' read -ra cidrs <<< "${UNBOUND_VPN_CIDRS:-}"
         for cidr in "${cidrs[@]}"; do
             [[ -z "$cidr" ]] && continue
@@ -6687,8 +6720,8 @@ apply_unbound_ufw_rules() {
 }
 
 remove_unbound_ufw_rules() {
-    local cidr candidates
-    candidates="${UNBOUND_VPN_CIDRS:-},10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+    local cidr candidates extra_cidrs="${1:-}"
+    candidates="${extra_cidrs},${UNBOUND_VPN_CIDRS:-},10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
     IFS=',' read -ra cidrs <<< "$candidates"
     for cidr in "${cidrs[@]}"; do
         [[ -z "$cidr" ]] && continue
@@ -6903,7 +6936,10 @@ cmd_dns_status() {
     echo -e "  Adblock: ${CYAN}${UNBOUND_ADBLOCK:-1}${RESET}"
     echo -e "  Local DNS: ${CYAN}127.0.0.1:53${RESET}, ${CYAN}127.0.0.1:5335${RESET}"
     if [[ "${UNBOUND_VPN_ENABLED:-0}" == "1" ]]; then
-        echo -e "  VPN DNS: ${CYAN}:53${RESET} только для ${CYAN}${UNBOUND_VPN_CIDRS}${RESET}"
+        local bind_ips_label
+        bind_ips_label=$(get_unbound_vpn_bind_ips | paste -sd ',' - 2>/dev/null || true)
+        [[ -n "$bind_ips_label" ]] || bind_ips_label="нет внешних IPv4"
+        echo -e "  VPN DNS: ${CYAN}${bind_ips_label}:53${RESET} только для ${CYAN}${UNBOUND_VPN_CIDRS}${RESET}"
     else
         echo -e "  VPN DNS: ${YELLOW}выключен${RESET}"
     fi
@@ -6984,6 +7020,7 @@ cmd_dns_set_mode() {
 
 cmd_dns_vpn_access() {
     load_config
+    local old_unbound_vpn_cidrs="${UNBOUND_VPN_CIDRS:-}"
     hr
     echo -e "${BOLD}  🔐 DNS доступ для VPN-клиентов${RESET}"
     hr
@@ -7009,7 +7046,7 @@ cmd_dns_vpn_access() {
             ;;
         2)
             UNBOUND_VPN_ENABLED="0"
-            remove_unbound_ufw_rules
+            remove_unbound_ufw_rules "$old_unbound_vpn_cidrs"
             ;;
         0) return 0 ;;
         *) err "Неверный выбор"; return 1 ;;
@@ -7017,6 +7054,7 @@ cmd_dns_vpn_access() {
 
     write_unbound_config
     restart_unbound_checked || return 1
+    remove_unbound_ufw_rules "$old_unbound_vpn_cidrs"
     apply_unbound_ufw_rules
     save_config
     ok "VPN DNS настройки применены"
@@ -7123,7 +7161,10 @@ cmd_dns_menu() {
         local blocked=0
         [[ -f "${DNS_BLOCKLIST}" ]] && blocked=$(grep -c "^local-zone" "${DNS_BLOCKLIST}" 2>/dev/null || echo 0)
         local dns_status="${RED}не установлен${RESET}"
-        command -v unbound &>/dev/null && systemctl is-active unbound &>/dev/null             && dns_status="${GREEN}активен (${blocked} доменов)${RESET}"
+        if command -v unbound &>/dev/null; then
+            dns_status="${YELLOW}установлен, не запущен${RESET}"
+            systemctl is-active --quiet unbound 2>/dev/null && dns_status="${GREEN}активен (${blocked} доменов)${RESET}"
+        fi
 
         echo -e "  Статус: ${dns_status}"
         echo -e "  Режим: ${CYAN}$(unbound_mode_label)${RESET} | Adblock: ${CYAN}${UNBOUND_ADBLOCK:-1}${RESET} | VPN: ${CYAN}${UNBOUND_VPN_ENABLED:-0}${RESET}"
