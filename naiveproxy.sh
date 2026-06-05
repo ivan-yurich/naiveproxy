@@ -1,26 +1,42 @@
 #!/bin/bash
 # ============================================================
-#   NaiveProxy Manager v5.5.14 — by Иван Юрьевич
-#   Стек: Caddy 2 + klzgrad/forwardproxy@naive + Hysteria 2 + WARP + Xray Modern
+#   Yurich Panel v5.6.2 — by Иван Юрьевич
+#   Стек: Yurich Core + Caddy 2 + klzgrad/forwardproxy@naive + Hysteria 2 + WARP + Xray Modern
+#   Legacy update marker: NaiveProxy Manager
 #   ОС: Ubuntu 20.04 / 22.04 / 24.04
 #
 #   Copyright (C) 2026 Иван Юрьевич (Ivan Yurievich)
-#   License: GPL-3.0 — see LICENSE file
-#   Commercial use without author permission is prohibited.
+#   License: PolyForm Noncommercial 1.0.0 + Commercial License
+#   Commercial use requires written permission from the author.
 #
 #   Telegram: https://t.me/ivan_it_net
-#   Сайт:     https://ivan-it.net
+#   Yurich Cloud: https://ivan-it.net
 #   GitHub:   https://github.com/ivan-yurich/naiveproxy
 #   Донат:    https://www.donationalerts.com/r/ivan_yurievich
 # ============================================================
 
 set -euo pipefail
 
-VERSION="5.5.14"
+VERSION="5.6.2"
 LANG_UI="${NAIVEPROXY_LANG:-ru}"  # ru или en — export NAIVEPROXY_LANG=en
+BRAND_NAME="Yurich"
+APP_NAME="Yurich Connect"
+PANEL_NAME="Yurich Panel"
+CORE_NAME="Yurich Core"
+DNS_NAME="Yurich DNS"
+DESKTOP_NAME="Yurich Desktop"
+MOBILE_NAME="Yurich Mobile"
+SUBSCRIPTION_NAME="Yurich ID"
+CLOUD_NAME="Yurich Cloud"
+NET_NAME="Yurich Net"
 GITHUB_RAW="https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/naiveproxy.sh"
+GITHUB_SHA256_RAW="https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/naiveproxy.sh.sha256"
 GITHUB_API="https://api.github.com/repos/ivan-yurich/naiveproxy/releases/latest"
 SCRIPT_PATH="/usr/local/bin/naiveproxy.sh"
+XCADDY_VERSION_PIN="${NAIVEPROXY_XCADDY_VERSION:-v0.4.6}"
+FORWARDPROXY_REF_PIN="${NAIVEPROXY_FORWARDPROXY_REF:-d62c80d3dd2c706b6b87579844d2397bddd18317}"
+XRAY_VERSION_PIN="${NAIVEPROXY_XRAY_VERSION:-v26.3.27}"
+HYSTERIA_VERSION_PIN="${NAIVEPROXY_HYSTERIA_VERSION:-app/v2.9.2}"
 
 # ─── Цвета ───────────────────────────────────────────────────
 RED='\033[0;31m'
@@ -57,12 +73,12 @@ show_banner() {
     echo -e "  ${BOLD}${GOLD}╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ${RESET}"
     echo
     echo -e "  ${DIM}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-    echo -e "  ${BOLD}  NaiveProxy Manager${RESET} ${DIM}v${VERSION}${RESET}  ${DIM}·${RESET}  ${CYAN}by Иван Юрьевич${RESET}"
+    echo -e "  ${BOLD}  Yurich Panel${RESET} ${DIM}v${VERSION}${RESET}  ${DIM}·${RESET}  ${CYAN}by Иван Юрьевич${RESET}"
     echo -e "  ${DIM}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
     echo
     echo -e "  ${YELLOW}🔔 Обновления выходят раз в месяц${RESET}"
     echo -e "  ${CYAN}📱 Telegram:${RESET} https://t.me/ivan_it_net"
-    echo -e "  ${CYAN}🌐 Сайт:${RESET}     https://ivan-it.net"
+    echo -e "  ${CYAN}🌐 Yurich Cloud:${RESET} https://ivan-it.net"
     echo -e "  ${CYAN}💻 GitHub:${RESET}   github.com/ivan-yurich/naiveproxy"
     echo -e "  ${BOLD}${GOLD}💛 Донат:${RESET}    donationalerts.com/r/ivan_yurievich"
     echo -e "  ${DIM}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
@@ -91,10 +107,13 @@ XRAY_USERS_FILE="/etc/naiveproxy/xray-users.conf"
 XRAY_DISABLED_USERS_FILE="/etc/naiveproxy/xray-users.disabled"
 SUBS_DIR="/etc/naiveproxy/subscriptions"
 SUBS_WEB_DIR="${WEBROOT}/s"
+USER_META_DIR="/etc/naiveproxy/users.d"
 PRIVATE_PAGE_TOKEN_FILE="/etc/naiveproxy/private_page.token"
 PRIVATE_WEB_DIR="${WEBROOT}/p"
 LOG_DIR="/var/log/caddy"
 BACKUP_DIR="/etc/naiveproxy/backups"
+EXPORT_DIR="/etc/naiveproxy/exports"
+BRIDGE_CONFIG="/etc/naiveproxy/bridge.conf"
 MONITOR_SCRIPT="/etc/naiveproxy/monitor.sh"
 SSH_HARDENING_DONE="/etc/naiveproxy/.ssh_hardened"
 SYSUPDATE_DONE="/etc/naiveproxy/.sysupdate_done"
@@ -574,9 +593,9 @@ EOF
 
     systemctl disable --now ssh.socket >/dev/null 2>&1 || true
     ufw allow 22/tcp comment "SSH rescue" >/dev/null 2>&1 || true
-    ufw allow 80/tcp comment "NaiveProxy ACME" >/dev/null 2>&1 || true
-    ufw allow 443/tcp comment "NaiveProxy HTTPS" >/dev/null 2>&1 || true
-    ufw allow 443/udp comment "NaiveProxy HTTP3" >/dev/null 2>&1 || true
+    ufw allow 80/tcp comment "Yurich Core ACME" >/dev/null 2>&1 || true
+    ufw allow 443/tcp comment "Yurich Core HTTPS" >/dev/null 2>&1 || true
+    ufw allow 443/udp comment "Yurich Core HTTP3" >/dev/null 2>&1 || true
     systemctl stop fail2ban >/dev/null 2>&1 || true
 
     if sshd -t; then
@@ -599,6 +618,16 @@ t() {
     else
         echo "$1"
     fi
+}
+
+normalize_lang_ui() {
+    if [[ -n "${NAIVEPROXY_LANG:-}" ]]; then
+        LANG_UI="$NAIVEPROXY_LANG"
+    fi
+    case "${LANG_UI:-ru}" in
+        ru|en) ;;
+        *) LANG_UI="ru" ;;
+    esac
 }
 
 # Установить язык: export NAIVEPROXY_LANG=en
@@ -754,15 +783,18 @@ load_config() {
         if [[ "$_cfg_owner" == "root" ]]; then
             # shellcheck source=/dev/null
             source "$CONFIG_FILE"
+            normalize_lang_ui
         else
             warn "CONFIG_FILE принадлежит не root — пропускаю source"
         fi
     fi
+    normalize_lang_ui
 }
 
 save_config() {
     mkdir -p "$CONFIG_DIR"
     {
+        printf 'LANG_UI=%q\n' "${LANG_UI:-ru}"
         printf 'DOMAIN=%q\n' "${DOMAIN:-}"
         printf 'DOMAINS=%q\n' "${DOMAINS:-${DOMAIN:-}}"
         printf 'EMAIL=%q\n' "${EMAIL:-}"
@@ -800,6 +832,15 @@ save_config() {
         printf 'XRAY_REALITY_PUBLIC_KEY=%q\n' "${XRAY_REALITY_PUBLIC_KEY:-}"
         printf 'XRAY_REALITY_SHORT_ID=%q\n' "${XRAY_REALITY_SHORT_ID:-}"
         printf 'XRAY_TROJAN_PASSWORD=%q\n' "${XRAY_TROJAN_PASSWORD:-}"
+        printf 'XCADDY_VERSION_PIN=%q\n' "${XCADDY_VERSION_PIN:-v0.4.6}"
+        printf 'FORWARDPROXY_REF_PIN=%q\n' "${FORWARDPROXY_REF_PIN:-d62c80d3dd2c706b6b87579844d2397bddd18317}"
+        printf 'XRAY_VERSION_PIN=%q\n' "${XRAY_VERSION_PIN:-v26.3.27}"
+        printf 'HYSTERIA_VERSION_PIN=%q\n' "${HYSTERIA_VERSION_PIN:-app/v2.9.2}"
+        printf 'BRIDGE_ENABLED=%q\n' "${BRIDGE_ENABLED:-0}"
+        printf 'BRIDGE_NAME=%q\n' "${BRIDGE_NAME:-}"
+        printf 'BRIDGE_ENTRY_PROTOCOL=%q\n' "${BRIDGE_ENTRY_PROTOCOL:-naive}"
+        printf 'BRIDGE_EXIT_PROTOCOL=%q\n' "${BRIDGE_EXIT_PROTOCOL:-vless}"
+        printf 'BRIDGE_EXIT_URI=%q\n' "${BRIDGE_EXIT_URI:-}"
         printf 'INSTALLED_AT=%q\n' "$(date '+%Y-%m-%d %H:%M:%S')"
     } > "$CONFIG_FILE"
     chmod 600 "$CONFIG_FILE"
@@ -830,6 +871,107 @@ active_user_count() {
     get_users | wc -l
 }
 
+is_valid_user_months() {
+    [[ "${1:-}" =~ ^([1-9]|1[0-2])$ ]]
+}
+
+user_meta_file() {
+    local user="$1"
+    printf '%s/%s.env\n' "$USER_META_DIR" "$user"
+}
+
+set_user_expiry_months() {
+    local user="$1" months="$2" expires_at created_at meta_file
+    if ! is_valid_proxy_user "$user"; then
+        err "Некорректный пользователь для срока: $user"
+        return 1
+    fi
+    if ! is_valid_user_months "$months"; then
+        err "Срок пользователя: только 1-12 месяцев"
+        return 1
+    fi
+    mkdir -p "$USER_META_DIR"
+    chmod 700 "$USER_META_DIR"
+    created_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+    expires_at=$(date -u -d "+${months} months" '+%Y-%m-%d' 2>/dev/null || true)
+    if [[ ! "$expires_at" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+        err "Не удалось рассчитать срок пользователя"
+        return 1
+    fi
+    meta_file=$(user_meta_file "$user")
+    {
+        printf 'USER=%q\n' "$user"
+        printf 'CREATED_AT=%q\n' "$created_at"
+        printf 'TERM_MONTHS=%q\n' "$months"
+        printf 'EXPIRES_AT=%q\n' "$expires_at"
+    } > "$meta_file"
+    chmod 600 "$meta_file"
+}
+
+get_user_expiry() {
+    local user="$1" meta_file expires
+    if ! is_valid_proxy_user "$user"; then
+        return 1
+    fi
+    meta_file=$(user_meta_file "$user")
+    [[ -f "$meta_file" ]] || return 1
+    expires=$(awk -F= '$1=="EXPIRES_AT"{gsub(/'\''|"|[[:space:]]/,"",$2); print $2; exit}' "$meta_file" 2>/dev/null || true)
+    [[ "$expires" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || return 1
+    printf '%s\n' "$expires"
+}
+
+user_is_expired() {
+    local user="$1" expires today
+    expires=$(get_user_expiry "$user" 2>/dev/null || true)
+    [[ -n "$expires" ]] || return 1
+    today=$(date -u '+%Y-%m-%d')
+    [[ "$expires" < "$today" ]]
+}
+
+user_expiry_label() {
+    local user="$1" expires today
+    expires=$(get_user_expiry "$user" 2>/dev/null || true)
+    if [[ -z "$expires" ]]; then
+        printf 'без срока'
+        return
+    fi
+    today=$(date -u '+%Y-%m-%d')
+    if [[ "$expires" < "$today" ]]; then
+        printf 'истёк %s' "$expires"
+    else
+        printf 'до %s' "$expires"
+    fi
+}
+
+user_expiry_tag() {
+    local user="$1" expires
+    expires=$(get_user_expiry "$user" 2>/dev/null || true)
+    if [[ -z "$expires" ]]; then
+        printf 'lifetime'
+    else
+        printf 'until-%s' "${expires//-/}"
+    fi
+}
+
+prompt_user_term_months() {
+    local default_months="${1:-12}" ans
+    is_valid_user_months "$default_months" || default_months="12"
+    echo -ne "${CYAN}Срок пользователя 1-12 месяцев [${default_months}]: ${RESET}"
+    read -r ans
+    ans="${ans:-$default_months}"
+    if ! is_valid_user_months "$ans"; then
+        err "Срок должен быть от 1 до 12 месяцев"
+        return 1
+    fi
+    printf '%s\n' "$ans"
+}
+
+cleanup_user_metadata() {
+    local user="$1"
+    is_valid_proxy_user "$user" || return 0
+    rm -f -- "$(user_meta_file "$user")" 2>/dev/null || true
+}
+
 # ─── Telegram ────────────────────────────────────────────────
 tg_send() {
     local message="$1"
@@ -844,14 +986,14 @@ tg_send() {
 }
 
 tg_alert_up() {
-    tg_send "✅ <b>NaiveProxy запущен</b>
+    tg_send "✅ <b>Yurich Core запущен</b>
 🌐 Домен: <code>${DOMAIN:-unknown}</code>
 🕐 $(date '+%Y-%m-%d %H:%M:%S')
 📡 Сервер: $(hostname)"
 }
 
 tg_alert_down() {
-    tg_send "🔴 <b>NaiveProxy упал!</b>
+    tg_send "🔴 <b>Yurich Core упал!</b>
 🌐 Домен: <code>${DOMAIN:-unknown}</code>
 🕐 $(date '+%Y-%m-%d %H:%M:%S')
 📡 Сервер: $(hostname)
@@ -868,7 +1010,7 @@ tg_alert_updated() {
 
 tg_send_stats() {
     if ! check_installed; then
-        tg_send "❌ NaiveProxy не установлен"
+        tg_send "❌ Yurich Core не установлен"
         return
     fi
 
@@ -892,7 +1034,7 @@ tg_send_stats() {
     local users_count
     users_count=$(get_users | wc -l)
 
-    tg_send "📊 <b>Статистика NaiveProxy</b>
+    tg_send "📊 <b>Статистика Yurich Core</b>
 
 🌐 Домен: <code>${DOMAIN:-н/д}</code>
 📡 Статус: ${status}
@@ -961,7 +1103,7 @@ setup_telegram() {
     save_config
     tg_apply_bot_menu || warn "Команды Telegram Menu можно применить позже: sudo bash naiveproxy.sh bot-menu"
 
-    tg_send "🤖 <b>NaiveProxy Manager подключён!</b>
+    tg_send "🤖 <b>Yurich Panel подключён!</b>
 ✅ Telegram-уведомления настроены
 📡 Сервер: <code>$(hostname)</code>
 🕐 $(date '+%Y-%m-%d %H:%M:%S')
@@ -998,8 +1140,9 @@ tg_send() {
     [[ -z "${TG_TOKEN:-}" || -z "${TG_CHAT_ID:-}" ]] && return
     curl -s --max-time 10 --retry 2 \
         -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
-        -H "Content-Type: application/json" \
-        -d "{"chat_id":"${TG_CHAT_ID}","parse_mode":"HTML","text":"${msg}"}" \
+        --data-urlencode "chat_id=${TG_CHAT_ID}" \
+        --data-urlencode "parse_mode=HTML" \
+        --data-urlencode "text=${msg}" \
         >/dev/null 2>&1 || true
 }
 
@@ -1008,7 +1151,7 @@ FLAG="/run/naiveproxy_was_down"
 if ! systemctl is-active --quiet caddy 2>/dev/null; then
     if [[ ! -f "$FLAG" ]]; then
         touch "$FLAG"
-        tg_send "🔴 <b>NaiveProxy упал!</b>
+        tg_send "🔴 <b>Yurich Core упал!</b>
 🌐 Домен: <code>${DOMAIN:-unknown}</code>
 🕐 $(date '+%Y-%m-%d %H:%M:%S')
 🔄 Пытаюсь перезапустить..."
@@ -1130,17 +1273,30 @@ build_caddy() {
     # Ставим git если нет
     command -v git &>/dev/null || apt-get install -y -q git
 
-    go install github.com/caddyserver/xcaddy/cmd/xcaddy@latest
+    info "Ставлю xcaddy ${XCADDY_VERSION_PIN:-v0.4.6}..."
+    go install "github.com/caddyserver/xcaddy/cmd/xcaddy@${XCADDY_VERSION_PIN:-v0.4.6}"
 
     # Клонируем naive ветку напрямую — единственный надёжный способ
     local fp_dir
     fp_dir=$(mktemp -d /tmp/naiveproxy_forwardproxy_XXXXXX)
     trap 'rm -rf "${fp_dir:-}" 2>/dev/null' RETURN
-    info "Клонирую klzgrad/forwardproxy@naive..."
+    info "Клонирую klzgrad/forwardproxy@${FORWARDPROXY_REF_PIN:-naive}..."
     if ! git clone -b naive --depth 1         https://github.com/klzgrad/forwardproxy.git "$fp_dir" 2>/dev/null; then
         err "Не удалось клонировать forwardproxy. Проверь интернет."
         exit 1
     fi
+    if [[ "${FORWARDPROXY_REF_PIN:-naive}" != "naive" ]]; then
+        local current_fp_commit
+        current_fp_commit=$(git -C "$fp_dir" rev-parse HEAD 2>/dev/null || true)
+        if [[ "$current_fp_commit" == "${FORWARDPROXY_REF_PIN}" ]]; then
+            git -C "$fp_dir" checkout --detach HEAD >/dev/null 2>&1 || true
+        elif ! git -C "$fp_dir" fetch --depth 1 origin "${FORWARDPROXY_REF_PIN}" >/dev/null 2>&1 \
+            || ! git -C "$fp_dir" checkout --detach FETCH_HEAD >/dev/null 2>&1; then
+            err "Не удалось закрепить forwardproxy на ${FORWARDPROXY_REF_PIN}"
+            return 1
+        fi
+    fi
+    info "Forwardproxy ref: $(git -C "$fp_dir" rev-parse --short HEAD 2>/dev/null || echo unknown)"
 
     # Читаем точную версию Caddy из go.mod forwardproxy
     local caddy_ver
@@ -1288,8 +1444,8 @@ install_camouflage_page() {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="DevStack — Technical notes on Linux, networking, security and open source infrastructure.">
-<title>DevStack — Linux & Infrastructure Notes</title>
+<meta name="description" content="Yurich Cloud — Technical notes on Linux, networking, security and open source infrastructure.">
+<title>Yurich Cloud — Linux & Infrastructure Notes</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
@@ -1485,7 +1641,7 @@ footer{border-top:1px solid var(--border);padding:32px 24px;background:var(--bg2
 </div>
 <footer>
   <div class="footer-inner">
-    <div class="footer-left"><span>&gt;_ DevStack</span> · Built with Caddy · © 2026</div>
+    <div class="footer-left"><span>&gt;_ Yurich Cloud</span> · Built with Caddy · © 2026</div>
     <div class="footer-links"><a href="#">Archive</a><a href="#">RSS</a><a href="#">Privacy</a><a href="#">Contact</a></div>
   </div>
 </footer>
@@ -1603,7 +1759,7 @@ rewrite_caddyfile_current() {
 write_service() {
     cat > "$CADDY_SERVICE" <<'EOF'
 [Unit]
-Description=Caddy NaiveProxy
+Description=Yurich Core Caddy
 Documentation=https://caddyserver.com/docs/
 After=network.target network-online.target
 Requires=network-online.target
@@ -1660,10 +1816,10 @@ setup_firewall() {
         ok "UFW включён (дефолт: блокировать всё входящее)"
     fi
 
-    # Базовые порты NaiveProxy
-    ufw allow 80/tcp  comment "NaiveProxy ACME"  >/dev/null 2>&1 || true
-    ufw allow 443/tcp comment "NaiveProxy HTTPS" >/dev/null 2>&1 || true
-    ufw allow 443/udp comment "NaiveProxy HTTP3" >/dev/null 2>&1 || true
+    # Базовые порты Yurich Core
+    ufw allow 80/tcp  comment "Yurich Core ACME"  >/dev/null 2>&1 || true
+    ufw allow 443/tcp comment "Yurich Core HTTPS" >/dev/null 2>&1 || true
+    ufw allow 443/udp comment "Yurich Core HTTP3" >/dev/null 2>&1 || true
 
     # Лимит подключений — защита от DDoS и сканирования
     ufw allow 80/tcp  >/dev/null 2>&1 || true
@@ -1704,6 +1860,366 @@ backup_config() {
     local ts; ts=$(date +%Y%m%d_%H%M%S)
     cp "$CADDYFILE" "$BACKUP_DIR/Caddyfile.$ts"
     ok "Бэкап → $BACKUP_DIR/Caddyfile.$ts"
+}
+
+validate_enabled_configs() {
+    local failed=0
+
+    if [[ -x "$CADDY_BIN" && -f "$CADDYFILE" ]]; then
+        if "$CADDY_BIN" validate --config "$CADDYFILE" >/dev/null 2>&1; then
+            ok "Caddyfile валиден"
+        else
+            err "Caddyfile не прошёл validate"
+            "$CADDY_BIN" validate --config "$CADDYFILE" || true
+            failed=1
+        fi
+    else
+        warn "Caddy validate пропущен: бинарник или Caddyfile не найден"
+    fi
+
+    if [[ -x "$XRAY_BIN" && -f "$XRAY_CONFIG" ]]; then
+        if "$XRAY_BIN" run -test -config "$XRAY_CONFIG" >/dev/null 2>&1; then
+            ok "Xray config валиден"
+        else
+            err "Xray config не прошёл проверку"
+            "$XRAY_BIN" run -test -config "$XRAY_CONFIG" || true
+            failed=1
+        fi
+    fi
+
+    if command -v unbound-checkconf >/dev/null 2>&1 && command -v unbound >/dev/null 2>&1; then
+        if unbound-checkconf >/dev/null 2>&1; then
+            ok "Unbound config валиден"
+        else
+            err "Unbound config не прошёл проверку"
+            unbound-checkconf || true
+            failed=1
+        fi
+    fi
+
+    if [[ -x "$HYSTERIA_BIN" && -f "$HYSTERIA_CONFIG" ]]; then
+        if grep -q 'type: userpass' "$HYSTERIA_CONFIG" || grep -q 'password:' "$HYSTERIA_CONFIG"; then
+            ok "Hysteria config найден и содержит auth"
+        else
+            err "Hysteria config без auth-блока"
+            failed=1
+        fi
+    fi
+
+    return "$failed"
+}
+
+safe_apply_caddy_current() {
+    load_config
+    load_users
+    mkdir -p "$BACKUP_DIR"
+    local ts backup_file
+    ts=$(date +%Y%m%d_%H%M%S)
+    backup_file="$BACKUP_DIR/Caddyfile.safe-apply.${ts}"
+    [[ -f "$CADDYFILE" ]] && cp "$CADDYFILE" "$backup_file"
+
+    if ! rewrite_caddyfile_current; then
+        err "Не удалось сгенерировать Caddyfile"
+        [[ -f "$backup_file" ]] && cp "$backup_file" "$CADDYFILE"
+        return 1
+    fi
+    if [[ -x "$CADDY_BIN" ]] && ! "$CADDY_BIN" validate --config "$CADDYFILE" >/dev/null 2>&1; then
+        err "Новый Caddyfile невалиден, откатываю"
+        [[ -f "$backup_file" ]] && cp "$backup_file" "$CADDYFILE"
+        "$CADDY_BIN" validate --config "$CADDYFILE" >/dev/null 2>&1 || true
+        return 1
+    fi
+    if ! systemctl reload caddy 2>/dev/null; then
+        warn "Reload Caddy не прошёл, пробую restart"
+        if ! systemctl restart caddy 2>/dev/null; then
+            err "Restart Caddy не прошёл, откатываю Caddyfile"
+            [[ -f "$backup_file" ]] && cp "$backup_file" "$CADDYFILE"
+            systemctl restart caddy 2>/dev/null || true
+            return 1
+        fi
+    fi
+    ok "Safe apply Caddy выполнен"
+    [[ -f "$backup_file" ]] && info "Rollback backup: $backup_file"
+}
+
+cmd_safe_apply() {
+    hr
+    echo -e "${BOLD}  Safe apply${RESET}"
+    hr
+    validate_enabled_configs || return 1
+    safe_apply_caddy_current
+}
+
+health_line() {
+    local name="$1" status="$2" detail="${3:-}"
+    case "$status" in
+        ok)   ok "$name${detail:+ — $detail}" ;;
+        warn) warn "$name${detail:+ — $detail}" ;;
+        fail) err "$name${detail:+ — $detail}" ;;
+    esac
+}
+
+cmd_health_check() {
+    load_config 2>/dev/null || true
+    load_users 2>/dev/null || true
+    hr
+    echo -e "${BOLD}  Health-check Yurich Panel${RESET}"
+    hr
+
+    [[ -x "$CADDY_BIN" ]] && health_line "Caddy binary" ok "$("$CADDY_BIN" version 2>/dev/null | head -1)" || health_line "Caddy binary" fail "не найден"
+    systemctl is-active --quiet caddy 2>/dev/null && health_line "Caddy service" ok "active" || health_line "Caddy service" warn "не active"
+    [[ -f "$CADDYFILE" ]] && "$CADDY_BIN" validate --config "$CADDYFILE" >/dev/null 2>&1 && health_line "Caddyfile" ok "valid" || health_line "Caddyfile" warn "нет validate"
+    ss -tulpn 2>/dev/null | grep -q ':443' && health_line "Port 443" ok "listening" || health_line "Port 443" warn "не слушается"
+
+    if command -v unbound >/dev/null 2>&1; then
+        systemctl is-active --quiet unbound 2>/dev/null && health_line "Yurich DNS" ok "active" || health_line "Yurich DNS" warn "не active"
+        command -v dig >/dev/null 2>&1 && dig @127.0.0.1 google.com +time=3 +tries=1 >/dev/null 2>&1 && health_line "DNS test" ok "127.0.0.1 отвечает" || health_line "DNS test" warn "dig не прошёл"
+    else
+        health_line "Yurich DNS" warn "не установлен"
+    fi
+
+    if systemctl list-unit-files 2>/dev/null | grep -q '^naiveproxy-bot\.service'; then
+        systemctl is-active --quiet naiveproxy-bot 2>/dev/null && health_line "Telegram bot service" ok "active" || health_line "Telegram bot service" warn "не active"
+    else
+        health_line "Telegram bot service" warn "не установлен"
+    fi
+
+    if command -v warp-cli >/dev/null 2>&1; then
+        warp-cli status >/dev/null 2>&1 && health_line "WARP" ok "${WARP_MODE:-off}" || health_line "WARP" warn "warp-cli без статуса"
+    else
+        health_line "WARP" warn "не установлен"
+    fi
+
+    if [[ -x "$XRAY_BIN" || -f "$XRAY_CONFIG" ]]; then
+        [[ -x "$XRAY_BIN" && -f "$XRAY_CONFIG" ]] && "$XRAY_BIN" run -test -config "$XRAY_CONFIG" >/dev/null 2>&1 && health_line "Xray config" ok "valid" || health_line "Xray config" fail "ошибка"
+        systemctl is-active --quiet xray 2>/dev/null && health_line "Xray service" ok "active" || health_line "Xray service" warn "не active"
+    else
+        health_line "Xray" warn "не установлен"
+    fi
+
+    if [[ -x "$HYSTERIA_BIN" || -f "$HYSTERIA_CONFIG" ]]; then
+        [[ -f "$HYSTERIA_CONFIG" ]] && health_line "Hysteria config" ok "$HYSTERIA_CONFIG" || health_line "Hysteria config" warn "не найден"
+        systemctl is-active --quiet hysteria 2>/dev/null && health_line "Hysteria service" ok "active" || health_line "Hysteria service" warn "не active"
+    else
+        health_line "Hysteria 2" warn "не установлен"
+    fi
+
+    hr
+}
+
+cmd_backup_encrypted() {
+    load_config 2>/dev/null || true
+    command -v openssl >/dev/null 2>&1 || { err "openssl не найден"; return 1; }
+    command -v tar >/dev/null 2>&1 || { err "tar не найден"; return 1; }
+    mkdir -p "$BACKUP_DIR"
+    chmod 700 "$BACKUP_DIR"
+
+    local pass pass_file ts backup_file item includes=()
+    if [[ -n "${NAIVEPROXY_BACKUP_PASSPHRASE:-}" ]]; then
+        pass="$NAIVEPROXY_BACKUP_PASSPHRASE"
+    else
+        echo -ne "${CYAN}Пароль для encrypted backup: ${RESET}"
+        read -r -s pass
+        echo
+    fi
+    [[ -n "$pass" ]] || { err "Пароль пустой"; return 1; }
+
+    for item in "$CONFIG_DIR" "$CADDYFILE" "$CADDY_SERVICE" "$XRAY_CONFIG_DIR" "$XRAY_SERVICE" "$HYSTERIA_SERVICE" "$SUBS_WEB_DIR" "$PRIVATE_WEB_DIR"; do
+        [[ -e "$item" ]] && includes+=("$item")
+    done
+    [[ "${#includes[@]}" -gt 0 ]] || { err "Нечего бэкапить"; return 1; }
+
+    pass_file=$(mktemp /tmp/naiveproxy_backup_pass_XXXXXX)
+    chmod 600 "$pass_file"
+    printf '%s' "$pass" > "$pass_file"
+    ts=$(date +%Y%m%d_%H%M%S)
+    backup_file="$BACKUP_DIR/naiveproxy-full-${ts}.tar.gz.enc"
+    if tar -czf - "${includes[@]}" 2>/dev/null | openssl enc -aes-256-cbc -pbkdf2 -salt -out "$backup_file" -pass "file:$pass_file"; then
+        chmod 600 "$backup_file"
+        ok "Encrypted backup создан: $backup_file"
+    else
+        rm -f "$backup_file" 2>/dev/null || true
+        err "Encrypted backup не создан"
+        rm -f "$pass_file"
+        return 1
+    fi
+    rm -f "$pass_file"
+}
+
+cmd_export_state() {
+    mkdir -p "$EXPORT_DIR"
+    chmod 700 "$EXPORT_DIR"
+    local ts out items=()
+    ts=$(date +%Y%m%d_%H%M%S)
+    out="$EXPORT_DIR/naiveproxy-state-${ts}.tar.gz"
+    for item in naive.conf users.conf users.d subscriptions xray-users.conf xray-users.disabled users.disabled bridge.conf; do
+        [[ -e "$CONFIG_DIR/$item" ]] && items+=("$item")
+    done
+    [[ "${#items[@]}" -gt 0 ]] || { err "Нет данных для export"; return 1; }
+    tar -C "$CONFIG_DIR" -czf "$out" "${items[@]}"
+    chmod 600 "$out"
+    ok "Export создан: $out"
+}
+
+cmd_import_state() {
+    local archive="${1:-}" tmp name
+    [[ -n "$archive" ]] || { echo -ne "${CYAN}Путь к export .tar.gz: ${RESET}"; read -r archive; }
+    [[ -f "$archive" ]] || { err "Файл не найден: $archive"; return 1; }
+    if tar -tzf "$archive" | grep -Eq '(^/|(^|/)\.\.(/|$))'; then
+        err "Архив содержит небезопасные пути"
+        return 1
+    fi
+    if tar -tzf "$archive" | grep -Ev '^(naive\.conf|users\.conf|users\.disabled|xray-users\.conf|xray-users\.disabled|bridge\.conf|users\.d/|subscriptions/)' >/dev/null; then
+        err "Архив содержит неизвестные файлы. Импорт остановлен."
+        return 1
+    fi
+    echo -ne "${YELLOW}Импорт перезапишет users/subscriptions/config. Продолжить? [y/N]: ${RESET}"
+    read -r ans
+    [[ "${ans,,}" == "y" ]] || return 0
+    info "Делаю export текущего состояния перед import..."
+    cmd_export_state >/dev/null 2>&1 || warn "Не удалось создать pre-import export, продолжаю по подтверждению"
+
+    tmp=$(mktemp -d /tmp/naiveproxy_import_XXXXXX)
+    tar -xzf "$archive" -C "$tmp"
+    mkdir -p "$CONFIG_DIR"
+    chmod 700 "$CONFIG_DIR"
+    for name in naive.conf users.conf users.disabled xray-users.conf xray-users.disabled bridge.conf; do
+        [[ -f "$tmp/$name" ]] && install -m 600 "$tmp/$name" "$CONFIG_DIR/$name"
+    done
+    [[ -d "$tmp/users.d" ]] && mkdir -p "$USER_META_DIR" && cp -a "$tmp/users.d/." "$USER_META_DIR/" && chmod 700 "$USER_META_DIR" && chmod 600 "$USER_META_DIR"/* 2>/dev/null || true
+    [[ -d "$tmp/subscriptions" ]] && mkdir -p "$SUBS_DIR" && cp -a "$tmp/subscriptions/." "$SUBS_DIR/" && chmod 700 "$SUBS_DIR" && chmod 600 "$SUBS_DIR"/* 2>/dev/null || true
+    rm -rf "$tmp"
+    ok "Import завершён"
+    warn "После импорта запусти: sudo bash naiveproxy.sh safe-apply"
+}
+
+cmd_bridge_configure() {
+    load_config 2>/dev/null || true
+    hr
+    echo -e "${BOLD}  Bridge builder${RESET}"
+    hr
+    echo -e "  Схема: мобилка → этот VPS (${DOMAIN:-domain}) → второй VPS"
+    echo -ne "${CYAN}Название bridge [ru-to-eu]: ${RESET}"
+    read -r BRIDGE_NAME
+    BRIDGE_NAME="${BRIDGE_NAME:-ru-to-eu}"
+    echo -ne "${CYAN}Входной протокол на этом VPS [naive]: ${RESET}"
+    read -r BRIDGE_ENTRY_PROTOCOL
+    BRIDGE_ENTRY_PROTOCOL="${BRIDGE_ENTRY_PROTOCOL:-naive}"
+    echo -ne "${CYAN}Выходной протокол второго VPS [vless]: ${RESET}"
+    read -r BRIDGE_EXIT_PROTOCOL
+    BRIDGE_EXIT_PROTOCOL="${BRIDGE_EXIT_PROTOCOL:-vless}"
+    echo -ne "${CYAN}URI второго VPS (vless://, trojan://, hysteria2://, socks://, http://): ${RESET}"
+    read -r BRIDGE_EXIT_URI
+    if [[ ! "$BRIDGE_EXIT_URI" =~ ^(vless|trojan|hysteria2|hy2|socks|socks5|http|https):// ]]; then
+        err "Нужен корректный URI второго VPS"
+        return 1
+    fi
+    BRIDGE_ENABLED="1"
+    save_config
+    install -d -m 700 "$CONFIG_DIR"
+    {
+        printf 'BRIDGE_ENABLED=%q\n' "$BRIDGE_ENABLED"
+        printf 'BRIDGE_NAME=%q\n' "$BRIDGE_NAME"
+        printf 'BRIDGE_ENTRY_PROTOCOL=%q\n' "$BRIDGE_ENTRY_PROTOCOL"
+        printf 'BRIDGE_EXIT_PROTOCOL=%q\n' "$BRIDGE_EXIT_PROTOCOL"
+        printf 'BRIDGE_EXIT_URI=%q\n' "$BRIDGE_EXIT_URI"
+        printf 'UPDATED_AT=%q\n' "$(date '+%Y-%m-%d %H:%M:%S')"
+    } > "$BRIDGE_CONFIG"
+    chmod 600 "$BRIDGE_CONFIG"
+    ok "Bridge profile сохранён: $BRIDGE_CONFIG"
+    cmd_bridge_show
+}
+
+cmd_bridge_show() {
+    load_config 2>/dev/null || true
+    if [[ -f "$BRIDGE_CONFIG" ]]; then
+        local bridge_owner
+        bridge_owner=$(stat -c '%U' "$BRIDGE_CONFIG" 2>/dev/null || echo unknown)
+        if [[ "$bridge_owner" == "root" ]]; then
+            chmod 600 "$BRIDGE_CONFIG" 2>/dev/null || true
+            # shellcheck source=/dev/null
+            source "$BRIDGE_CONFIG" 2>/dev/null || true
+        else
+            warn "$BRIDGE_CONFIG принадлежит не root — не загружаю"
+        fi
+    fi
+    hr
+    echo -e "${BOLD}  Bridge profile${RESET}"
+    hr
+    if [[ "${BRIDGE_ENABLED:-0}" != "1" ]]; then
+        warn "Bridge не настроен"
+        return 0
+    fi
+    echo -e "  Name:   ${CYAN}${BRIDGE_NAME:-bridge}${RESET}"
+    echo -e "  Entry:  ${CYAN}${BRIDGE_ENTRY_PROTOCOL:-naive}${RESET} на этом VPS"
+    echo -e "  Exit:   ${CYAN}${BRIDGE_EXIT_PROTOCOL:-vless}${RESET} на втором VPS"
+    echo -e "  URI:    ${DIM}${BRIDGE_EXIT_URI:-не задан}${RESET}"
+    echo
+    warn "Caddy/Naive сам по себе не умеет upstream chaining. Для полного bridge используй Xray/sing-box outbound на первом VPS."
+    echo -e "${CYAN}  Следующий шаг:${RESET} включить Xray на этом VPS и добавить outbound на второй VPS по URI выше."
+    hr
+}
+
+cmd_bridge_remove() {
+    rm -f "$BRIDGE_CONFIG" 2>/dev/null || true
+    BRIDGE_ENABLED="0"
+    BRIDGE_EXIT_URI=""
+    save_config
+    ok "Bridge profile удалён"
+}
+
+cmd_bridge_menu() {
+    while true; do
+        hr
+        echo -e "${BOLD}  Bridge builder${RESET}"
+        hr
+        echo -e "  ${BOLD}1)${RESET} Создать / изменить bridge profile"
+        echo -e "  ${BOLD}2)${RESET} Показать bridge profile"
+        echo -e "  ${BOLD}3)${RESET} Удалить bridge profile"
+        echo -e "  ${BOLD}0)${RESET} Назад"
+        hr
+        echo -ne "${CYAN}Выбор: ${RESET}"
+        read -r choice
+        case "$choice" in
+            1) cmd_bridge_configure ;;
+            2) cmd_bridge_show ;;
+            3) cmd_bridge_remove ;;
+            0) break ;;
+            *) warn "Неверный выбор" ;;
+        esac
+        echo -ne "${YELLOW}Enter для продолжения...${RESET}"
+        read -r
+    done
+}
+
+cmd_production_tools_menu() {
+    while true; do
+        hr
+        echo -e "${BOLD}  Production tools${RESET}"
+        hr
+        echo -e "  ${BOLD}1)${RESET} Health-check всего стека"
+        echo -e "  ${BOLD}2)${RESET} Safe apply configs"
+        echo -e "  ${BOLD}3)${RESET} Encrypted backup /etc/naiveproxy"
+        echo -e "  ${BOLD}4)${RESET} Export users + subscriptions"
+        echo -e "  ${BOLD}5)${RESET} Import users + subscriptions"
+        echo -e "  ${BOLD}6)${RESET} Bridge builder"
+        echo -e "  ${BOLD}0)${RESET} Назад"
+        hr
+        echo -ne "${CYAN}Выбор: ${RESET}"
+        read -r choice
+        case "$choice" in
+            1) cmd_health_check ;;
+            2) cmd_safe_apply ;;
+            3) cmd_backup_encrypted ;;
+            4) cmd_export_state ;;
+            5) cmd_import_state ;;
+            6) cmd_bridge_menu ;;
+            0) break ;;
+            *) warn "Неверный выбор" ;;
+        esac
+        echo -ne "${YELLOW}Enter для продолжения...${RESET}"
+        read -r
+    done
 }
 
 # ─── Клиентский конфиг ───────────────────────────────────────
@@ -1793,7 +2309,7 @@ EOF
 print_client_config() {
     load_config
     hr
-    echo -e "${BOLD}${GREEN}  Клиентский конфиг NaiveProxy${RESET}"
+    echo -e "${BOLD}${GREEN}  Клиентский конфиг Yurich Connect (NaiveProxy)${RESET}"
     hr
 
     local first_user first_pass selected_user
@@ -1817,6 +2333,7 @@ print_client_config() {
 
     echo -e "${CYAN}  Стек сервера:${RESET}"
     echo -e "  Caddy 2 + klzgrad/forwardproxy@naive"
+    echo -e "  Пользователь: ${BOLD}${first_user}${RESET} | срок: ${CYAN}$(user_expiry_label "$first_user")${RESET}"
     echo
     echo -e "${YELLOW}  Важно для приложений:${RESET}"
     echo -e "  Выбирай тип ${BOLD}NaiveProxy / naive${RESET}, а не VLESS/Trojan/Shadowsocks."
@@ -1847,11 +2364,11 @@ EOF
   }
 EOF
     echo
-    echo -e "${CYAN}  JSON (sing-box полный пример, Android VPN/TUN):${RESET}"
+    echo -e "${CYAN}  JSON (sing-box полный пример, Yurich Mobile VPN/TUN):${RESET}"
     if [[ -n "$(aurum_dns_client_ip)" ]]; then
-        echo -e "${GREEN}  Aurum DNS включён:${RESET} DNS в этом примере идёт через ${CYAN}tcp://$(aurum_dns_client_ip):53${RESET}"
+        echo -e "${GREEN}  Yurich DNS включён:${RESET} DNS в этом примере идёт через ${CYAN}tcp://$(aurum_dns_client_ip):53${RESET}"
     else
-        echo -e "${YELLOW}  Aurum DNS для клиентов выключен:${RESET} меню 17 → 2 включит DNS в этот пример."
+        echo -e "${YELLOW}  Yurich DNS для клиентов выключен:${RESET} меню 17 → 2 включит DNS в этот пример."
     fi
     singbox_naive_tun_json "$first_user" "$first_pass" | sed 's/^/  /'
     echo
@@ -1924,7 +2441,11 @@ install_hysteria_bin() {
     local arch asset url tmp_bin tmp_hash expected actual
     arch=$(detect_hysteria_arch) || return 1
     asset="hysteria-linux-${arch}"
-    url="https://github.com/apernet/hysteria/releases/latest/download/${asset}"
+    if [[ "${HYSTERIA_VERSION_PIN:-latest}" == "latest" ]]; then
+        url="https://github.com/apernet/hysteria/releases/latest/download/${asset}"
+    else
+        url="https://github.com/apernet/hysteria/releases/download/${HYSTERIA_VERSION_PIN}/${asset}"
+    fi
     tmp_bin=$(mktemp /tmp/hysteria_XXXXXX)
     tmp_hash=$(mktemp /tmp/hysteria_hashes_XXXXXX)
     trap 'rm -f "${tmp_bin:-}" "${tmp_hash:-}" 2>/dev/null; trap - RETURN' RETURN
@@ -1936,7 +2457,7 @@ install_hysteria_bin() {
     fi
 
     if curl -fsSL --connect-timeout 10 --max-time 30 \
-        "https://github.com/apernet/hysteria/releases/latest/download/hashes.txt" -o "$tmp_hash" 2>/dev/null; then
+        "${url%/${asset}}/hashes.txt" -o "$tmp_hash" 2>/dev/null; then
         expected=$(grep -F "$asset" "$tmp_hash" | awk '{for(i=1;i<=NF;i++) if($i ~ /^[a-f0-9]{64}$/){print $i; exit}}' | head -1)
         if [[ -n "$expected" ]]; then
             actual=$(sha256sum "$tmp_bin" | awk '{print $1}')
@@ -1954,6 +2475,7 @@ install_hysteria_bin() {
 
     install -m 755 "$tmp_bin" "$HYSTERIA_BIN"
     ok "Hysteria 2 установлен: $("$HYSTERIA_BIN" version 2>/dev/null | head -1 || echo "$HYSTERIA_BIN")"
+    info "Hysteria release pin: ${HYSTERIA_VERSION_PIN:-latest}"
 }
 
 write_hysteria_config() {
@@ -1967,7 +2489,7 @@ write_hysteria_config() {
 
     if [[ -z "$cert_file" || -z "$key_file" ]]; then
         err "Не нашёл TLS сертификат Caddy для ${DOMAIN:-не задан}"
-        err "Сначала запусти NaiveProxy и дождись TLS: sudo bash naiveproxy.sh install"
+        err "Сначала запусти Yurich Core и дождись TLS: sudo bash naiveproxy.sh install"
         return 1
     fi
 
@@ -2141,7 +2663,7 @@ print_hysteria_client_config() {
 EOF
     if [[ -n "$(aurum_dns_client_ip)" ]]; then
         echo
-        echo -e "${CYAN}  Aurum DNS для full TUN/sing-box:${RESET}"
+        echo -e "${CYAN}  Yurich DNS для full TUN/sing-box:${RESET}"
         echo -e "  DNS server: ${GREEN}tcp://$(aurum_dns_client_ip):53${RESET}"
         echo -e "  detour: ${GREEN}hysteria2-out${RESET}"
     fi
@@ -2204,7 +2726,7 @@ choose_hysteria_port() {
 cmd_hysteria_install() {
     load_config
     if [[ -z "${DOMAIN:-}" ]]; then
-        err "Домен не настроен. Сначала установи NaiveProxy."
+        err "Домен не настроен. Сначала установи Yurich Core."
         return 1
     fi
 
@@ -2370,7 +2892,11 @@ install_xray_bin() {
 
     local arch url tmp zip_dir
     arch=$(detect_xray_arch) || return 1
-    url="https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-${arch}.zip"
+    if [[ "${XRAY_VERSION_PIN:-latest}" == "latest" ]]; then
+        url="https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-${arch}.zip"
+    else
+        url="https://github.com/XTLS/Xray-core/releases/download/${XRAY_VERSION_PIN}/Xray-linux-${arch}.zip"
+    fi
     tmp=$(mktemp /tmp/xray_XXXXXX.zip)
     zip_dir=$(mktemp -d /tmp/xray_unzip_XXXXXX)
     trap 'rm -f "${tmp:-}" 2>/dev/null; rm -rf "${zip_dir:-}" 2>/dev/null; trap - RETURN' RETURN
@@ -2380,6 +2906,7 @@ install_xray_bin() {
         err "Не удалось скачать Xray: $url"
         return 1
     fi
+    info "Xray release pin: ${XRAY_VERSION_PIN:-latest}"
 
     command -v unzip &>/dev/null || apt-get install -y -q unzip
     unzip -q "$tmp" -d "$zip_dir"
@@ -2550,7 +3077,7 @@ write_xray_config() {
     cert=$(find_caddy_cert "${DOMAIN:-}") || true
     key=$(find_caddy_key "${DOMAIN:-}") || true
     if [[ -z "$cert" || -z "$key" ]]; then
-        err "Для Xray TLS/gRPC/fallback нужен TLS сертификат Caddy. Сначала запусти NaiveProxy и дождись сертификата."
+        err "Для Xray TLS/gRPC/fallback нужен TLS сертификат Caddy. Сначала запусти Yurich Core и дождись сертификата."
         return 1
     fi
 
@@ -2781,7 +3308,7 @@ print_xray_client_config() {
     echo "  vless://${uuid}@${DOMAIN}:${XRAY_GRPC_PORT:-$XRAY_GRPC_PORT_DEFAULT}?security=tls&type=grpc&serviceName=vless-grpc&sni=${DOMAIN}&fp=chrome#${user}-grpc"
     if [[ -n "$(aurum_dns_client_ip)" ]]; then
         echo
-        echo -e "${CYAN}  Aurum DNS для full TUN/sing-box:${RESET}"
+        echo -e "${CYAN}  Yurich DNS для full TUN/sing-box:${RESET}"
         echo -e "  DNS server: ${GREEN}tcp://$(aurum_dns_client_ip):53${RESET}"
         echo -e "  detour: ${GREEN}xray-out${RESET} (или тег твоего Xray outbound в клиенте)"
     fi
@@ -2901,20 +3428,22 @@ generate_subscription_page() {
 
     ensure_web_privacy_files
 
-    local token token_file page_dir links_file naive_pass naive_uri naive_json naive_singbox_tun_json hy2_uri hy2_json
+    local token token_file page_dir links_file naive_pass naive_uri naive_json naive_singbox_tun_json hy2_uri hy2_json expiry_label expiry_tag
     token_file="${SUBS_DIR}/${user}.token"
     token=$(get_or_create_token_file "$token_file")
     page_dir="${SUBS_WEB_DIR}/${token}"
     links_file="${page_dir}/links.txt"
     mkdir -p "$page_dir"
     chmod 755 "$page_dir"
+    expiry_label=$(user_expiry_label "$user")
+    expiry_tag=$(user_expiry_tag "$user")
 
     naive_pass=$(get_user_pass "$user" 2>/dev/null || true)
     naive_uri=""
     naive_json=""
     naive_singbox_tun_json=""
     if [[ -n "$naive_pass" ]]; then
-        naive_uri="naive+https://${user}:${naive_pass}@${DOMAIN}:443"
+        naive_uri="naive+https://${user}:${naive_pass}@${DOMAIN}:443#${user}-naive-${expiry_tag}"
         naive_json=$(cat <<EOF
 {
   "listen": "socks://127.0.0.1:1080",
@@ -2930,6 +3459,7 @@ EOF
     if [[ -n "$naive_pass" && -n "${HYSTERIA_OBFS_PASSWORD:-}" && ( -f "$HYSTERIA_CONFIG" || -x "$HYSTERIA_BIN" ) ]]; then
         hy2_uri=$(hysteria_uri_for_user "$user" 2>/dev/null || true)
         if [[ -n "$hy2_uri" ]]; then
+            [[ "$hy2_uri" != *"#"* ]] && hy2_uri="${hy2_uri}#${user}-hy2-${expiry_tag}"
             hy2_json=$(cat <<EOF
 {
   "type": "hysteria2",
@@ -2962,15 +3492,15 @@ EOF
     mkcp_link=""
     grpc_link=""
     if [[ -n "$uuid" ]]; then
-        reality_link="vless://${uuid}@${DOMAIN}:${XRAY_REALITY_PORT:-$XRAY_REALITY_PORT_DEFAULT}?security=reality&type=tcp&flow=xtls-rprx-vision&sni=${XRAY_REALITY_SERVER_NAME:-www.microsoft.com}&fp=chrome&pbk=${XRAY_REALITY_PUBLIC_KEY:-PUBLIC_KEY}&sid=${XRAY_REALITY_SHORT_ID:-SHORT_ID}#${user}-reality"
-        mkcp_link="vless://${uuid}@${DOMAIN}:${XRAY_MKCP_PORT:-$XRAY_MKCP_PORT_DEFAULT}?security=none&type=mkcp#${user}-mkcp"
-        grpc_link="vless://${uuid}@${DOMAIN}:${XRAY_GRPC_PORT:-$XRAY_GRPC_PORT_DEFAULT}?security=tls&type=grpc&serviceName=vless-grpc&sni=${DOMAIN}&fp=chrome#${user}-grpc"
+        reality_link="vless://${uuid}@${DOMAIN}:${XRAY_REALITY_PORT:-$XRAY_REALITY_PORT_DEFAULT}?security=reality&type=tcp&flow=xtls-rprx-vision&sni=${XRAY_REALITY_SERVER_NAME:-www.microsoft.com}&fp=chrome&pbk=${XRAY_REALITY_PUBLIC_KEY:-PUBLIC_KEY}&sid=${XRAY_REALITY_SHORT_ID:-SHORT_ID}#${user}-reality-${expiry_tag}"
+        mkcp_link="vless://${uuid}@${DOMAIN}:${XRAY_MKCP_PORT:-$XRAY_MKCP_PORT_DEFAULT}?security=none&type=mkcp#${user}-mkcp-${expiry_tag}"
+        grpc_link="vless://${uuid}@${DOMAIN}:${XRAY_GRPC_PORT:-$XRAY_GRPC_PORT_DEFAULT}?security=tls&type=grpc&serviceName=vless-grpc&sni=${DOMAIN}&fp=chrome#${user}-grpc-${expiry_tag}"
         if [[ "${XRAY_FALLBACK_ENABLED:-0}" == "1" ]]; then
-            vision_link="vless://${uuid}@${DOMAIN}:443?security=tls&type=tcp&flow=xtls-rprx-vision&sni=${DOMAIN}&fp=chrome#${user}-vless-vision"
-            ws_link="vless://${uuid}@${DOMAIN}:443?security=tls&type=ws&host=${DOMAIN}&path=%2Fvless-ws&sni=${DOMAIN}&fp=chrome#${user}-vless-ws"
-            hu_link="vless://${uuid}@${DOMAIN}:443?security=tls&type=httpupgrade&host=${DOMAIN}&path=%2Fvless-hu&sni=${DOMAIN}&fp=chrome#${user}-vless-httpupgrade"
-            xhttp_link="vless://${uuid}@${DOMAIN}:443?security=tls&type=xhttp&host=${DOMAIN}&path=%2Fvless-xhttp&sni=${DOMAIN}&fp=chrome#${user}-vless-xhttp"
-            trojan_link="trojan://${XRAY_TROJAN_PASSWORD:-PASSWORD}@${DOMAIN}:443?security=tls&type=ws&host=${DOMAIN}&path=%2Ftrojan-ws&sni=${DOMAIN}&fp=chrome#trojan-ws"
+            vision_link="vless://${uuid}@${DOMAIN}:443?security=tls&type=tcp&flow=xtls-rprx-vision&sni=${DOMAIN}&fp=chrome#${user}-vless-vision-${expiry_tag}"
+            ws_link="vless://${uuid}@${DOMAIN}:443?security=tls&type=ws&host=${DOMAIN}&path=%2Fvless-ws&sni=${DOMAIN}&fp=chrome#${user}-vless-ws-${expiry_tag}"
+            hu_link="vless://${uuid}@${DOMAIN}:443?security=tls&type=httpupgrade&host=${DOMAIN}&path=%2Fvless-hu&sni=${DOMAIN}&fp=chrome#${user}-vless-httpupgrade-${expiry_tag}"
+            xhttp_link="vless://${uuid}@${DOMAIN}:443?security=tls&type=xhttp&host=${DOMAIN}&path=%2Fvless-xhttp&sni=${DOMAIN}&fp=chrome#${user}-vless-xhttp-${expiry_tag}"
+            trojan_link="trojan://${XRAY_TROJAN_PASSWORD:-PASSWORD}@${DOMAIN}:443?security=tls&type=ws&host=${DOMAIN}&path=%2Ftrojan-ws&sni=${DOMAIN}&fp=chrome#trojan-ws-${expiry_tag}"
         fi
     fi
 
@@ -2988,12 +3518,13 @@ EOF
     } > "$links_file"
     chmod 644 "$links_file"
 
-    local sub_url links_url title safe_user safe_domain safe_naive_uri safe_naive_json safe_naive_singbox_tun_json safe_hy2_uri safe_hy2_json
+    local sub_url links_url title safe_user safe_domain safe_expiry_label safe_naive_uri safe_naive_json safe_naive_singbox_tun_json safe_hy2_uri safe_hy2_json
     sub_url="https://${DOMAIN}/s/${token}/"
     links_url="${sub_url}links.txt"
-    title="Subscription for ${user}"
+    title="Yurich ID for ${user}"
     safe_user=$(html_escape_text "$user")
     safe_domain=$(html_escape_text "$DOMAIN")
+    safe_expiry_label=$(html_escape_text "$expiry_label")
     safe_naive_uri=$(html_escape_text "$naive_uri")
     safe_naive_json=$(html_escape_text "$naive_json")
     safe_naive_singbox_tun_json=$(html_escape_text "$naive_singbox_tun_json")
@@ -3028,11 +3559,11 @@ EOF
 <main class="wrap">
   <section class="top">
     <div>
-      <div class="brand">NaiveProxy Manager</div>
-      <div class="h1">Подписка пользователя ${safe_user}</div>
+      <div class="brand">Yurich ID · Yurich Cloud</div>
+      <div class="h1">Yurich ID пользователя ${safe_user}</div>
       <div class="muted">Домен: <b>${safe_domain}</b>. Страница скрыта от индексации, но доступна всем, у кого есть этот секретный URL.</div>
     </div>
-    <div class="pill">Обновлено: $(date '+%Y-%m-%d %H:%M')</div>
+    <div class="pill">Срок: ${safe_expiry_label}<br>Обновлено: $(date '+%Y-%m-%d %H:%M')</div>
   </section>
 
   <section class="card">
@@ -3049,7 +3580,7 @@ EOF
       <pre>${safe_naive_uri:-Naive пользователь не найден}</pre>
       <h3>naive-client JSON</h3>
       <pre>${safe_naive_json:-Naive конфиг недоступен}</pre>
-      <h3>sing-box Android VPN/TUN + Aurum DNS</h3>
+      <h3>sing-box Yurich Mobile VPN/TUN + Yurich DNS</h3>
       <pre>${safe_naive_singbox_tun_json:-sing-box TUN конфиг недоступен}</pre>
       <h2>Hysteria 2</h2>
       <p class="muted">Персональный UDP/QUIC профиль для этого же пользователя, если Hysteria 2 установлен.</p>
@@ -3074,8 +3605,8 @@ EOF
   <section class="card">
     <h2>Настройки под системы</h2>
     <div class="os">
-      <div><b>Windows</b><br><span class="muted">v2rayN, NekoRay или Hiddify. Импортируй links.txt или вставь нужную URI.</span></div>
-      <div><b>Android</b><br><span class="muted">Hiddify, NekoBox, v2rayNG. Для Naive лучше Hiddify/NekoBox с поддержкой naive.</span></div>
+      <div><b>Yurich Desktop (Windows)</b><br><span class="muted">v2rayN, NekoRay или Hiddify. Импортируй links.txt или вставь нужную URI.</span></div>
+      <div><b>Yurich Mobile (Android)</b><br><span class="muted">Hiddify, NekoBox, v2rayNG. Для Naive лучше Hiddify/NekoBox с поддержкой naive.</span></div>
       <div><b>iOS/macOS</b><br><span class="muted">Streisand, FoXray, Shadowrocket. Импортируй подписку или отдельную ссылку.</span></div>
       <div><b>Linux</b><br><span class="muted">naive-client JSON для SOCKS 127.0.0.1:1080 или sing-box/v2rayN GUI.</span></div>
     </div>
@@ -3163,7 +3694,7 @@ install_private_camouflage_page() {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex,nofollow,noarchive">
-<title>Ivan IT Lab</title>
+<title>Yurich Cloud Lab</title>
 <style>
 :root{--bg:#0a0e13;--panel:#111923;--line:#263241;--text:#edf2f7;--muted:#9ca9b7;--accent:#d4a017;--blue:#58a6ff;--green:#4ade80}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,Arial,sans-serif}.wrap{max-width:980px;margin:0 auto;padding:34px 18px}.top{border-bottom:1px solid var(--line);padding-bottom:22px}.eyebrow{color:var(--accent);font-size:12px;text-transform:uppercase;letter-spacing:.12em}.h1{font-size:36px;font-weight:850;margin:8px 0}.muted{color:var(--muted);line-height:1.65}.grid{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-top:20px}.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:18px}.row{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:10px 0}.row:last-child{border-bottom:0}.ok{color:var(--green)}code{color:var(--blue)}@media(max-width:760px){.grid{grid-template-columns:1fr}.h1{font-size:28px}}
 </style>
@@ -3172,7 +3703,7 @@ install_private_camouflage_page() {
 <main class="wrap">
   <section class="top">
     <div class="eyebrow">Private technical notebook</div>
-    <div class="h1">Ivan IT Lab</div>
+    <div class="h1">Yurich Cloud Lab</div>
     <p class="muted">Личная страница для заметок по инфраструктуре, релизам и тестовым окружениям. Публичная часть сайта остаётся обычным техническим блогом, эта страница живёт только по секретному адресу.</p>
   </section>
   <section class="grid">
@@ -3199,7 +3730,7 @@ EOF
 
 cmd_xray_install() {
     load_config
-    check_installed || { err "Сначала установи NaiveProxy и получи TLS сертификат"; return 1; }
+    check_installed || { err "Сначала установи Yurich Core и получи TLS сертификат"; return 1; }
     hr
     echo -e "${BOLD}  Xray Modern transports${RESET}"
     hr
@@ -3216,6 +3747,9 @@ cmd_xray_install() {
         err "Логин: 2-32 символа, только A-Z a-z 0-9 _ -"
         return 1
     fi
+    local x_months
+    x_months=$(prompt_user_term_months 12) || return 1
+    set_user_expiry_months "$xuser" "$x_months" || true
 
     echo -ne "${CYAN}REALITY target [${XRAY_REALITY_TARGET:-www.microsoft.com:443}]: ${RESET}"
     read -r ans
@@ -3308,13 +3842,23 @@ provision_xray_user() {
 cmd_xray_add_user() {
     load_config
     local xuser="${1:-}"
+    local months_arg="${2:-}"
     if [[ -z "$xuser" ]]; then
         echo -ne "${CYAN}Новый Xray пользователь: ${RESET}"
         read -r xuser
     fi
+    local x_months
+    if is_valid_user_months "$months_arg"; then
+        x_months="$months_arg"
+    elif [[ -t 0 ]]; then
+        x_months=$(prompt_user_term_months 12) || return 1
+    else
+        x_months="12"
+    fi
     if ! provision_xray_user "$xuser"; then
         return 1
     fi
+    set_user_expiry_months "$xuser" "$x_months" || true
 
     local sub_url
     sub_url=$(generate_subscription_page "$xuser" 2>/dev/null || true)
@@ -4036,7 +4580,7 @@ cmd_warp_menu() {
 # ─── Ввод параметров ─────────────────────────────────────────
 prompt_params() {
     echo
-    echo -e "${BOLD}Настройка NaiveProxy:${RESET}"
+    echo -e "${BOLD}Настройка Yurich Core:${RESET}"
     echo
 
     while true; do
@@ -4074,9 +4618,13 @@ prompt_params() {
         err "Пароль: 8-64 символа, только A-Z a-z 0-9 _ -"
     done
 
+    local first_months
+    first_months=$(prompt_user_term_months 12) || return 1
+
     load_users
     echo "${first_user}:${first_pass}" > "$USERS_FILE"
     chmod 600 "$USERS_FILE"
+    set_user_expiry_months "$first_user" "$first_months" || true
 }
 
 
@@ -4190,7 +4738,7 @@ cmd_users() {
                 local count=0
                 while IFS=: read -r u p; do
                     count=$((count+1))
-                    echo -e "  ${count}. ${BOLD}${u}${RESET} : $p"
+                    echo -e "  ${count}. ${BOLD}${u}${RESET} : $p  ${DIM}срок: $(user_expiry_label "$u")${RESET}"
                 done < <(get_users)
                 [[ $count -eq 0 ]] && warn "Нет пользователей"
                 echo -e "  Итого: $count"
@@ -4216,7 +4764,10 @@ cmd_users() {
                     err "Пароль: 8-64 символа, только A-Z a-z 0-9 _ -"
                     continue
                 fi
+                local new_months
+                new_months=$(prompt_user_term_months 12) || continue
                 printf '%s:%s\n' "${new_user}" "${new_pass}" >> "$USERS_FILE"
+                set_user_expiry_months "$new_user" "$new_months" || true
                 backup_config
                 rewrite_caddyfile_current
                 systemctl reload caddy 2>/dev/null || systemctl restart caddy
@@ -4255,7 +4806,7 @@ cmd_users() {
                 if [[ "$xray_added" -eq 1 ]]; then
                     print_xray_client_config "$new_user"
                 fi
-                tg_send "👤 <b>Новый пользователь NaiveProxy</b>
+                tg_send "👤 <b>Новый пользователь Yurich Connect</b>
 🔑 Логин: <code>${new_user}</code>
 🕐 $(date '+%Y-%m-%d %H:%M:%S')"
                 ;;
@@ -4271,6 +4822,7 @@ cmd_users() {
                 fi
                 backup_config
                 cleanup_subscription_page "$del_user"
+                cleanup_user_metadata "$del_user"
                 awk -F: -v user="${del_user}" '$1 != user' "$USERS_FILE" > "${USERS_FILE}.tmp" && mv "${USERS_FILE}.tmp" "$USERS_FILE" || true
                 rewrite_caddyfile_current
                 systemctl reload caddy 2>/dev/null || systemctl restart caddy
@@ -4593,12 +5145,12 @@ cmd_devices_scan() {
     trap 'rm -f "${report_file:-}" 2>/dev/null; trap - RETURN' RETURN
 
     if ! device_usage_report "$window" > "$report_file"; then
-        warn "Логи NaiveProxy не найдены: ${LOG_DIR}/naive.log"
+        warn "Логи Yurich Core не найдены: ${LOG_DIR}/naive.log"
         return 1
     fi
 
     hr
-    echo -e "${BOLD}  Лимит устройств NaiveProxy${RESET}"
+    echo -e "${BOLD}  Лимит устройств Yurich ID${RESET}"
     hr
     echo -e "  Лимит: ${CYAN}${limit}${RESET} уникальных IP за ${CYAN}${window}${RESET} ч"
     echo -e "  Режим: ${CYAN}${mode}${RESET}  |  Авто: ${CYAN}${enabled}${RESET}"
@@ -4617,7 +5169,7 @@ cmd_devices_scan() {
         if [[ "$count" =~ ^[0-9]+$ ]] && [[ "$count" -gt "$limit" ]]; then
             exceeded=$((exceeded+1))
             warn "Превышение: $user использует $count IP при лимите $limit"
-            tg_send "⚠️ <b>NaiveProxy: превышен лимит устройств</b>
+            tg_send "⚠️ <b>Yurich ID: превышен лимит устройств</b>
 👤 Пользователь: <code>${user}</code>
 📱 IP за ${window} ч: <b>${count}</b> / лимит <b>${limit}</b>
 🔒 Режим: <code>${mode}</code>"
@@ -4797,11 +5349,11 @@ cmd_monitor() {
 # ─── УСТАНОВКА ───────────────────────────────────────────────
 cmd_install() {
     hr
-    echo -e "${BOLD}  Установка NaiveProxy v${VERSION}${RESET}"
+    echo -e "${BOLD}  Установка Yurich Core v${VERSION}${RESET}"
     hr
 
     if check_installed; then
-        warn "NaiveProxy уже установлен."
+        warn "Yurich Core уже установлен."
         echo -ne "${YELLOW}Переустановить? [y/N]: ${RESET}"
         read -r ans
         [[ "${ans,,}" == "y" ]] || return
@@ -4857,6 +5409,7 @@ cmd_install() {
     fi
 
     print_client_config
+    cmd_health_check
 }
 
 
@@ -4922,7 +5475,7 @@ check_cert() {
 
 cmd_self_update() {
     hr
-    echo -e "${BOLD}  Обновление скрипта NaiveProxy Manager${RESET}"
+    echo -e "${BOLD}  Обновление скрипта Yurich Panel${RESET}"
     hr
 
     info "Текущая версия: ${BOLD}v${VERSION}${RESET}"
@@ -4956,16 +5509,37 @@ cmd_self_update() {
     [[ "${ans,,}" == "n" ]] && return 0
 
     # Скачиваем новую версию во временный файл
-    local tmp_script
+    local tmp_script tmp_sha expected_sha actual_sha
     tmp_script=$(mktemp /tmp/naiveproxy_update_XXXXXX.sh)
+    tmp_sha=$(mktemp /tmp/naiveproxy_update_sha_XXXXXX)
     # Cleanup при любом выходе из функции
-    trap 'rm -f "${tmp_script:-}" 2>/dev/null' RETURN
+    trap 'rm -f "${tmp_script:-}" "${tmp_sha:-}" 2>/dev/null' RETURN
 
     info "Скачиваю v${latest_ver}..."
     if ! curl -fsSL --max-time 60 "$GITHUB_RAW" -o "$tmp_script" 2>/dev/null; then
         err "Ошибка загрузки скрипта"
         rm -f "$tmp_script"
         return 1
+    fi
+
+    info "Проверяю SHA256 релиза..."
+    if curl -fsSL --max-time 20 "$GITHUB_SHA256_RAW" -o "$tmp_sha" 2>/dev/null; then
+        expected_sha=$(awk '{print $1; exit}' "$tmp_sha" | tr -d '\r\n')
+        actual_sha=$(sha256sum "$tmp_script" | awk '{print $1}')
+        if [[ ! "$expected_sha" =~ ^[a-fA-F0-9]{64}$ ]]; then
+            warn "Файл SHA256 найден, но формат некорректный"
+            [[ "${NAIVEPROXY_REQUIRE_SHA:-0}" == "1" ]] && return 1
+        elif [[ "$actual_sha" != "$expected_sha" ]]; then
+            err "SHA256 не совпадает. Обновление остановлено."
+            echo "  expected: $expected_sha"
+            echo "  actual:   $actual_sha"
+            return 1
+        else
+            ok "SHA256 релиза подтверждён"
+        fi
+    else
+        warn "SHA256 файл релиза не найден. Для строгого режима: NAIVEPROXY_REQUIRE_SHA=1"
+        [[ "${NAIVEPROXY_REQUIRE_SHA:-0}" == "1" ]] && return 1
     fi
 
     # Проверяем что скачали валидный bash скрипт
@@ -4975,9 +5549,9 @@ cmd_self_update() {
         return 1
     fi
 
-    # Проверяем что это действительно наш скрипт
-    if ! grep -q "NaiveProxy Manager" "$tmp_script" 2>/dev/null; then
-        err "Скачанный файл не является NaiveProxy Manager. Отменяю."
+    # Проверяем что это действительно наш скрипт; legacy-маркер нужен для self-update старых релизов.
+    if ! grep -Eq "Yurich Panel|NaiveProxy Manager" "$tmp_script" 2>/dev/null; then
+        err "Скачанный файл не является Yurich Panel. Отменяю."
         rm -f "$tmp_script"
         return 1
     fi
@@ -5006,7 +5580,7 @@ cmd_self_update() {
     fi
 
     ok "Скрипт обновлён: v${VERSION} → v${latest_ver}"
-    tg_send "🔄 <b>NaiveProxy Manager обновлён</b>
+    tg_send "🔄 <b>Yurich Panel обновлён</b>
 📦 Было: <code>v${VERSION}</code>
 📦 Стало: <code>v${latest_ver}</code>
 🕐 $(date '+%Y-%m-%d %H:%M:%S')"
@@ -5036,7 +5610,7 @@ cmd_diagnose_fix() {
     load_config 2>/dev/null || true
     load_users 2>/dev/null || true
     hr
-    echo -e "${BOLD}  🛠 Автофикс NaiveProxy Manager${RESET}"
+    echo -e "${BOLD}  🛠 Автофикс Yurich Panel${RESET}"
     hr
 
     local changed=0
@@ -5134,7 +5708,7 @@ cmd_diagnose() {
     _sep()  { echo -e "  ${DIM}──────────────────────────────────────${RESET}"; }
 
     hr
-    echo -e "${BOLD}  🔍 Диагностика NaiveProxy Manager v${VERSION}${RESET}"
+    echo -e "${BOLD}  🔍 Диагностика Yurich Panel v${VERSION}${RESET}"
     echo -e "  $(date '+%Y-%m-%d %H:%M:%S') · $(hostname)"
     hr
     echo
@@ -5350,12 +5924,12 @@ cmd_diagnose() {
         _warn "Fail2Ban не запущен — SSH не защищён от брутфорса"
     fi
 
-    # Aurum DNS / Unbound
+    # Yurich DNS / Unbound
     if command -v unbound &>/dev/null; then
         if systemctl is-active --quiet unbound 2>/dev/null; then
-            _ok "Aurum DNS: $(unbound_mode_label), gateway=${UNBOUND_GATEWAY_IP:-127.0.0.1}, vpn=${UNBOUND_VPN_ENABLED:-0}"
+            _ok "Yurich DNS: $(unbound_mode_label), gateway=${UNBOUND_GATEWAY_IP:-127.0.0.1}, vpn=${UNBOUND_VPN_ENABLED:-0}"
         else
-            _warn "Aurum DNS установлен, но сервис не активен"
+            _warn "Yurich DNS установлен, но сервис не активен"
         fi
         if [[ -f "${DNS_CONF:-/etc/unbound/unbound.conf.d/aurum-vpn.conf}" ]] && unbound-checkconf "${DNS_CONF:-/etc/unbound/unbound.conf.d/aurum-vpn.conf}" >/dev/null 2>&1; then
             _ok "Unbound config валиден"
@@ -5363,12 +5937,12 @@ cmd_diagnose() {
             _warn "Unbound config не найден или содержит ошибку"
         fi
         if command -v dig >/dev/null 2>&1 && dig "@127.0.0.1" google.com +short +time=2 +tries=1 2>/dev/null | grep -Eq '^[0-9a-fA-F:.]+$'; then
-            _ok "Aurum DNS отвечает на 127.0.0.1:53"
+            _ok "Yurich DNS отвечает на 127.0.0.1:53"
         else
-            _warn "Aurum DNS test не прошёл"
+            _warn "Yurich DNS test не прошёл"
         fi
     else
-        _info "Aurum DNS не установлен (меню → 17)"
+        _info "Yurich DNS не установлен (меню → 17)"
     fi
 
     # WARP modes — proxy/full-tunnel
@@ -5599,7 +6173,7 @@ print(errs)
     echo -ne "\n${YELLOW}Отправить отчёт в Telegram? [y/N]: ${RESET}"
     read -r ans
     if [[ "${ans,,}" == "y" ]]; then
-        tg_send "🔍 <b>Диагностика NaiveProxy</b>
+        tg_send "🔍 <b>Диагностика Yurich Core</b>
 🖥 Сервер: <code>$(hostname)</code>
 🕐 $(date '+%Y-%m-%d %H:%M:%S')
 
@@ -5885,7 +6459,7 @@ tg_handle_command() {
     case "${cmd}" in
 
         /start|/help|/menu)
-            tg_reply_menu "${chat_id}" "🛡 <b>NaiveProxy Manager v${VERSION}</b>
+            tg_reply_menu "${chat_id}" "🛡 <b>Yurich Panel v${VERSION}</b>
 🖥 Сервер: <code>$(hostname)</code>
 
 Русское меню включено. Кнопки ниже запускают основные действия, а команды руками тоже работают.
@@ -5901,7 +6475,7 @@ tg_handle_command() {
 /cert — статус TLS сертификата
 
 👥 <b>Пользователи</b>
-/adduser логин [пароль] — добавить пользователя + QR + подписка
+/adduser логин [пароль] [1-12 мес] — добавить пользователя + QR + подписка
 /deluser логин — удалить пользователя + страницу
 /qr логин — QR код для подключения
 /sub логин — страница подписки пользователя
@@ -5947,7 +6521,7 @@ tg_handle_command() {
                 fi
             fi
 
-            tg_reply "${chat_id}" "📡 <b>Статус NaiveProxy</b>
+            tg_reply "${chat_id}" "📡 <b>Статус Yurich Core</b>
 🖥 Сервер: <code>$(hostname)</code>
 ${caddy_status}
 🌐 Домен: <code>${DOMAIN:-не настроен}</code>
@@ -6052,7 +6626,7 @@ ${caddy_status}
                 fail=$((fail+1))
             fi
 
-            tg_reply "${chat_id}" "🔍 <b>Диагностика NaiveProxy</b>
+            tg_reply "${chat_id}" "🔍 <b>Диагностика Yurich Core</b>
 
 ${diag_result}
 ✅ Пройдено: ${pass}  ⚠️ Внимание: ${warn}  ❌ Проблемы: ${fail}"
@@ -6073,14 +6647,28 @@ ${user_list}"
             ;;
 
         /adduser)
-            local new_user new_pass
+            local new_user new_pass new_months arg2 arg3
             new_user=$(echo "${args}" | awk '{print $1}')
-            new_pass=$(echo "${args}" | awk '{print $2}')
+            arg2=$(echo "${args}" | awk '{print $2}')
+            arg3=$(echo "${args}" | awk '{print $3}')
+            new_months="${arg3:-12}"
+            if [[ -n "$arg2" && -z "$arg3" && $(is_valid_user_months "$arg2"; echo $?) -eq 0 ]]; then
+                new_pass=""
+                new_months="$arg2"
+            else
+                new_pass="$arg2"
+            fi
 
             if [[ -z "${new_user}" ]]; then
-                tg_reply "${chat_id}" "❌ Использование: /adduser логин [пароль]
+                tg_reply "${chat_id}" "❌ Использование: /adduser логин [пароль] [месяцы 1-12]
 Пароль можно не указывать — бот сгенерирует безопасный.
-Пример: /adduser alice MyPass123"
+Примеры:
+<code>/adduser alice 6</code>
+<code>/adduser alice MyPass123 12</code>"
+                return
+            fi
+            if ! is_valid_user_months "$new_months"; then
+                tg_reply "${chat_id}" "❌ Срок должен быть от 1 до 12 месяцев"
                 return
             fi
 
@@ -6113,6 +6701,7 @@ ${user_list}"
             chmod 600 "${USERS_FILE}"
 
             printf '%s:%s\n' "${new_user}" "${new_pass}" >> "${USERS_FILE}"
+            set_user_expiry_months "${new_user}" "${new_months}" || true
 
             if rewrite_caddyfile_current 2>/dev/null; then
                 systemctl reload caddy 2>/dev/null || systemctl restart caddy 2>/dev/null
@@ -6146,6 +6735,7 @@ ${user_list}"
                 tg_reply "${chat_id}" "✅ <b>Пользователь добавлен</b>
 👤 Логин: <code>${new_user}</code>
 🔑 Пароль: <code>${new_pass}</code>
+📅 Срок: <code>$(user_expiry_label "${new_user}")</code>
 ${hy_note}
 ${xray_note}
 🌐 URI:
@@ -6195,6 +6785,7 @@ Raw links:
                 return
             fi
             cleanup_subscription_page "${del_user}"
+            cleanup_user_metadata "${del_user}"
             awk -F: -v user="${del_user}" '$1 != user' "${USERS_FILE}" > "${USERS_FILE}.tmp"                 && mv "${USERS_FILE}.tmp" "${USERS_FILE}"
             rewrite_caddyfile_current
             systemctl reload caddy 2>/dev/null || systemctl restart caddy
@@ -6361,14 +6952,21 @@ Raw links:
             ;;
 
         /xrayadduser|/xrayuser)
-            local x_new="${args%% *}"
+            local x_new x_months
+            x_new=$(echo "${args}" | awk '{print $1}')
+            x_months=$(echo "${args}" | awk '{print $2}')
+            x_months="${x_months:-12}"
             if [[ -z "$x_new" ]]; then
-                tg_reply "${chat_id}" "❌ Использование: /xrayadduser логин"
+                tg_reply "${chat_id}" "❌ Использование: /xrayadduser логин [месяцы 1-12]"
+                return
+            fi
+            if ! is_valid_user_months "$x_months"; then
+                tg_reply "${chat_id}" "❌ Срок должен быть от 1 до 12 месяцев"
                 return
             fi
             local xa_tmp xa_rc
             xa_tmp=$(mktemp)
-            cmd_xray_add_user "$x_new" > "$xa_tmp" 2>&1
+            cmd_xray_add_user "$x_new" "$x_months" > "$xa_tmp" 2>&1
             xa_rc=$?
             if [[ "$xa_rc" -eq 0 ]]; then
                 tg_reply_file_tail "${chat_id}" "✅ <b>Xray пользователь создан</b>" "$xa_tmp" 100
@@ -6432,7 +7030,7 @@ Raw links:
         /donate)
             tg_reply "${chat_id}" "💛 <b>Поддержать проект</b>
 
-Если NaiveProxy Manager помог тебе — поддержи разработку!
+Если Yurich Panel помог тебе — поддержи разработку!
 
 👉 <a href=\"https://www.donationalerts.com/r/ivan_yurievich\">DonationAlerts</a>
 
@@ -6621,12 +7219,13 @@ install_bot_service() {
     local running_script
 
     running_script=$(realpath "$0" 2>/dev/null || echo "")
-    if [[ ! -f "$script_path" ]]; then
-        if [[ -n "$running_script" && -f "$running_script" && "$running_script" != /dev/fd/* && "$running_script" != /proc/* ]]; then
-            cp "$running_script" "$script_path" 2>/dev/null || true
-        else
-            curl -fsSL --max-time 30 "$GITHUB_RAW" -o "$script_path" 2>/dev/null || true
+    mkdir -p "$(dirname "$script_path")"
+    if [[ -n "$running_script" && -f "$running_script" && "$running_script" != /dev/fd/* && "$running_script" != /proc/* ]]; then
+        if bash -n "$running_script" 2>/dev/null; then
+            install -m 755 "$running_script" "$script_path" 2>/dev/null || true
         fi
+    elif [[ ! -f "$script_path" ]]; then
+        curl -fsSL --max-time 30 "$GITHUB_RAW" -o "$script_path" 2>/dev/null || true
     fi
 
     if [[ ! -f "$script_path" ]]; then
@@ -6637,7 +7236,7 @@ install_bot_service() {
 
     cat > /etc/systemd/system/naiveproxy-bot.service << EOF
 [Unit]
-Description=NaiveProxy Telegram Bot
+Description=Yurich Panel Telegram Bot
 After=network-online.target caddy.service
 Wants=network-online.target
 
@@ -6679,7 +7278,7 @@ tg_send_stats_to() {
         fi
     fi
 
-    tg_reply "${target_chat}" "📊 <b>Статистика NaiveProxy</b>
+    tg_reply "${target_chat}" "📊 <b>Статистика Yurich Core</b>
 
 🌐 Домен: <code>${DOMAIN:-н/д}</code>
 📡 Статус: ${caddy_status}
@@ -6697,7 +7296,7 @@ tg_send_stats_to() {
 
 
 # ══════════════════════════════════════════════════════════════
-#   AURUM DNS (Unbound recursive resolver for VPN clients)
+#   YURICH DNS (Unbound recursive resolver for VPN clients)
 # ══════════════════════════════════════════════════════════════
 
 DNS_CONF="/etc/unbound/unbound.conf.d/aurum-vpn.conf"
@@ -6742,8 +7341,16 @@ normalize_cidr_list() {
             err "Некорректная VPN CIDR подсеть: $item"
             return 1
         fi
+        if [[ "${item#*/}" == "0" ]]; then
+            err "Open resolver запрещён: маска /0 использовать нельзя"
+            return 1
+        fi
         out="${out},${item}"
     done
+    if [[ -z "$out" ]]; then
+        err "Нужна хотя бы одна VPN CIDR подсеть"
+        return 1
+    fi
     printf '%s\n' "${out#,}"
 }
 
@@ -6778,7 +7385,7 @@ ensure_managed_dns_gateway() {
 
     cat > "$DNS_GATEWAY_SERVICE" <<EOF
 [Unit]
-Description=Aurum DNS local gateway IP (${gateway_ip})
+Description=Yurich DNS local gateway IP (${gateway_ip})
 Before=unbound.service
 After=network.target
 
@@ -6869,7 +7476,7 @@ check_port53_for_aurum_dns() {
     local conflicts
     conflicts=$(port53_listeners | grep -Ev 'unbound|systemd-resolve|systemd-resolved' || true)
     if [[ -n "$conflicts" ]]; then
-        err "Порт 53 занят другим сервисом. Aurum DNS не будет ломать его автоматически:"
+        err "Порт 53 занят другим сервисом. Yurich DNS не будет ломать его автоматически:"
         echo "$conflicts"
         return 1
     fi
@@ -6897,7 +7504,7 @@ write_unbound_config() {
 
     cat > "$DNS_CONF" <<EOF
 server:
-    # Aurum VPN DNS: local recursive resolver.
+    # Yurich DNS: local recursive resolver.
     # Never bind 0.0.0.0. VPN access is bound to the gateway IP only.
     interface: 127.0.0.1
 EOF
@@ -7031,7 +7638,7 @@ remove_unbound_ufw_rules() {
 
 cmd_dns_install() {
     hr
-    echo -e "${BOLD}  🛡️ Установка Aurum DNS (Unbound)${RESET}"
+    echo -e "${BOLD}  🛡️ Установка Yurich DNS (Unbound)${RESET}"
     hr
 
     info "Обновляю apt cache и устанавливаю зависимости..."
@@ -7045,7 +7652,7 @@ cmd_dns_install() {
     unbound-anchor -a /var/lib/unbound/root.key >/dev/null 2>&1 || true
 
     echo
-    echo -e "${CYAN}Aurum DNS работает как recursive Unbound без рекламных blocklists.${RESET}"
+    echo -e "${CYAN}Yurich DNS работает как recursive Unbound без рекламных blocklists.${RESET}"
     echo -e "${DIM}Если нужен DNS для VPN-клиентов, укажи IP gateway на VPN-интерфейсе, например 10.0.0.1.${RESET}"
     local detected_gateway gateway_input vpn_cidrs
     detected_gateway=$(detect_private_dns_gateway || true)
@@ -7093,27 +7700,27 @@ cmd_dns_install() {
     UNBOUND_ENABLED="1"
     save_config
 
-    ok "Aurum DNS установлен!"
-    tg_send "🛡️ <b>Aurum DNS установлен</b>
+    ok "Yurich DNS установлен!"
+    tg_send "🛡️ <b>Yurich DNS установлен</b>
 🖥 Сервер: <code>$(hostname)</code>
 🔒 Режим: recursive DNSSEC, gateway=${UNBOUND_GATEWAY_IP:-127.0.0.1}, VPN=${UNBOUND_VPN_ENABLED:-0}
 🕐 $(date '+%Y-%m-%d %H:%M:%S')"
 }
 
-# Старый adblock/blocklists режим удалён: Aurum DNS теперь только безопасный resolver.
+# Старый adblock/blocklists режим удалён: Yurich DNS теперь только безопасный resolver.
 cmd_dns_update() {
     hr
-    echo -e "${BOLD}  🛡️ Aurum DNS${RESET}"
+    echo -e "${BOLD}  🛡️ Yurich DNS${RESET}"
     hr
     warn "Блокировка рекламы временно удалена из скрипта."
-    info "Aurum DNS не скачивает blocklists и не логирует DNS-запросы."
+    info "Yurich DNS не скачивает blocklists и не логирует DNS-запросы."
     info "Для проверки используй: меню 17 → 3 или команду unbound-test"
 }
 
 cmd_dns_restart() {
     load_config
     hr
-    echo -e "${BOLD}  🔄 Restart Aurum DNS${RESET}"
+    echo -e "${BOLD}  🔄 Restart Yurich DNS${RESET}"
     hr
     if ! command -v unbound &>/dev/null; then
         err "unbound не установлен"
@@ -7124,14 +7731,14 @@ cmd_dns_restart() {
     fi
     write_unbound_config
     restart_unbound_checked || return 1
-    ok "Aurum DNS перезапущен"
+    ok "Yurich DNS перезапущен"
 }
 
-# Статус и тест Aurum DNS
+# Статус и тест Yurich DNS
 cmd_dns_status() {
     load_config
     hr
-    echo -e "${BOLD}  🛡️ Aurum DNS (Unbound)${RESET}"
+    echo -e "${BOLD}  🛡️ Yurich DNS (Unbound)${RESET}"
     hr
 
     if ! command -v unbound &>/dev/null; then
@@ -7193,9 +7800,9 @@ cmd_dns_status() {
 cmd_dns_set_mode() {
     load_config
     hr
-    echo -e "${BOLD}  🛡️ Aurum DNS mode${RESET}"
+    echo -e "${BOLD}  🛡️ Yurich DNS mode${RESET}"
     hr
-    warn "Forward/adblock режимы удалены. Aurum DNS работает только как безопасный recursive resolver."
+    warn "Forward/adblock режимы удалены. Yurich DNS работает только как безопасный recursive resolver."
     UNBOUND_MODE="recursive"
     UNBOUND_ADBLOCK="0"
     UNBOUND_ENABLED="1"
@@ -7275,15 +7882,15 @@ cmd_dns_vpn_access() {
 # Совместимость со старым пунктом whitelist.
 cmd_dns_whitelist() {
     hr
-    echo -e "${BOLD}  🛡️ Aurum DNS${RESET}"
+    echo -e "${BOLD}  🛡️ Yurich DNS${RESET}"
     hr
     warn "Whitelist больше не нужен: блокировка рекламы удалена."
-    info "Aurum DNS только резолвит DNS для сервера/VPN и не блокирует домены."
+    info "Yurich DNS только резолвит DNS для сервера/VPN и не блокирует домены."
 }
 
-# Удалить Aurum DNS
+# Удалить Yurich DNS
 cmd_dns_remove() {
-    echo -ne "${YELLOW}Удалить Aurum DNS конфиг и команды? [y/N]: ${RESET}"
+    echo -ne "${YELLOW}Удалить Yurich DNS конфиг и команды? [y/N]: ${RESET}"
     read -r ans
     [[ "${ans,,}" != "y" ]] && return
 
@@ -7308,7 +7915,7 @@ cmd_dns_remove() {
     save_config
     systemctl daemon-reload 2>/dev/null || true
 
-    ok "Aurum DNS удалён. Пакеты unbound/dnsutils не удалял."
+    ok "Yurich DNS удалён. Пакеты unbound/dnsutils не удалял."
 }
 
 # ─── Донат ─────────────────────────────────────────────────────
@@ -7319,7 +7926,7 @@ cmd_donate() {
     echo -e "${BOLD}${GOLD}  ║     💛 ПОДДЕРЖАТЬ ПРОЕКТ                   ║${RESET}"
     echo -e "${BOLD}${GOLD}  ╚════════════════════════════════════════════╝${RESET}"
     echo
-    echo -e "  ${CYAN}Если NaiveProxy Manager помог тебе —${RESET}"
+    echo -e "  ${CYAN}Если Yurich Panel помог тебе —${RESET}"
     echo -e "  ${CYAN}поддержи разработку! Это очень мотивирует.${RESET}"
     echo
     echo -e "  ${BOLD}🎁 Ссылка на донат:${RESET}"
@@ -7337,7 +7944,7 @@ cmd_donate() {
     echo -e "  ${BOLD}Другие способы поддержки:${RESET}"
     echo -e "  ${CYAN}⭐${RESET} Поставь звезду:  github.com/ivan-yurich/naiveproxy"
     echo -e "  ${CYAN}📱${RESET} Telegram канал:  t.me/ivan_it_net"
-    echo -e "  ${CYAN}🌐${RESET} Сайт:            ivan-it.net"
+    echo -e "  ${CYAN}🌐${RESET} Yurich Cloud:    ivan-it.net"
     echo -e "  ${CYAN}📢${RESET} Расскажи друзьям!"
     echo
     echo -e "  ${BOLD}${GOLD}Спасибо за поддержку! 🙏${RESET}"
@@ -7354,12 +7961,12 @@ cmd_donate() {
     read -r
 }
 
-# Меню Aurum DNS
+# Меню Yurich DNS
 cmd_dns_menu() {
     while true; do
         load_config
         hr
-        echo -e "${BOLD}  🛡️ Aurum DNS (Unbound)${RESET}"
+        echo -e "${BOLD}  🛡️ Yurich DNS (Unbound)${RESET}"
         hr
 
         local dns_status="${RED}не установлен${RESET}"
@@ -7373,11 +7980,11 @@ cmd_dns_menu() {
         echo -e "  VPN DNS: ${CYAN}${UNBOUND_VPN_ENABLED:-0}${RESET} | Gateway: ${CYAN}${UNBOUND_GATEWAY_IP:-нет}${RESET} | CIDR: ${CYAN}${UNBOUND_VPN_CIDRS:-$DNS_DEFAULT_VPN_CIDRS}${RESET}"
         [[ "${UNBOUND_MANAGED_GATEWAY:-0}" == "1" ]] && echo -e "  Gateway mode: ${CYAN}auto lo /32${RESET}"
         echo
-        echo -e "  ${BOLD}1)${RESET} Установить / переустановить Aurum DNS"
+        echo -e "  ${BOLD}1)${RESET} Установить / переустановить Yurich DNS"
         echo -e "  ${BOLD}2)${RESET} Настроить DNS для VPN-клиентов"
         echo -e "  ${BOLD}3)${RESET} Статус, порт 53, DNSSEC и тесты"
-        echo -e "  ${BOLD}4)${RESET} Перезапустить Aurum DNS"
-        echo -e "  ${BOLD}5)${RESET} Удалить Aurum DNS"
+        echo -e "  ${BOLD}4)${RESET} Перезапустить Yurich DNS"
+        echo -e "  ${BOLD}5)${RESET} Удалить Yurich DNS"
         echo -e "  ${BOLD}0)${RESET} Назад"
         hr
         echo -ne "${CYAN}Выбор: ${RESET}"
@@ -7404,7 +8011,7 @@ cmd_unbound_plugin() {
 # ─── СТАТУС ──────────────────────────────────────────────────
 cmd_status() {
     hr
-    echo -e "${BOLD}  Статус NaiveProxy${RESET}"
+    echo -e "${BOLD}  Статус Yurich Core${RESET}"
     hr
 
     systemctl is-active --quiet caddy 2>/dev/null \
@@ -7437,8 +8044,8 @@ cmd_status() {
     fi
     if command -v unbound &>/dev/null; then
         systemctl is-active --quiet unbound 2>/dev/null \
-            && ok "Aurum DNS: $(unbound_mode_label), gateway=${UNBOUND_GATEWAY_IP:-127.0.0.1}, vpn=${UNBOUND_VPN_ENABLED:-0}" \
-            || warn "Aurum DNS: установлен, но не работает"
+            && ok "Yurich DNS: $(unbound_mode_label), gateway=${UNBOUND_GATEWAY_IP:-127.0.0.1}, vpn=${UNBOUND_VPN_ENABLED:-0}" \
+            || warn "Yurich DNS: установлен, но не работает"
     fi
     check_cert "${DOMAIN:-}"
     echo
@@ -7487,7 +8094,7 @@ cmd_update() {
     echo -e "${BOLD}  Обновление Caddy${RESET}"
     hr
 
-    check_installed || { err "NaiveProxy не установлен"; return 1; }
+    check_installed || { err "Yurich Core не установлен"; return 1; }
 
     local old_ver
     old_ver=$("$CADDY_BIN" version 2>/dev/null | head -1 || echo "unknown")
@@ -7513,7 +8120,7 @@ cmd_update() {
 # ─── УДАЛЕНИЕ ────────────────────────────────────────────────
 cmd_remove() {
     hr
-    echo -e "${BOLD}${RED}  Удаление NaiveProxy${RESET}"
+    echo -e "${BOLD}${RED}  Удаление Yurich Core${RESET}"
     hr
     echo -ne "${RED}Удалить всё? [y/N]: ${RESET}"
     read -r ans
@@ -7540,7 +8147,7 @@ cmd_remove() {
 
     ( crontab -l 2>/dev/null | grep -v "naiveproxy\|monitor\.sh" || true ) | crontab -
 
-    ok "NaiveProxy удалён"
+    ok "Yurich Core удалён"
 }
 
 # ─── ЛОГИ ────────────────────────────────────────────────────
@@ -7549,96 +8156,132 @@ cmd_logs() {
     journalctl -u caddy -n 50 -f
 }
 
+cmd_language() {
+    load_config 2>/dev/null || true
+    hr
+    echo -e "${BOLD}  $(t "Язык SSH-панели" "SSH panel language")${RESET}"
+    hr
+    echo -e "  $(t "Текущий язык" "Current language"): ${CYAN}${LANG_UI:-ru}${RESET}"
+    echo
+    echo -e "  ${BOLD}1)${RESET} Русский"
+    echo -e "  ${BOLD}2)${RESET} English"
+    echo -e "  ${BOLD}0)${RESET} $(t "Назад" "Back")"
+    hr
+    echo -ne "${CYAN}$(t "Выбор" "Choice") [0-2]: ${RESET}"
+    read -r lang_choice
+    case "${lang_choice,,}" in
+        1|ru|rus|russian|русский)
+            LANG_UI="ru"
+            save_config
+            ok "Язык панели: Русский"
+            ;;
+        2|en|eng|english)
+            LANG_UI="en"
+            save_config
+            ok "Panel language: English"
+            ;;
+        0|"")
+            return 0
+            ;;
+        *)
+            warn "$(t "Неверный выбор" "Invalid choice")"
+            return 1
+            ;;
+    esac
+}
+
 # ─── МЕНЮ ────────────────────────────────────────────────────
 show_menu() {
     clear
     load_config
 
-    local status_str="${YELLOW}● не установлен${RESET}"
+    local status_str="${YELLOW}● $(t "не установлен" "not installed")${RESET}"
     if check_installed; then
         systemctl is-active --quiet caddy 2>/dev/null \
-            && status_str="${GREEN}● работает${RESET}" \
-            || status_str="${RED}● остановлен${RESET}"
+            && status_str="${GREEN}● $(t "работает" "running")${RESET}" \
+            || status_str="${RED}● $(t "остановлен" "stopped")${RESET}"
     fi
 
-    local tg_str="${RED}не настроен${RESET}"
-    [[ -n "${TG_TOKEN:-}" ]] && tg_str="${GREEN}подключён${RESET}"
+    local tg_str="${RED}$(t "не настроен" "not configured")${RESET}"
+    [[ -n "${TG_TOKEN:-}" ]] && tg_str="${GREEN}$(t "подключён" "connected")${RESET}"
 
     hr
-    echo -e "${BOLD}${CYAN}   NaiveProxy Manager v${VERSION}${RESET}  ${DIM}[$(t "РУС" "ENG")]${RESET}"
-    echo -e "   Статус: ${status_str}  |  Домен: ${CYAN}${DOMAIN:-не задан}${RESET}"
-    local ssh_str="${YELLOW}не настроен${RESET}"
+    echo -e "${BOLD}${CYAN}   Yurich Panel v${VERSION}${RESET}  ${DIM}[$(t "РУС" "ENG")]${RESET}"
+    echo -e "   $(t "Статус" "Status"): ${status_str}  |  $(t "Домен" "Domain"): ${CYAN}${DOMAIN:-$(t "не задан" "not set")}${RESET}"
+    local ssh_str="${YELLOW}$(t "не настроен" "not configured")${RESET}"
     [[ -f "$SSH_HARDENING_DONE" ]] && ssh_str="${GREEN}$(grep SSH_PORT "$SSH_HARDENING_DONE" 2>/dev/null | cut -d= -f2)${RESET}"
-    echo -e "   Telegram: ${tg_str}  |  Юзеров: $(get_users | wc -l)  |  SSH порт: ${ssh_str}"
-    local hysteria_str="${YELLOW}не установлен${RESET}"
+    echo -e "   Telegram: ${tg_str}  |  $(t "Юзеров" "Users"): $(get_users | wc -l)  |  $(t "SSH порт" "SSH port"): ${ssh_str}"
+    local hysteria_str="${YELLOW}$(t "не установлен" "not installed")${RESET}"
     if [[ -f "$HYSTERIA_CONFIG" || -x "$HYSTERIA_BIN" ]]; then
         systemctl is-active --quiet hysteria 2>/dev/null \
             && hysteria_str="${GREEN}UDP/${HYSTERIA_PORT:-8443}${RESET}" \
-            || hysteria_str="${RED}остановлен${RESET}"
+            || hysteria_str="${RED}$(t "остановлен" "stopped")${RESET}"
     fi
     echo -e "   Hysteria 2: ${hysteria_str}"
-    local warp_str="${YELLOW}не установлен${RESET}"
+    local warp_str="${YELLOW}$(t "не установлен" "not installed")${RESET}"
     if command -v warp-cli &>/dev/null; then
         case "${WARP_MODE:-off}" in
             proxy) warp_str="${GREEN}proxy 127.0.0.1:${WARP_PROXY_PORT:-$WARP_PROXY_PORT_DEFAULT}${RESET}" ;;
             warp|warp+doh) warp_str="${GREEN}full ${WARP_MODE}${RESET}" ;;
-            *) warp_str="${YELLOW}установлен${RESET}" ;;
+            *) warp_str="${YELLOW}$(t "установлен" "installed")${RESET}" ;;
         esac
     fi
     echo -e "   WARP: ${warp_str}"
-    local xray_str="${YELLOW}не установлен${RESET}"
+    local xray_str="${YELLOW}$(t "не установлен" "not installed")${RESET}"
     if [[ -x "$XRAY_BIN" || -f "$XRAY_CONFIG" ]]; then
         systemctl is-active --quiet xray 2>/dev/null \
             && xray_str="${GREEN}active${RESET}" \
-            || xray_str="${RED}остановлен${RESET}"
+            || xray_str="${RED}$(t "остановлен" "stopped")${RESET}"
         [[ "${XRAY_FALLBACK_ENABLED:-0}" == "1" ]] && xray_str="${xray_str} ${CYAN}443-fallback${RESET}"
     fi
     echo -e "   Xray Modern: ${xray_str}"
-    local unbound_str="${YELLOW}не установлен${RESET}"
+    local unbound_str="${YELLOW}$(t "не установлен" "not installed")${RESET}"
     if command -v unbound &>/dev/null; then
         if systemctl is-active --quiet unbound 2>/dev/null; then
             unbound_str="${GREEN}active${RESET} ${CYAN}${UNBOUND_GATEWAY_IP:-127.0.0.1}${RESET}"
         else
-            unbound_str="${RED}остановлен${RESET}"
+            unbound_str="${RED}$(t "остановлен" "stopped")${RESET}"
         fi
     fi
-    echo -e "   Aurum DNS: ${unbound_str}"
-    local device_str="${YELLOW}выкл${RESET}"
+    echo -e "   Yurich DNS: ${unbound_str}"
+    local device_str="${YELLOW}$(t "выкл" "off")${RESET}"
     if [[ "${DEVICE_LIMIT_ENABLED:-0}" == "1" ]]; then
         device_str="${GREEN}${DEVICE_LIMIT:-$DEVICE_LIMIT_DEFAULT}/${DEVICE_WINDOW_HOURS:-$DEVICE_WINDOW_HOURS_DEFAULT}ч ${DEVICE_LIMIT_MODE:-alert}${RESET}"
     fi
-    echo -e "   Лимит устройств: ${device_str}"
+    echo -e "   $(t "Лимит устройств" "Device limit"): ${device_str}"
     hr
-    echo -e "   ${BOLD}1)${RESET}  Установить NaiveProxy"
-    echo -e "   ${BOLD}2)${RESET}  Статус"
-    echo -e "   ${BOLD}3)${RESET}  Клиентский конфиг"
-    echo -e "   ${BOLD}4)${RESET}  Управление пользователями"
-    echo -e "   ${BOLD}5)${RESET}  🌐 Управление доменами"
-    echo -e "   ${BOLD}6)${RESET}  Мониторинг и статистика"
-    echo -e "   ${BOLD}7)${RESET}  Настройка Telegram + Бот"
-    echo -e "   ${BOLD}8)${RESET}  Перезапустить Caddy"
-    echo -e "   ${BOLD}9)${RESET}  Обновить Caddy"
-    echo -e "   ${BOLD}10)${RESET} Логи"
-    echo -e "   ${BOLD}11)${RESET} Удалить NaiveProxy"
-    echo -e "   ${BOLD}16)${RESET} 🔍 Диагностика системы"
-    echo -e "   ${BOLD}17)${RESET} 🛡️ Aurum DNS (Unbound)"
-    echo -e "   ${BOLD}18)${RESET} 💛 Поддержать проект (донат)"
+    echo -e "   ${BOLD}1)${RESET}  $(t "Установить Yurich Core" "Install Yurich Core")"
+    echo -e "   ${BOLD}2)${RESET}  $(t "Статус" "Status")"
+    echo -e "   ${BOLD}3)${RESET}  $(t "Клиентский конфиг" "Client config")"
+    echo -e "   ${BOLD}4)${RESET}  $(t "Управление пользователями" "User management")"
+    echo -e "   ${BOLD}5)${RESET}  🌐 $(t "Управление доменами" "Domain management")"
+    echo -e "   ${BOLD}6)${RESET}  $(t "Мониторинг и статистика" "Monitoring and stats")"
+    echo -e "   ${BOLD}7)${RESET}  $(t "Настройка Telegram + Бот" "Telegram + Bot setup")"
+    echo -e "   ${BOLD}8)${RESET}  $(t "Перезапустить Caddy" "Restart Caddy")"
+    echo -e "   ${BOLD}9)${RESET}  $(t "Обновить Caddy" "Update Caddy")"
+    echo -e "   ${BOLD}10)${RESET} $(t "Логи" "Logs")"
+    echo -e "   ${BOLD}11)${RESET} $(t "Удалить Yurich Core" "Remove Yurich Core")"
+    echo -e "   ${BOLD}16)${RESET} 🔍 $(t "Диагностика системы" "System diagnostics")"
+    echo -e "   ${BOLD}17)${RESET} 🛡️ Yurich DNS (Unbound)"
+    echo -e "   ${BOLD}18)${RESET} 💛 $(t "Поддержать проект (донат)" "Support project (donation)")"
     echo -e "   ──────────────────────────"
     echo -e "   ${BOLD}12)${RESET} 🔒 SSH Hardening"
-    echo -e "   ${BOLD}13)${RESET} 🔄 Обновить систему"
-    echo -e "   ${BOLD}14)${RESET} ⬆️  Обновить скрипт"
-    echo -e "   ${BOLD}15)${RESET} 🎭 Обновить камуфляж"
-    echo -e "   ${BOLD}19)${RESET} ♻️  Reload Caddy без разрыва"
-    echo -e "   ${BOLD}20)${RESET} ⚡ Hysteria 2 (UDP порт на выбор)"
+    echo -e "   ${BOLD}13)${RESET} 🔄 $(t "Обновить систему" "Update system")"
+    echo -e "   ${BOLD}14)${RESET} ⬆️  $(t "Обновить скрипт" "Update script")"
+    echo -e "   ${BOLD}15)${RESET} 🎭 $(t "Обновить камуфляж" "Update camouflage")"
+    echo -e "   ${BOLD}19)${RESET} ♻️  $(t "Reload Caddy без разрыва" "Reload Caddy without restart")"
+    echo -e "   ${BOLD}20)${RESET} ⚡ Hysteria 2 ($(t "UDP порт на выбор" "custom UDP port"))"
     echo -e "   ${BOLD}21)${RESET} 🌀 WARP modes (proxy/full tunnel)"
-    echo -e "   ${BOLD}22)${RESET} 📱 Лимит устройств / анти-шаринг"
+    echo -e "   ${BOLD}22)${RESET} 📱 $(t "Лимит устройств / анти-шаринг" "Device limit / anti-sharing")"
     echo -e "   ${BOLD}23)${RESET} 🧬 Xray VLESS/Trojan/REALITY fallback"
     echo -e "   ${BOLD}24)${RESET} 🛠 Diagnose --fix"
-    echo -e "   ${BOLD}25)${RESET} 🔗 Страница подписки пользователя"
-    echo -e "   ${BOLD}26)${RESET} 🎭 Личная фейковая страница"
-    echo -e "   ${BOLD}0)${RESET}  Выход"
+    echo -e "   ${BOLD}25)${RESET} 🔗 $(t "Страница подписки пользователя" "User subscription page")"
+    echo -e "   ${BOLD}26)${RESET} 🎭 $(t "Личная фейковая страница" "Private camouflage page")"
+    echo -e "   ${BOLD}27)${RESET} 🧩 Production tools / Bridge"
+    echo -e "   ${BOLD}28)${RESET} 🌐 $(t "Язык панели RU/EN" "Panel language RU/EN")"
+    echo -e "   ${BOLD}0)${RESET}  $(t "Выход" "Exit")"
     hr
-    echo -ne "${CYAN}Выбор [0-26]: ${RESET}"
+    echo -ne "${CYAN}$(t "Выбор" "Choice") [0-28]: ${RESET}"
 }
 
 # ─── MAIN ────────────────────────────────────────────────────
@@ -7679,7 +8322,7 @@ main() {
             warp-remove) cmd_warp_remove ;;
             xray) cmd_xray_menu ;;
             xray-install) cmd_xray_install ;;
-            xray-add-user|xray-user) cmd_xray_add_user "${2:-}" ;;
+            xray-add-user|xray-user) cmd_xray_add_user "${2:-}" "${3:-}" ;;
             xray-config) print_xray_client_config "${2:-}" ;;
             xray-status) cmd_xray_status ;;
             xray-logs) cmd_xray_logs ;;
@@ -7713,16 +8356,25 @@ main() {
             bot)         load_config; cmd_bot ;;
             bot-install) load_config; install_bot_service ;;
             bot-menu)    load_config; tg_apply_bot_menu ;;
+            health|health-check) cmd_health_check ;;
+            safe-apply)   cmd_safe_apply ;;
+            backup|backup-encrypted) cmd_backup_encrypted ;;
+            export|export-state) cmd_export_state ;;
+            import|import-state) cmd_import_state "${2:-}" ;;
+            bridge)       cmd_bridge_menu ;;
+            bridge-show)  cmd_bridge_show ;;
+            bridge-remove) cmd_bridge_remove ;;
+            language|lang) cmd_language ;;
             self-update)  load_config; cmd_self_update ;;
             camouflage)   install_camouflage_page ;;
             version)
-                echo "NaiveProxy Manager v${VERSION}"
+                echo "Yurich Panel v${VERSION}"
                 echo "Telegram: https://t.me/ivan_it_net"
-                echo "Сайт:     https://ivan-it.net"
+                echo "Yurich Cloud: https://ivan-it.net"
                 echo "GitHub:   github.com/ivan-yurich/naiveproxy"
                 ;;
             *) err "Неизвестная команда: $1"
-               echo "Доступные: install status config [user] reload restart update remove logs monitor users hysteria hy2 hysteria-port warp warp-proxy warp-full warp-protocol xray xray-add-user [user] devices subscription private-page tg-stats bot-menu ssh-hardening ssh-rescue sysupdate cert domains dns unbound aurum-dns aurum-dns-status aurum-dns-restart self-update version camouflage"
+               echo "Доступные: install status config [user] reload restart update remove logs monitor users hysteria hy2 hysteria-port warp warp-proxy warp-full warp-protocol xray xray-add-user [user] devices subscription private-page tg-stats bot-menu health safe-apply backup export import bridge language ssh-hardening ssh-rescue sysupdate cert domains dns unbound aurum-dns aurum-dns-status aurum-dns-restart self-update version camouflage"
                exit 1 ;;
         esac
         exit 0
@@ -7762,11 +8414,13 @@ main() {
             24) cmd_diagnose_fix ;;
             25) cmd_subscription_user ;;
             26) install_private_camouflage_page ;;
-            0)  echo -e "${GREEN}Пока!${RESET}"; exit 0 ;;
-            *)  warn "Неверный выбор" ;;
+            27) cmd_production_tools_menu ;;
+            28) cmd_language ;;
+            0)  echo -e "${GREEN}$(t "Пока!" "Bye!")${RESET}"; exit 0 ;;
+            *)  warn "$(t "Неверный выбор" "Invalid choice")" ;;
         esac
         echo
-        echo -ne "${YELLOW}Нажми Enter чтобы вернуться в меню...${RESET}"
+        echo -ne "${YELLOW}$(t "Нажми Enter чтобы вернуться в меню..." "Press Enter to return to menu...")${RESET}"
         read -r
     done
 }

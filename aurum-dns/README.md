@@ -1,6 +1,6 @@
-# Aurum DNS
+# Yurich DNS
 
-Aurum DNS - production-ready установщик Unbound для Ubuntu 24.04 LTS. Он поднимает собственный DNS-резолвер для VPN-клиентов, чтобы DNS-запросы шли через ваш сервер и не превращали VPS в открытый публичный resolver.
+Yurich DNS - production-ready установщик Unbound для Ubuntu 24.04 LTS. Он поднимает собственный DNS-резолвер для VPN-клиентов, чтобы DNS-запросы шли через ваш сервер и не превращали VPS в открытый публичный resolver.
 
 ## Что такое Unbound
 
@@ -144,7 +144,7 @@ DNS = 10.0.0.1
 - не добавляйте `interface: 0.0.0.0`;
 - не добавляйте `access-control: 0.0.0.0/0 allow`;
 - не открывайте UFW порт `53` для всего мира;
-- используйте только VPN CIDR, например `10.0.0.0/24`;
+- используйте только реальный VPN CIDR, например `10.0.0.0/24`, и не используйте сети с маской `/0`;
 - проверяйте:
 
 ```bash
@@ -184,7 +184,7 @@ sudo ss -lntup | grep ':53'
 
 - порт `53` занят другим DNS-сервисом;
 - `aurum-dns-gateway.service` не поднял локальный gateway IP;
-- указана слишком широкая подсеть `0.0.0.0/0`;
+- указана слишком широкая подсеть с маской `/0`;
 - в конфиг вручную добавили повторный `auto-trust-anchor-file`.
 
-На Ubuntu trust anchor уже управляется пакетом Unbound, поэтому Aurum DNS не дублирует `auto-trust-anchor-file`.
+На Ubuntu trust anchor уже управляется пакетом Unbound, поэтому Yurich DNS не дублирует `auto-trust-anchor-file`.

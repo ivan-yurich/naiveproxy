@@ -51,7 +51,7 @@ normalize_cidrs() {
     for item in "${items[@]}"; do
         [[ -z "$item" ]] && continue
         is_cidr4 "$item" || die "Invalid CIDR: $item"
-        [[ "$item" == "0.0.0.0/0" ]] && die "Open resolver is forbidden: 0.0.0.0/0"
+        [[ "${item#*/}" == "0" ]] && die "Open resolver is forbidden: /0"
         out="${out},${item}"
     done
     [[ -n "$out" ]] || die "At least one VPN CIDR is required"
@@ -80,7 +80,7 @@ ensure_managed_gateway() {
     ip_bin=$(command -v ip || echo "/usr/sbin/ip")
     cat > "$GATEWAY_SERVICE" <<EOF
 [Unit]
-Description=Aurum DNS local gateway IP (${gateway})
+Description=Yurich DNS local gateway IP (${gateway})
 Before=unbound.service
 After=network.target
 
@@ -162,7 +162,7 @@ write_unbound_config() {
 
     cat > "$CONF" <<EOF
 server:
-    # Aurum VPN DNS: private recursive resolver for VPN clients.
+    # Yurich DNS: private recursive resolver for VPN clients.
     # Security rule: never bind 0.0.0.0 here.
     interface: 127.0.0.1
 EOF
@@ -225,8 +225,8 @@ apply_ufw() {
     IFS=',' read -r -a cidr_list <<< "$cidrs"
     for cidr in "${cidr_list[@]}"; do
         [[ -z "$cidr" ]] && continue
-        ufw allow from "$cidr" to any port 53 proto udp comment "Aurum DNS VPN" >/dev/null 2>&1 || true
-        ufw allow from "$cidr" to any port 53 proto tcp comment "Aurum DNS VPN" >/dev/null 2>&1 || true
+        ufw allow from "$cidr" to any port 53 proto udp comment "Yurich DNS VPN" >/dev/null 2>&1 || true
+        ufw allow from "$cidr" to any port 53 proto tcp comment "Yurich DNS VPN" >/dev/null 2>&1 || true
     done
 }
 
@@ -283,7 +283,7 @@ main() {
     apply_ufw "$cidrs"
     install_commands
     run_tests
-    ok "Aurum DNS installed. Commands: aurum-dns-status, aurum-dns-test, aurum-dns-restart"
+    ok "Yurich DNS installed. Commands: aurum-dns-status, aurum-dns-test, aurum-dns-restart"
 }
 
 main "$@"

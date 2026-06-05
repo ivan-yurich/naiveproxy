@@ -1,258 +1,160 @@
-═══════════════════════════════════════════════════════════════════
+Yurich Panel License
+Copyright (C) 2026 Ivan Yurievich (Иван Юрьевич)
 
-       ███╗   ██╗ █████╗ ██╗██╗   ██╗███████╗
-       ████╗  ██║██╔══██╗██║██║   ██║██╔════╝
-       ██╔██╗ ██║███████║██║██║   ██║█████╗
-       ██║╚██╗██║██╔══██║██║╚██╗ ██╔╝██╔══╝
-       ██║ ╚████║██║  ██║██║ ╚████╔╝ ███████╗
-       ╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝  ╚═══╝  ╚══════╝
-       ██████╗ ██████╗  ██████╗ ██╗  ██╗██╗   ██╗
-       ██╔══██╗██╔══██╗██╔═══██╗╚██╗██╔╝╚██╗ ██╔╝
-       ██████╔╝██████╔╝██║   ██║ ╚███╔╝  ╚████╔╝
-       ██╔═══╝ ██╔══██╗██║   ██║ ██╔██╗   ╚██╔╝
-       ██║     ██║  ██║╚██████╔╝██╔╝ ██╗   ██║
-       ╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝
-                                      MANAGER
+Required Notice: Copyright 2026 Ivan Yurievich (Иван Юрьевич)
+Required Notice: Yurich Panel — https://github.com/ivan-yurich/naiveproxy
+Required Notice: Telegram — https://t.me/ivan_it_net
+Required Notice: Yurich Cloud — https://ivan-it.net
 
-              Professional Proxy Server Manager
+License model
+=============
 
-═══════════════════════════════════════════════════════════════════
+Yurich Panel is distributed under a dual-license model:
 
-                    GNU GENERAL PUBLIC LICENSE
-                       Version 3, 29 June 2007
+1. Community / public source license:
+   PolyForm Noncommercial License 1.0.0
+   https://polyformproject.org/licenses/noncommercial/1.0.0/
 
- Copyright (C) 2026 Иван Юрьевич (Ivan Yurievich)
- All Rights Reserved.
+2. Commercial License:
+   Commercial use is allowed only under a separate written commercial
+   license from the author.
 
- 📱 Telegram:  https://t.me/ivan_it_net
- 🌐 Website:   https://ivan-it.net
- 💻 GitHub:    https://github.com/ivan-yurich/naiveproxy
- 💛 Donate:    https://www.donationalerts.com/r/ivan_yurievich
+Commercial use includes, but is not limited to:
 
- Everyone is permitted to copy and distribute verbatim copies
- of this license document, but changing it is not allowed.
+- selling access to services built with this software;
+- using this software in paid VPN/proxy/hosting panels or SaaS products;
+- reselling this software or modified versions of it;
+- providing this software as part of a paid managed service;
+- using this software in a company or commercial product where the use is
+  connected to revenue, paid customers, paid support, internal business
+  infrastructure, consulting, outsourcing, or customer delivery.
 
-═══════════════════════════════════════════════════════════════════
+For commercial licensing, contact:
 
-                  🇷🇺  ДОПОЛНИТЕЛЬНЫЕ УСЛОВИЯ
+- Telegram: https://t.me/ivan_it_net
+- Yurich Cloud: https://ivan-it.net
 
-═══════════════════════════════════════════════════════════════════
+PolyForm Noncommercial License 1.0.0
+====================================
 
-NaiveProxy Manager создан и поддерживается Иваном Юрьевичем.
-Этот проект распространяется под лицензией GPL-3.0 со следующими
-дополнительными условиями:
+Acceptance
+----------
 
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
-│  ✅ РАЗРЕШЕНО (БЕСПЛАТНО):                                       │
-│                                                                 │
-│    ✓ Использовать программу в личных целях                      │
-│    ✓ Изучать исходный код                                       │
-│    ✓ Создавать модификации для личного использования            │
-│    ✓ Распространять программу при сохранении этой лицензии      │
-│      и копирайта автора                                         │
-│    ✓ Использовать для семьи и друзей (некоммерчески)            │
-│    ✓ Делать форки на GitHub с сохранением авторства             │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+In order to get any license under these terms, you must agree to them as
+both strict obligations and conditions to all your licenses.
 
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
-│  ❌ ЗАПРЕЩЕНО БЕЗ ПИСЬМЕННОГО РАЗРЕШЕНИЯ АВТОРА:                │
-│                                                                 │
-│    ✗ Коммерческое использование:                                │
-│      • Продажа этого ПО или его модификаций                     │
-│      • Создание платных VPN/прокси-сервисов на его основе       │
-│      • Использование в корпоративных продуктах за деньги        │
-│      • Платные подписки на сервисы созданные на этом ПО         │
-│                                                                 │
-│    ✗ Удаление или изменение информации об авторе:               │
-│      • Имени автора (Иван Юрьевич)                              │
-│      • Ссылок на Telegram канал                                 │
-│      • Ссылок на сайт ivan-it.net                               │
-│      • Копирайта в исходниках                                   │
-│      • Ссылки на донат (DonationAlerts)                         │
-│                                                                 │
-│    ✗ Создание производных проектов:                             │
-│      • Без указания оригинального автора                        │
-│      • Без ссылки на оригинальный репозиторий                   │
-│      • Под закрытой лицензией                                   │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+Copyright License
+-----------------
 
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
-│  📞 КОНТАКТЫ ДЛЯ КОММЕРЧЕСКОГО ЛИЦЕНЗИРОВАНИЯ:                  │
-│                                                                 │
-│     📱  Telegram:  https://t.me/ivan_it_net                     │
-│     🌐  Сайт:      https://ivan-it.net                          │
-│     💛  Поддержка: https://donationalerts.com/r/ivan_yurievich  │
-│                                                                 │
-│  Для коммерческого использования необходимо получить            │
-│  отдельную коммерческую лицензию от автора.                     │
-│                                                                 │
-│  💡 Скидки и партнёрство — пиши в Telegram!                     │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+The licensor grants you a copyright license for the software to do
+everything you might do with the software that would otherwise infringe the
+licensor's copyright in it for any permitted purpose. However, you may only
+distribute the software according to Distribution License and make changes or
+new works based on the software according to Changes and New Works License.
 
-═══════════════════════════════════════════════════════════════════
+Distribution License
+--------------------
 
-                  🇬🇧  ADDITIONAL TERMS (ENGLISH)
+The licensor grants you an additional copyright license to distribute copies
+of the software. Your license to distribute covers distributing the software
+with changes and new works permitted by Changes and New Works License.
 
-═══════════════════════════════════════════════════════════════════
+Notices
+-------
 
-NaiveProxy Manager is created and maintained by Ivan Yurievich.
-This project is distributed under the GPL-3.0 license with the
-following additional terms:
+You must ensure that anyone who gets a copy of any part of the software from
+you also gets a copy of these terms or the URL for them above, as well as
+copies of any plain-text lines beginning with `Required Notice:` that the
+licensor provided with the software.
 
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
-│  ✅ ALLOWED (FREE):                                              │
-│                                                                 │
-│    ✓ Use the program for personal purposes                      │
-│    ✓ Study the source code                                      │
-│    ✓ Create modifications for personal use                      │
-│    ✓ Distribute the program while preserving this license       │
-│      and the author's copyright                                 │
-│    ✓ Use for family and friends (non-commercial)                │
-│    ✓ Make GitHub forks while preserving authorship              │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+Changes and New Works License
+-----------------------------
 
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
-│  ❌ PROHIBITED WITHOUT WRITTEN PERMISSION FROM AUTHOR:           │
-│                                                                 │
-│    ✗ Commercial use:                                            │
-│      • Selling this software or its modifications               │
-│      • Creating paid VPN/proxy services based on it             │
-│      • Using in corporate products for profit                   │
-│      • Paid subscriptions to services built on this software    │
-│                                                                 │
-│    ✗ Removing or modifying author information:                  │
-│      • Author's name (Ivan Yurievich / Иван Юрьевич)            │
-│      • Links to Telegram channel                                │
-│      • Links to ivan-it.net website                             │
-│      • Copyright in source code                                 │
-│      • Donation link (DonationAlerts)                           │
-│                                                                 │
-│    ✗ Creating derivative projects:                              │
-│      • Without crediting the original author                    │
-│      • Without linking to the original repository               │
-│      • Under closed license                                     │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+The licensor grants you an additional copyright license to make changes and
+new works based on the software for any permitted purpose.
 
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
-│  📞 CONTACT FOR COMMERCIAL LICENSING:                            │
-│                                                                 │
-│     📱  Telegram:  https://t.me/ivan_it_net                     │
-│     🌐  Website:   https://ivan-it.net                          │
-│     💛  Support:   https://donationalerts.com/r/ivan_yurievich  │
-│                                                                 │
-│  Commercial use requires obtaining a separate commercial        │
-│  license from the author.                                       │
-│                                                                 │
-│  💡 Discounts and partnership — message me on Telegram!         │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+Patent License
+--------------
 
-═══════════════════════════════════════════════════════════════════
+The licensor grants you a patent license for the software that covers patent
+claims the licensor can license, or becomes able to license, that you would
+infringe by using the software.
 
-                    📜  GPL-3.0 LICENSE
+Noncommercial Purposes
+----------------------
 
-═══════════════════════════════════════════════════════════════════
+Any noncommercial purpose is a permitted purpose.
 
-Полный текст лицензии GPL-3.0 доступен по ссылке:
-The full GPL-3.0 license text is available at:
+Personal Uses
+-------------
 
-  → https://www.gnu.org/licenses/gpl-3.0.txt
+Personal use for research, experiment, and testing for the benefit of public
+knowledge, personal study, private entertainment, hobby projects, amateur
+pursuits, or religious observance, without any anticipated commercial
+application, is use for a permitted purpose.
 
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
-│  ОСНОВНЫЕ ПУНКТЫ GPL-3.0 / KEY GPL-3.0 TERMS:                  │
-│                                                                 │
-│  1. 🚀  Свобода запуска программы для любых целей.              │
-│         Freedom to run the program for any purpose.             │
-│                                                                 │
-│  2. 🔍  Свобода изучения исходного кода и модификации.          │
-│         Freedom to study source code and modify it.             │
-│                                                                 │
-│  3. 📤  Свобода распространения копий программы.                │
-│         Freedom to distribute copies of the program.            │
-│                                                                 │
-│  4. 🔄  Свобода распространения модифицированных версий.        │
-│         Freedom to distribute modified versions.                │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+Noncommercial Organizations
+---------------------------
 
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
-│  🔒  КОПИРАЙТ-ЛЕВО (COPYLEFT):                                  │
-│                                                                 │
-│  Если вы распространяете модифицированную версию этого ПО,      │
-│  ВЫ ОБЯЗАНЫ:                                                    │
-│                                                                 │
-│    📤  Опубликовать исходный код модификаций                    │
-│    📜  Распространять под той же лицензией GPL-3.0              │
-│    ©️   Сохранить копирайт оригинального автора                  │
-│    📝  Указать какие изменения были внесены                     │
-│                                                                 │
-│  ─────────────────────────────────────────────                  │
-│                                                                 │
-│  If you distribute a modified version of this software,         │
-│  YOU MUST:                                                      │
-│                                                                 │
-│    📤  Publish the source code of modifications                 │
-│    📜  Distribute under the same GPL-3.0 license                │
-│    ©️   Preserve the original author's copyright                 │
-│    📝  Indicate what changes were made                          │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+Use by any charitable organization, educational institution, public research
+organization, public safety or health organization, environmental protection
+organization, or government institution is use for a permitted purpose
+regardless of the source of funding or obligations resulting from the funding.
 
-═══════════════════════════════════════════════════════════════════
+Fair Use
+--------
 
-                  ⚠️  ОТКАЗ ОТ ГАРАНТИЙ / DISCLAIMER
+You may have "fair use" rights for the software under the law. These terms do
+not limit them.
 
-═══════════════════════════════════════════════════════════════════
+No Other Rights
+---------------
 
-ПРОГРАММА ПРЕДОСТАВЛЯЕТСЯ "КАК ЕСТЬ", БЕЗ КАКИХ-ЛИБО ГАРАНТИЙ,
-ЯВНЫХ ИЛИ ПОДРАЗУМЕВАЕМЫХ. АВТОР НЕ НЕСЁТ ОТВЕТСТВЕННОСТИ ЗА
-ЛЮБОЙ УЩЕРБ, ВОЗНИКШИЙ В РЕЗУЛЬТАТЕ ИСПОЛЬЗОВАНИЯ ИЛИ НЕВОЗМОЖНОСТИ
-ИСПОЛЬЗОВАНИЯ ЭТОЙ ПРОГРАММЫ.
+These terms do not allow you to sublicense or transfer any of your licenses
+to anyone else, or prevent the licensor from granting licenses to anyone
+else. These terms do not imply any other licenses.
 
-THIS PROGRAM IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED. THE AUTHOR SHALL NOT BE LIABLE FOR ANY DAMAGES
-ARISING FROM THE USE OR INABILITY TO USE THIS PROGRAM.
+Patent Defense
+--------------
 
-═══════════════════════════════════════════════════════════════════
+If you make any written claim that the software infringes or contributes to
+infringement of any patent, your patent license for the software granted
+under these terms ends immediately. If your company makes such a claim, your
+patent license ends immediately for work on behalf of your company.
 
-                  💛  ПОДДЕРЖАТЬ ПРОЕКТ / SUPPORT
+Violations
+----------
 
-═══════════════════════════════════════════════════════════════════
+The first time you are notified in writing that you have violated any of
+these terms, or done anything with the software not covered by your licenses,
+your licenses can nonetheless continue if you come into full compliance with
+these terms, and take practical steps to correct past violations, within 32
+days of receiving notice. Otherwise, all your licenses end immediately.
 
-  Если NaiveProxy Manager помог тебе — поддержи разработку!
-  If NaiveProxy Manager helped you — support development!
+No Liability
+------------
 
-  👉  https://www.donationalerts.com/r/ivan_yurievich
+As far as the law allows, the software comes as is, without any warranty or
+condition, and the licensor will not be liable to you for any damages arising
+out of these terms or the use or nature of the software, under any kind of
+legal claim.
 
-  Подпишись на Telegram канал / Subscribe to Telegram channel:
-  👉  https://t.me/ivan_it_net
+Definitions
+-----------
 
-  Поставь ⭐ на GitHub / Give a ⭐ on GitHub:
-  👉  https://github.com/ivan-yurich/naiveproxy
+The licensor is the individual or entity offering these terms, and the
+software is the software the licensor makes available under these terms.
 
-  Спасибо за поддержку! 🙏 / Thanks for support! 🙏
+You refers to the individual or entity agreeing to these terms.
 
-═══════════════════════════════════════════════════════════════════
+Your company is any legal entity, sole proprietorship, or other kind of
+organization that you work for, plus all organizations that have control
+over, are under the control of, or are under common control with that
+organization. Control means ownership of substantially all the assets of an
+entity, or the power to direct its management and policies by vote, contract,
+or otherwise. Control can be direct or indirect.
 
-  Copyright © 2026 Иван Юрьевич (Ivan Yurievich)
-  All Rights Reserved.
+Your licenses are all the licenses granted to you for the software under
+these terms.
 
-  NaiveProxy Manager · Professional Proxy Server Manager
-  https://github.com/ivan-yurich/naiveproxy
-
-  Сделано с 💛 в России / Made with 💛 in Russia
-
-═══════════════════════════════════════════════════════════════════
+Use means anything you do with the software requiring one of your licenses.

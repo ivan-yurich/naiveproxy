@@ -21,6 +21,24 @@ backup_file() {
     cp -a "$file" "${file}.bak.$(date '+%Y%m%d-%H%M%S')" || true
 }
 
+source_env_if_safe() {
+    [[ -f "$ENV_FILE" ]] || return 0
+
+    local owner perms
+    owner=$(stat -c '%U' "$ENV_FILE" 2>/dev/null || echo "unknown")
+    perms=$(stat -c '%a' "$ENV_FILE" 2>/dev/null || echo "000")
+    if [[ "$owner" != "root" ]]; then
+        warn "Skip unsafe env file owner: $ENV_FILE belongs to $owner"
+        return 0
+    fi
+    if [[ "$perms" != "600" ]]; then
+        chmod 600 "$ENV_FILE" 2>/dev/null || true
+    fi
+
+    # shellcheck disable=SC1090
+    source "$ENV_FILE"
+}
+
 remove_ufw_rules() {
     local cidr cidrs="${AURUM_DNS_CIDRS:-10.0.0.0/24}"
     local -a cidr_list
@@ -36,10 +54,7 @@ remove_ufw_rules() {
 main() {
     require_root
 
-    if [[ -f "$ENV_FILE" ]]; then
-        # shellcheck disable=SC1090
-        source "$ENV_FILE"
-    fi
+    source_env_if_safe
 
     systemctl stop unbound 2>/dev/null || true
     systemctl disable unbound 2>/dev/null || true
@@ -61,7 +76,7 @@ main() {
     rmdir /etc/aurum-dns 2>/dev/null || true
     systemctl daemon-reload 2>/dev/null || true
 
-    ok "Aurum DNS config removed. VPN config was not touched."
+    ok "Yurich DNS config removed. VPN config was not touched."
     if [[ -t 0 ]]; then
         printf 'Remove packages unbound/dnsutils too? [y/N]: '
         read -r ans
