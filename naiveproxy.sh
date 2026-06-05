@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================================
 #   Yurich Panel v5.6.2 — by Иван Юрьевич
-#   Стек: Yurich Core + Caddy 2 + klzgrad/forwardproxy@naive + Hysteria 2 + WARP + Xray Modern
+#   Стек: Caddy 2 + klzgrad/forwardproxy@naive + Hysteria 2 + WARP + Xray Modern
 #   Legacy update marker: NaiveProxy Manager
 #   ОС: Ubuntu 20.04 / 22.04 / 24.04
 #
@@ -10,7 +10,7 @@
 #   Commercial use requires written permission from the author.
 #
 #   Telegram: https://t.me/ivan_it_net
-#   Yurich Cloud: https://ivan-it.net
+#   Website: https://ivan-it.net
 #   GitHub:   https://github.com/ivan-yurich/naiveproxy
 #   Донат:    https://www.donationalerts.com/r/ivan_yurievich
 # ============================================================
@@ -19,16 +19,6 @@ set -euo pipefail
 
 VERSION="5.6.2"
 LANG_UI="${NAIVEPROXY_LANG:-ru}"  # ru или en — export NAIVEPROXY_LANG=en
-BRAND_NAME="Yurich"
-APP_NAME="Yurich Connect"
-PANEL_NAME="Yurich Panel"
-CORE_NAME="Yurich Core"
-DNS_NAME="Yurich DNS"
-DESKTOP_NAME="Yurich Desktop"
-MOBILE_NAME="Yurich Mobile"
-SUBSCRIPTION_NAME="Yurich ID"
-CLOUD_NAME="Yurich Cloud"
-NET_NAME="Yurich Net"
 GITHUB_RAW="https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/naiveproxy.sh"
 GITHUB_SHA256_RAW="https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/naiveproxy.sh.sha256"
 GITHUB_API="https://api.github.com/repos/ivan-yurich/naiveproxy/releases/latest"
@@ -78,7 +68,7 @@ show_banner() {
     echo
     echo -e "  ${YELLOW}🔔 Обновления выходят раз в месяц${RESET}"
     echo -e "  ${CYAN}📱 Telegram:${RESET} https://t.me/ivan_it_net"
-    echo -e "  ${CYAN}🌐 Yurich Cloud:${RESET} https://ivan-it.net"
+    echo -e "  ${CYAN}🌐 Сайт:${RESET}     https://ivan-it.net"
     echo -e "  ${CYAN}💻 GitHub:${RESET}   github.com/ivan-yurich/naiveproxy"
     echo -e "  ${BOLD}${GOLD}💛 Донат:${RESET}    donationalerts.com/r/ivan_yurievich"
     echo -e "  ${DIM}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
@@ -593,9 +583,9 @@ EOF
 
     systemctl disable --now ssh.socket >/dev/null 2>&1 || true
     ufw allow 22/tcp comment "SSH rescue" >/dev/null 2>&1 || true
-    ufw allow 80/tcp comment "Yurich Core ACME" >/dev/null 2>&1 || true
-    ufw allow 443/tcp comment "Yurich Core HTTPS" >/dev/null 2>&1 || true
-    ufw allow 443/udp comment "Yurich Core HTTP3" >/dev/null 2>&1 || true
+    ufw allow 80/tcp comment "Yurich Panel ACME" >/dev/null 2>&1 || true
+    ufw allow 443/tcp comment "Yurich Panel HTTPS" >/dev/null 2>&1 || true
+    ufw allow 443/udp comment "Yurich Panel HTTP3" >/dev/null 2>&1 || true
     systemctl stop fail2ban >/dev/null 2>&1 || true
 
     if sshd -t; then
@@ -986,14 +976,14 @@ tg_send() {
 }
 
 tg_alert_up() {
-    tg_send "✅ <b>Yurich Core запущен</b>
+    tg_send "✅ <b>Yurich Panel запущен</b>
 🌐 Домен: <code>${DOMAIN:-unknown}</code>
 🕐 $(date '+%Y-%m-%d %H:%M:%S')
 📡 Сервер: $(hostname)"
 }
 
 tg_alert_down() {
-    tg_send "🔴 <b>Yurich Core упал!</b>
+    tg_send "🔴 <b>Yurich Panel упал!</b>
 🌐 Домен: <code>${DOMAIN:-unknown}</code>
 🕐 $(date '+%Y-%m-%d %H:%M:%S')
 📡 Сервер: $(hostname)
@@ -1010,7 +1000,7 @@ tg_alert_updated() {
 
 tg_send_stats() {
     if ! check_installed; then
-        tg_send "❌ Yurich Core не установлен"
+        tg_send "❌ Yurich Panel не установлен"
         return
     fi
 
@@ -1034,7 +1024,7 @@ tg_send_stats() {
     local users_count
     users_count=$(get_users | wc -l)
 
-    tg_send "📊 <b>Статистика Yurich Core</b>
+    tg_send "📊 <b>Статистика Yurich Panel</b>
 
 🌐 Домен: <code>${DOMAIN:-н/д}</code>
 📡 Статус: ${status}
@@ -1151,7 +1141,7 @@ FLAG="/run/naiveproxy_was_down"
 if ! systemctl is-active --quiet caddy 2>/dev/null; then
     if [[ ! -f "$FLAG" ]]; then
         touch "$FLAG"
-        tg_send "🔴 <b>Yurich Core упал!</b>
+        tg_send "🔴 <b>Yurich Panel упал!</b>
 🌐 Домен: <code>${DOMAIN:-unknown}</code>
 🕐 $(date '+%Y-%m-%d %H:%M:%S')
 🔄 Пытаюсь перезапустить..."
@@ -1444,8 +1434,8 @@ install_camouflage_page() {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Yurich Cloud — Technical notes on Linux, networking, security and open source infrastructure.">
-<title>Yurich Cloud — Linux & Infrastructure Notes</title>
+<meta name="description" content="Yurich Panel — Technical notes on Linux, networking, security and open source infrastructure.">
+<title>Yurich Panel — Linux & Infrastructure Notes</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
@@ -1641,7 +1631,7 @@ footer{border-top:1px solid var(--border);padding:32px 24px;background:var(--bg2
 </div>
 <footer>
   <div class="footer-inner">
-    <div class="footer-left"><span>&gt;_ Yurich Cloud</span> · Built with Caddy · © 2026</div>
+    <div class="footer-left"><span>&gt;_ Yurich Panel</span> · Built with Caddy · © 2026</div>
     <div class="footer-links"><a href="#">Archive</a><a href="#">RSS</a><a href="#">Privacy</a><a href="#">Contact</a></div>
   </div>
 </footer>
@@ -1759,7 +1749,7 @@ rewrite_caddyfile_current() {
 write_service() {
     cat > "$CADDY_SERVICE" <<'EOF'
 [Unit]
-Description=Yurich Core Caddy
+Description=Yurich Panel Caddy
 Documentation=https://caddyserver.com/docs/
 After=network.target network-online.target
 Requires=network-online.target
@@ -1816,10 +1806,10 @@ setup_firewall() {
         ok "UFW включён (дефолт: блокировать всё входящее)"
     fi
 
-    # Базовые порты Yurich Core
-    ufw allow 80/tcp  comment "Yurich Core ACME"  >/dev/null 2>&1 || true
-    ufw allow 443/tcp comment "Yurich Core HTTPS" >/dev/null 2>&1 || true
-    ufw allow 443/udp comment "Yurich Core HTTP3" >/dev/null 2>&1 || true
+    # Базовые порты Yurich Panel
+    ufw allow 80/tcp  comment "Yurich Panel ACME"  >/dev/null 2>&1 || true
+    ufw allow 443/tcp comment "Yurich Panel HTTPS" >/dev/null 2>&1 || true
+    ufw allow 443/udp comment "Yurich Panel HTTP3" >/dev/null 2>&1 || true
 
     # Лимит подключений — защита от DDoS и сканирования
     ufw allow 80/tcp  >/dev/null 2>&1 || true
@@ -1972,10 +1962,10 @@ cmd_health_check() {
     ss -tulpn 2>/dev/null | grep -q ':443' && health_line "Port 443" ok "listening" || health_line "Port 443" warn "не слушается"
 
     if command -v unbound >/dev/null 2>&1; then
-        systemctl is-active --quiet unbound 2>/dev/null && health_line "Yurich DNS" ok "active" || health_line "Yurich DNS" warn "не active"
+        systemctl is-active --quiet unbound 2>/dev/null && health_line "DNS (Unbound)" ok "active" || health_line "DNS (Unbound)" warn "не active"
         command -v dig >/dev/null 2>&1 && dig @127.0.0.1 google.com +time=3 +tries=1 >/dev/null 2>&1 && health_line "DNS test" ok "127.0.0.1 отвечает" || health_line "DNS test" warn "dig не прошёл"
     else
-        health_line "Yurich DNS" warn "не установлен"
+        health_line "DNS (Unbound)" warn "не установлен"
     fi
 
     if systemctl list-unit-files 2>/dev/null | grep -q '^naiveproxy-bot\.service'; then
@@ -2309,7 +2299,7 @@ EOF
 print_client_config() {
     load_config
     hr
-    echo -e "${BOLD}${GREEN}  Клиентский конфиг Yurich Connect (NaiveProxy)${RESET}"
+    echo -e "${BOLD}${GREEN}  Клиентский конфиг Yurich Panel (NaiveProxy)${RESET}"
     hr
 
     local first_user first_pass selected_user
@@ -2364,11 +2354,11 @@ EOF
   }
 EOF
     echo
-    echo -e "${CYAN}  JSON (sing-box полный пример, Yurich Mobile VPN/TUN):${RESET}"
+    echo -e "${CYAN}  JSON (sing-box полный пример, Android VPN/TUN):${RESET}"
     if [[ -n "$(aurum_dns_client_ip)" ]]; then
-        echo -e "${GREEN}  Yurich DNS включён:${RESET} DNS в этом примере идёт через ${CYAN}tcp://$(aurum_dns_client_ip):53${RESET}"
+        echo -e "${GREEN}  DNS (Unbound) включён:${RESET} DNS в этом примере идёт через ${CYAN}tcp://$(aurum_dns_client_ip):53${RESET}"
     else
-        echo -e "${YELLOW}  Yurich DNS для клиентов выключен:${RESET} меню 17 → 2 включит DNS в этот пример."
+        echo -e "${YELLOW}  DNS (Unbound) для клиентов выключен:${RESET} меню 17 → 2 включит DNS в этот пример."
     fi
     singbox_naive_tun_json "$first_user" "$first_pass" | sed 's/^/  /'
     echo
@@ -2489,7 +2479,7 @@ write_hysteria_config() {
 
     if [[ -z "$cert_file" || -z "$key_file" ]]; then
         err "Не нашёл TLS сертификат Caddy для ${DOMAIN:-не задан}"
-        err "Сначала запусти Yurich Core и дождись TLS: sudo bash naiveproxy.sh install"
+        err "Сначала запусти Yurich Panel и дождись TLS: sudo bash naiveproxy.sh install"
         return 1
     fi
 
@@ -2663,7 +2653,7 @@ print_hysteria_client_config() {
 EOF
     if [[ -n "$(aurum_dns_client_ip)" ]]; then
         echo
-        echo -e "${CYAN}  Yurich DNS для full TUN/sing-box:${RESET}"
+        echo -e "${CYAN}  DNS (Unbound) для full TUN/sing-box:${RESET}"
         echo -e "  DNS server: ${GREEN}tcp://$(aurum_dns_client_ip):53${RESET}"
         echo -e "  detour: ${GREEN}hysteria2-out${RESET}"
     fi
@@ -2726,7 +2716,7 @@ choose_hysteria_port() {
 cmd_hysteria_install() {
     load_config
     if [[ -z "${DOMAIN:-}" ]]; then
-        err "Домен не настроен. Сначала установи Yurich Core."
+        err "Домен не настроен. Сначала установи Yurich Panel."
         return 1
     fi
 
@@ -3077,7 +3067,7 @@ write_xray_config() {
     cert=$(find_caddy_cert "${DOMAIN:-}") || true
     key=$(find_caddy_key "${DOMAIN:-}") || true
     if [[ -z "$cert" || -z "$key" ]]; then
-        err "Для Xray TLS/gRPC/fallback нужен TLS сертификат Caddy. Сначала запусти Yurich Core и дождись сертификата."
+        err "Для Xray TLS/gRPC/fallback нужен TLS сертификат Caddy. Сначала запусти Yurich Panel и дождись сертификата."
         return 1
     fi
 
@@ -3308,7 +3298,7 @@ print_xray_client_config() {
     echo "  vless://${uuid}@${DOMAIN}:${XRAY_GRPC_PORT:-$XRAY_GRPC_PORT_DEFAULT}?security=tls&type=grpc&serviceName=vless-grpc&sni=${DOMAIN}&fp=chrome#${user}-grpc"
     if [[ -n "$(aurum_dns_client_ip)" ]]; then
         echo
-        echo -e "${CYAN}  Yurich DNS для full TUN/sing-box:${RESET}"
+        echo -e "${CYAN}  DNS (Unbound) для full TUN/sing-box:${RESET}"
         echo -e "  DNS server: ${GREEN}tcp://$(aurum_dns_client_ip):53${RESET}"
         echo -e "  detour: ${GREEN}xray-out${RESET} (или тег твоего Xray outbound в клиенте)"
     fi
@@ -3521,7 +3511,7 @@ EOF
     local sub_url links_url title safe_user safe_domain safe_expiry_label safe_naive_uri safe_naive_json safe_naive_singbox_tun_json safe_hy2_uri safe_hy2_json
     sub_url="https://${DOMAIN}/s/${token}/"
     links_url="${sub_url}links.txt"
-    title="Yurich ID for ${user}"
+    title="Yurich Panel subscription for ${user}"
     safe_user=$(html_escape_text "$user")
     safe_domain=$(html_escape_text "$DOMAIN")
     safe_expiry_label=$(html_escape_text "$expiry_label")
@@ -3559,8 +3549,8 @@ EOF
 <main class="wrap">
   <section class="top">
     <div>
-      <div class="brand">Yurich ID · Yurich Cloud</div>
-      <div class="h1">Yurich ID пользователя ${safe_user}</div>
+      <div class="brand">Yurich Panel</div>
+      <div class="h1">Подписка пользователя ${safe_user}</div>
       <div class="muted">Домен: <b>${safe_domain}</b>. Страница скрыта от индексации, но доступна всем, у кого есть этот секретный URL.</div>
     </div>
     <div class="pill">Срок: ${safe_expiry_label}<br>Обновлено: $(date '+%Y-%m-%d %H:%M')</div>
@@ -3580,7 +3570,7 @@ EOF
       <pre>${safe_naive_uri:-Naive пользователь не найден}</pre>
       <h3>naive-client JSON</h3>
       <pre>${safe_naive_json:-Naive конфиг недоступен}</pre>
-      <h3>sing-box Yurich Mobile VPN/TUN + Yurich DNS</h3>
+      <h3>sing-box Android VPN/TUN + DNS (Unbound)</h3>
       <pre>${safe_naive_singbox_tun_json:-sing-box TUN конфиг недоступен}</pre>
       <h2>Hysteria 2</h2>
       <p class="muted">Персональный UDP/QUIC профиль для этого же пользователя, если Hysteria 2 установлен.</p>
@@ -3605,8 +3595,8 @@ EOF
   <section class="card">
     <h2>Настройки под системы</h2>
     <div class="os">
-      <div><b>Yurich Desktop (Windows)</b><br><span class="muted">v2rayN, NekoRay или Hiddify. Импортируй links.txt или вставь нужную URI.</span></div>
-      <div><b>Yurich Mobile (Android)</b><br><span class="muted">Hiddify, NekoBox, v2rayNG. Для Naive лучше Hiddify/NekoBox с поддержкой naive.</span></div>
+      <div><b>Windows</b><br><span class="muted">v2rayN, NekoRay или Hiddify. Импортируй links.txt или вставь нужную URI.</span></div>
+      <div><b>Android</b><br><span class="muted">Hiddify, NekoBox, v2rayNG. Для Naive лучше Hiddify/NekoBox с поддержкой naive.</span></div>
       <div><b>iOS/macOS</b><br><span class="muted">Streisand, FoXray, Shadowrocket. Импортируй подписку или отдельную ссылку.</span></div>
       <div><b>Linux</b><br><span class="muted">naive-client JSON для SOCKS 127.0.0.1:1080 или sing-box/v2rayN GUI.</span></div>
     </div>
@@ -3694,7 +3684,7 @@ install_private_camouflage_page() {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex,nofollow,noarchive">
-<title>Yurich Cloud Lab</title>
+<title>Yurich Panel Lab</title>
 <style>
 :root{--bg:#0a0e13;--panel:#111923;--line:#263241;--text:#edf2f7;--muted:#9ca9b7;--accent:#d4a017;--blue:#58a6ff;--green:#4ade80}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,Arial,sans-serif}.wrap{max-width:980px;margin:0 auto;padding:34px 18px}.top{border-bottom:1px solid var(--line);padding-bottom:22px}.eyebrow{color:var(--accent);font-size:12px;text-transform:uppercase;letter-spacing:.12em}.h1{font-size:36px;font-weight:850;margin:8px 0}.muted{color:var(--muted);line-height:1.65}.grid{display:grid;grid-template-columns:2fr 1fr;gap:14px;margin-top:20px}.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:18px}.row{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:10px 0}.row:last-child{border-bottom:0}.ok{color:var(--green)}code{color:var(--blue)}@media(max-width:760px){.grid{grid-template-columns:1fr}.h1{font-size:28px}}
 </style>
@@ -3703,7 +3693,7 @@ install_private_camouflage_page() {
 <main class="wrap">
   <section class="top">
     <div class="eyebrow">Private technical notebook</div>
-    <div class="h1">Yurich Cloud Lab</div>
+    <div class="h1">Yurich Panel Lab</div>
     <p class="muted">Личная страница для заметок по инфраструктуре, релизам и тестовым окружениям. Публичная часть сайта остаётся обычным техническим блогом, эта страница живёт только по секретному адресу.</p>
   </section>
   <section class="grid">
@@ -3730,7 +3720,7 @@ EOF
 
 cmd_xray_install() {
     load_config
-    check_installed || { err "Сначала установи Yurich Core и получи TLS сертификат"; return 1; }
+    check_installed || { err "Сначала установи Yurich Panel и получи TLS сертификат"; return 1; }
     hr
     echo -e "${BOLD}  Xray Modern transports${RESET}"
     hr
@@ -4580,7 +4570,7 @@ cmd_warp_menu() {
 # ─── Ввод параметров ─────────────────────────────────────────
 prompt_params() {
     echo
-    echo -e "${BOLD}Настройка Yurich Core:${RESET}"
+    echo -e "${BOLD}Настройка Yurich Panel:${RESET}"
     echo
 
     while true; do
@@ -4806,7 +4796,7 @@ cmd_users() {
                 if [[ "$xray_added" -eq 1 ]]; then
                     print_xray_client_config "$new_user"
                 fi
-                tg_send "👤 <b>Новый пользователь Yurich Connect</b>
+                tg_send "👤 <b>Новый пользователь Yurich Panel</b>
 🔑 Логин: <code>${new_user}</code>
 🕐 $(date '+%Y-%m-%d %H:%M:%S')"
                 ;;
@@ -5145,12 +5135,12 @@ cmd_devices_scan() {
     trap 'rm -f "${report_file:-}" 2>/dev/null; trap - RETURN' RETURN
 
     if ! device_usage_report "$window" > "$report_file"; then
-        warn "Логи Yurich Core не найдены: ${LOG_DIR}/naive.log"
+        warn "Логи Yurich Panel не найдены: ${LOG_DIR}/naive.log"
         return 1
     fi
 
     hr
-    echo -e "${BOLD}  Лимит устройств Yurich ID${RESET}"
+    echo -e "${BOLD}  Лимит устройств подписка${RESET}"
     hr
     echo -e "  Лимит: ${CYAN}${limit}${RESET} уникальных IP за ${CYAN}${window}${RESET} ч"
     echo -e "  Режим: ${CYAN}${mode}${RESET}  |  Авто: ${CYAN}${enabled}${RESET}"
@@ -5169,7 +5159,7 @@ cmd_devices_scan() {
         if [[ "$count" =~ ^[0-9]+$ ]] && [[ "$count" -gt "$limit" ]]; then
             exceeded=$((exceeded+1))
             warn "Превышение: $user использует $count IP при лимите $limit"
-            tg_send "⚠️ <b>Yurich ID: превышен лимит устройств</b>
+            tg_send "⚠️ <b>подписка: превышен лимит устройств</b>
 👤 Пользователь: <code>${user}</code>
 📱 IP за ${window} ч: <b>${count}</b> / лимит <b>${limit}</b>
 🔒 Режим: <code>${mode}</code>"
@@ -5349,11 +5339,11 @@ cmd_monitor() {
 # ─── УСТАНОВКА ───────────────────────────────────────────────
 cmd_install() {
     hr
-    echo -e "${BOLD}  Установка Yurich Core v${VERSION}${RESET}"
+    echo -e "${BOLD}  Установка Yurich Panel v${VERSION}${RESET}"
     hr
 
     if check_installed; then
-        warn "Yurich Core уже установлен."
+        warn "Yurich Panel уже установлен."
         echo -ne "${YELLOW}Переустановить? [y/N]: ${RESET}"
         read -r ans
         [[ "${ans,,}" == "y" ]] || return
@@ -5924,12 +5914,12 @@ cmd_diagnose() {
         _warn "Fail2Ban не запущен — SSH не защищён от брутфорса"
     fi
 
-    # Yurich DNS / Unbound
+    # DNS / Unbound
     if command -v unbound &>/dev/null; then
         if systemctl is-active --quiet unbound 2>/dev/null; then
-            _ok "Yurich DNS: $(unbound_mode_label), gateway=${UNBOUND_GATEWAY_IP:-127.0.0.1}, vpn=${UNBOUND_VPN_ENABLED:-0}"
+            _ok "DNS (Unbound): $(unbound_mode_label), gateway=${UNBOUND_GATEWAY_IP:-127.0.0.1}, vpn=${UNBOUND_VPN_ENABLED:-0}"
         else
-            _warn "Yurich DNS установлен, но сервис не активен"
+            _warn "DNS (Unbound) установлен, но сервис не активен"
         fi
         if [[ -f "${DNS_CONF:-/etc/unbound/unbound.conf.d/aurum-vpn.conf}" ]] && unbound-checkconf "${DNS_CONF:-/etc/unbound/unbound.conf.d/aurum-vpn.conf}" >/dev/null 2>&1; then
             _ok "Unbound config валиден"
@@ -5937,12 +5927,12 @@ cmd_diagnose() {
             _warn "Unbound config не найден или содержит ошибку"
         fi
         if command -v dig >/dev/null 2>&1 && dig "@127.0.0.1" google.com +short +time=2 +tries=1 2>/dev/null | grep -Eq '^[0-9a-fA-F:.]+$'; then
-            _ok "Yurich DNS отвечает на 127.0.0.1:53"
+            _ok "DNS (Unbound) отвечает на 127.0.0.1:53"
         else
-            _warn "Yurich DNS test не прошёл"
+            _warn "DNS (Unbound) test не прошёл"
         fi
     else
-        _info "Yurich DNS не установлен (меню → 17)"
+        _info "DNS (Unbound) не установлен (меню → 17)"
     fi
 
     # WARP modes — proxy/full-tunnel
@@ -6173,7 +6163,7 @@ print(errs)
     echo -ne "\n${YELLOW}Отправить отчёт в Telegram? [y/N]: ${RESET}"
     read -r ans
     if [[ "${ans,,}" == "y" ]]; then
-        tg_send "🔍 <b>Диагностика Yurich Core</b>
+        tg_send "🔍 <b>Диагностика Yurich Panel</b>
 🖥 Сервер: <code>$(hostname)</code>
 🕐 $(date '+%Y-%m-%d %H:%M:%S')
 
@@ -6521,7 +6511,7 @@ tg_handle_command() {
                 fi
             fi
 
-            tg_reply "${chat_id}" "📡 <b>Статус Yurich Core</b>
+            tg_reply "${chat_id}" "📡 <b>Статус Yurich Panel</b>
 🖥 Сервер: <code>$(hostname)</code>
 ${caddy_status}
 🌐 Домен: <code>${DOMAIN:-не настроен}</code>
@@ -6626,7 +6616,7 @@ ${caddy_status}
                 fail=$((fail+1))
             fi
 
-            tg_reply "${chat_id}" "🔍 <b>Диагностика Yurich Core</b>
+            tg_reply "${chat_id}" "🔍 <b>Диагностика Yurich Panel</b>
 
 ${diag_result}
 ✅ Пройдено: ${pass}  ⚠️ Внимание: ${warn}  ❌ Проблемы: ${fail}"
@@ -7278,7 +7268,7 @@ tg_send_stats_to() {
         fi
     fi
 
-    tg_reply "${target_chat}" "📊 <b>Статистика Yurich Core</b>
+    tg_reply "${target_chat}" "📊 <b>Статистика Yurich Panel</b>
 
 🌐 Домен: <code>${DOMAIN:-н/д}</code>
 📡 Статус: ${caddy_status}
@@ -7385,7 +7375,7 @@ ensure_managed_dns_gateway() {
 
     cat > "$DNS_GATEWAY_SERVICE" <<EOF
 [Unit]
-Description=Yurich DNS local gateway IP (${gateway_ip})
+Description=DNS (Unbound) local gateway IP (${gateway_ip})
 Before=unbound.service
 After=network.target
 
@@ -7476,7 +7466,7 @@ check_port53_for_aurum_dns() {
     local conflicts
     conflicts=$(port53_listeners | grep -Ev 'unbound|systemd-resolve|systemd-resolved' || true)
     if [[ -n "$conflicts" ]]; then
-        err "Порт 53 занят другим сервисом. Yurich DNS не будет ломать его автоматически:"
+        err "Порт 53 занят другим сервисом. DNS (Unbound) не будет ломать его автоматически:"
         echo "$conflicts"
         return 1
     fi
@@ -7504,7 +7494,7 @@ write_unbound_config() {
 
     cat > "$DNS_CONF" <<EOF
 server:
-    # Yurich DNS: local recursive resolver.
+    # DNS (Unbound): local recursive resolver.
     # Never bind 0.0.0.0. VPN access is bound to the gateway IP only.
     interface: 127.0.0.1
 EOF
@@ -7638,7 +7628,7 @@ remove_unbound_ufw_rules() {
 
 cmd_dns_install() {
     hr
-    echo -e "${BOLD}  🛡️ Установка Yurich DNS (Unbound)${RESET}"
+    echo -e "${BOLD}  🛡️ Установка DNS (Unbound) (Unbound)${RESET}"
     hr
 
     info "Обновляю apt cache и устанавливаю зависимости..."
@@ -7652,7 +7642,7 @@ cmd_dns_install() {
     unbound-anchor -a /var/lib/unbound/root.key >/dev/null 2>&1 || true
 
     echo
-    echo -e "${CYAN}Yurich DNS работает как recursive Unbound без рекламных blocklists.${RESET}"
+    echo -e "${CYAN}DNS (Unbound) работает как recursive Unbound без рекламных blocklists.${RESET}"
     echo -e "${DIM}Если нужен DNS для VPN-клиентов, укажи IP gateway на VPN-интерфейсе, например 10.0.0.1.${RESET}"
     local detected_gateway gateway_input vpn_cidrs
     detected_gateway=$(detect_private_dns_gateway || true)
@@ -7700,27 +7690,27 @@ cmd_dns_install() {
     UNBOUND_ENABLED="1"
     save_config
 
-    ok "Yurich DNS установлен!"
-    tg_send "🛡️ <b>Yurich DNS установлен</b>
+    ok "DNS (Unbound) установлен!"
+    tg_send "🛡️ <b>DNS (Unbound) установлен</b>
 🖥 Сервер: <code>$(hostname)</code>
 🔒 Режим: recursive DNSSEC, gateway=${UNBOUND_GATEWAY_IP:-127.0.0.1}, VPN=${UNBOUND_VPN_ENABLED:-0}
 🕐 $(date '+%Y-%m-%d %H:%M:%S')"
 }
 
-# Старый adblock/blocklists режим удалён: Yurich DNS теперь только безопасный resolver.
+# Старый adblock/blocklists режим удалён: DNS (Unbound) теперь только безопасный resolver.
 cmd_dns_update() {
     hr
-    echo -e "${BOLD}  🛡️ Yurich DNS${RESET}"
+    echo -e "${BOLD}  🛡️ DNS (Unbound)${RESET}"
     hr
     warn "Блокировка рекламы временно удалена из скрипта."
-    info "Yurich DNS не скачивает blocklists и не логирует DNS-запросы."
+    info "DNS (Unbound) не скачивает blocklists и не логирует DNS-запросы."
     info "Для проверки используй: меню 17 → 3 или команду unbound-test"
 }
 
 cmd_dns_restart() {
     load_config
     hr
-    echo -e "${BOLD}  🔄 Restart Yurich DNS${RESET}"
+    echo -e "${BOLD}  🔄 Restart DNS (Unbound)${RESET}"
     hr
     if ! command -v unbound &>/dev/null; then
         err "unbound не установлен"
@@ -7731,14 +7721,14 @@ cmd_dns_restart() {
     fi
     write_unbound_config
     restart_unbound_checked || return 1
-    ok "Yurich DNS перезапущен"
+    ok "DNS (Unbound) перезапущен"
 }
 
-# Статус и тест Yurich DNS
+# Статус и тест DNS (Unbound)
 cmd_dns_status() {
     load_config
     hr
-    echo -e "${BOLD}  🛡️ Yurich DNS (Unbound)${RESET}"
+    echo -e "${BOLD}  🛡️ DNS (Unbound) (Unbound)${RESET}"
     hr
 
     if ! command -v unbound &>/dev/null; then
@@ -7800,9 +7790,9 @@ cmd_dns_status() {
 cmd_dns_set_mode() {
     load_config
     hr
-    echo -e "${BOLD}  🛡️ Yurich DNS mode${RESET}"
+    echo -e "${BOLD}  🛡️ DNS (Unbound) mode${RESET}"
     hr
-    warn "Forward/adblock режимы удалены. Yurich DNS работает только как безопасный recursive resolver."
+    warn "Forward/adblock режимы удалены. DNS (Unbound) работает только как безопасный recursive resolver."
     UNBOUND_MODE="recursive"
     UNBOUND_ADBLOCK="0"
     UNBOUND_ENABLED="1"
@@ -7882,15 +7872,15 @@ cmd_dns_vpn_access() {
 # Совместимость со старым пунктом whitelist.
 cmd_dns_whitelist() {
     hr
-    echo -e "${BOLD}  🛡️ Yurich DNS${RESET}"
+    echo -e "${BOLD}  🛡️ DNS (Unbound)${RESET}"
     hr
     warn "Whitelist больше не нужен: блокировка рекламы удалена."
-    info "Yurich DNS только резолвит DNS для сервера/VPN и не блокирует домены."
+    info "DNS (Unbound) только резолвит DNS для сервера/VPN и не блокирует домены."
 }
 
-# Удалить Yurich DNS
+# Удалить DNS (Unbound)
 cmd_dns_remove() {
-    echo -ne "${YELLOW}Удалить Yurich DNS конфиг и команды? [y/N]: ${RESET}"
+    echo -ne "${YELLOW}Удалить DNS (Unbound) конфиг и команды? [y/N]: ${RESET}"
     read -r ans
     [[ "${ans,,}" != "y" ]] && return
 
@@ -7915,7 +7905,7 @@ cmd_dns_remove() {
     save_config
     systemctl daemon-reload 2>/dev/null || true
 
-    ok "Yurich DNS удалён. Пакеты unbound/dnsutils не удалял."
+    ok "DNS (Unbound) удалён. Пакеты unbound/dnsutils не удалял."
 }
 
 # ─── Донат ─────────────────────────────────────────────────────
@@ -7944,7 +7934,7 @@ cmd_donate() {
     echo -e "  ${BOLD}Другие способы поддержки:${RESET}"
     echo -e "  ${CYAN}⭐${RESET} Поставь звезду:  github.com/ivan-yurich/naiveproxy"
     echo -e "  ${CYAN}📱${RESET} Telegram канал:  t.me/ivan_it_net"
-    echo -e "  ${CYAN}🌐${RESET} Yurich Cloud:    ivan-it.net"
+    echo -e "  ${CYAN}🌐${RESET} Сайт:            ivan-it.net"
     echo -e "  ${CYAN}📢${RESET} Расскажи друзьям!"
     echo
     echo -e "  ${BOLD}${GOLD}Спасибо за поддержку! 🙏${RESET}"
@@ -7961,12 +7951,12 @@ cmd_donate() {
     read -r
 }
 
-# Меню Yurich DNS
+# Меню DNS (Unbound)
 cmd_dns_menu() {
     while true; do
         load_config
         hr
-        echo -e "${BOLD}  🛡️ Yurich DNS (Unbound)${RESET}"
+        echo -e "${BOLD}  🛡️ DNS (Unbound) (Unbound)${RESET}"
         hr
 
         local dns_status="${RED}не установлен${RESET}"
@@ -7980,11 +7970,11 @@ cmd_dns_menu() {
         echo -e "  VPN DNS: ${CYAN}${UNBOUND_VPN_ENABLED:-0}${RESET} | Gateway: ${CYAN}${UNBOUND_GATEWAY_IP:-нет}${RESET} | CIDR: ${CYAN}${UNBOUND_VPN_CIDRS:-$DNS_DEFAULT_VPN_CIDRS}${RESET}"
         [[ "${UNBOUND_MANAGED_GATEWAY:-0}" == "1" ]] && echo -e "  Gateway mode: ${CYAN}auto lo /32${RESET}"
         echo
-        echo -e "  ${BOLD}1)${RESET} Установить / переустановить Yurich DNS"
+        echo -e "  ${BOLD}1)${RESET} Установить / переустановить DNS (Unbound)"
         echo -e "  ${BOLD}2)${RESET} Настроить DNS для VPN-клиентов"
         echo -e "  ${BOLD}3)${RESET} Статус, порт 53, DNSSEC и тесты"
-        echo -e "  ${BOLD}4)${RESET} Перезапустить Yurich DNS"
-        echo -e "  ${BOLD}5)${RESET} Удалить Yurich DNS"
+        echo -e "  ${BOLD}4)${RESET} Перезапустить DNS (Unbound)"
+        echo -e "  ${BOLD}5)${RESET} Удалить DNS (Unbound)"
         echo -e "  ${BOLD}0)${RESET} Назад"
         hr
         echo -ne "${CYAN}Выбор: ${RESET}"
@@ -8011,7 +8001,7 @@ cmd_unbound_plugin() {
 # ─── СТАТУС ──────────────────────────────────────────────────
 cmd_status() {
     hr
-    echo -e "${BOLD}  Статус Yurich Core${RESET}"
+    echo -e "${BOLD}  Статус Yurich Panel${RESET}"
     hr
 
     systemctl is-active --quiet caddy 2>/dev/null \
@@ -8044,8 +8034,8 @@ cmd_status() {
     fi
     if command -v unbound &>/dev/null; then
         systemctl is-active --quiet unbound 2>/dev/null \
-            && ok "Yurich DNS: $(unbound_mode_label), gateway=${UNBOUND_GATEWAY_IP:-127.0.0.1}, vpn=${UNBOUND_VPN_ENABLED:-0}" \
-            || warn "Yurich DNS: установлен, но не работает"
+            && ok "DNS (Unbound): $(unbound_mode_label), gateway=${UNBOUND_GATEWAY_IP:-127.0.0.1}, vpn=${UNBOUND_VPN_ENABLED:-0}" \
+            || warn "DNS (Unbound): установлен, но не работает"
     fi
     check_cert "${DOMAIN:-}"
     echo
@@ -8094,7 +8084,7 @@ cmd_update() {
     echo -e "${BOLD}  Обновление Caddy${RESET}"
     hr
 
-    check_installed || { err "Yurich Core не установлен"; return 1; }
+    check_installed || { err "Yurich Panel не установлен"; return 1; }
 
     local old_ver
     old_ver=$("$CADDY_BIN" version 2>/dev/null | head -1 || echo "unknown")
@@ -8120,7 +8110,7 @@ cmd_update() {
 # ─── УДАЛЕНИЕ ────────────────────────────────────────────────
 cmd_remove() {
     hr
-    echo -e "${BOLD}${RED}  Удаление Yurich Core${RESET}"
+    echo -e "${BOLD}${RED}  Удаление Yurich Panel${RESET}"
     hr
     echo -ne "${RED}Удалить всё? [y/N]: ${RESET}"
     read -r ans
@@ -8147,7 +8137,7 @@ cmd_remove() {
 
     ( crontab -l 2>/dev/null | grep -v "naiveproxy\|monitor\.sh" || true ) | crontab -
 
-    ok "Yurich Core удалён"
+    ok "Yurich Panel удалён"
 }
 
 # ─── ЛОГИ ────────────────────────────────────────────────────
@@ -8243,14 +8233,14 @@ show_menu() {
             unbound_str="${RED}$(t "остановлен" "stopped")${RESET}"
         fi
     fi
-    echo -e "   Yurich DNS: ${unbound_str}"
+    echo -e "   DNS (Unbound): ${unbound_str}"
     local device_str="${YELLOW}$(t "выкл" "off")${RESET}"
     if [[ "${DEVICE_LIMIT_ENABLED:-0}" == "1" ]]; then
         device_str="${GREEN}${DEVICE_LIMIT:-$DEVICE_LIMIT_DEFAULT}/${DEVICE_WINDOW_HOURS:-$DEVICE_WINDOW_HOURS_DEFAULT}ч ${DEVICE_LIMIT_MODE:-alert}${RESET}"
     fi
     echo -e "   $(t "Лимит устройств" "Device limit"): ${device_str}"
     hr
-    echo -e "   ${BOLD}1)${RESET}  $(t "Установить Yurich Core" "Install Yurich Core")"
+    echo -e "   ${BOLD}1)${RESET}  $(t "Установить Yurich Panel" "Install Yurich Panel")"
     echo -e "   ${BOLD}2)${RESET}  $(t "Статус" "Status")"
     echo -e "   ${BOLD}3)${RESET}  $(t "Клиентский конфиг" "Client config")"
     echo -e "   ${BOLD}4)${RESET}  $(t "Управление пользователями" "User management")"
@@ -8260,9 +8250,9 @@ show_menu() {
     echo -e "   ${BOLD}8)${RESET}  $(t "Перезапустить Caddy" "Restart Caddy")"
     echo -e "   ${BOLD}9)${RESET}  $(t "Обновить Caddy" "Update Caddy")"
     echo -e "   ${BOLD}10)${RESET} $(t "Логи" "Logs")"
-    echo -e "   ${BOLD}11)${RESET} $(t "Удалить Yurich Core" "Remove Yurich Core")"
+    echo -e "   ${BOLD}11)${RESET} $(t "Удалить Yurich Panel" "Remove Yurich Panel")"
     echo -e "   ${BOLD}16)${RESET} 🔍 $(t "Диагностика системы" "System diagnostics")"
-    echo -e "   ${BOLD}17)${RESET} 🛡️ Yurich DNS (Unbound)"
+    echo -e "   ${BOLD}17)${RESET} 🛡️ DNS (Unbound) (Unbound)"
     echo -e "   ${BOLD}18)${RESET} 💛 $(t "Поддержать проект (донат)" "Support project (donation)")"
     echo -e "   ──────────────────────────"
     echo -e "   ${BOLD}12)${RESET} 🔒 SSH Hardening"
@@ -8370,7 +8360,7 @@ main() {
             version)
                 echo "Yurich Panel v${VERSION}"
                 echo "Telegram: https://t.me/ivan_it_net"
-                echo "Yurich Cloud: https://ivan-it.net"
+                echo "Сайт:     https://ivan-it.net"
                 echo "GitHub:   github.com/ivan-yurich/naiveproxy"
                 ;;
             *) err "Неизвестная команда: $1"

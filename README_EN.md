@@ -22,7 +22,7 @@
 
 **One script. Bare VPS → secure proxy, private DNS and diagnostics in 10 minutes.**
 
-*Caddy 2 · NaiveProxy · Telegram Bot · Yurich DNS · Diagnostics · SSH Hardening*
+*Caddy 2 · NaiveProxy · Telegram Bot · DNS (Unbound) · Diagnostics · SSH Hardening*
 
 ---
 
@@ -43,7 +43,7 @@
 
 [![Donate](https://img.shields.io/badge/💛_Support_project-DonationAlerts-FF5E3A?style=for-the-badge)](https://www.donationalerts.com/r/ivan_yurievich)
 [![Telegram](https://img.shields.io/badge/📱_Telegram_channel-@ivan__it__net-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/ivan_it_net)
-[![Website](https://img.shields.io/badge/🌐_Yurich_Cloud-ivan--it.net-D4A017?style=for-the-badge&logo=googlechrome&logoColor=white)](https://ivan-it.net)
+[![Website](https://img.shields.io/badge/🌐_Website-ivan--it.net-D4A017?style=for-the-badge&logo=googlechrome&logoColor=white)](https://ivan-it.net)
 
 **🔔 Updates released once a month**
 
@@ -58,7 +58,7 @@
 [**⚡ Quick Start**](#-quick-start) ·
 [**✨ Features**](#-features) ·
 [**🤖 Telegram Bot**](#-telegram-bot) ·
-[**🛡️ Yurich DNS**](#-yurich-dns) ·
+[**🛡️ DNS (Unbound)**](#-dns-unbound) ·
 [**🌀 WARP**](#-cloudflare-warp-modes) ·
 [**🔍 Diagnostics**](#-diagnostics) ·
 [**❓ FAQ**](#-faq) ·
@@ -106,8 +106,8 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 
 ### 🐛 Bug fixes
 
-✅ Yurich brand architecture: Yurich Connect, Panel, Core, DNS, Desktop, Mobile, ID and Cloud
-✅ Public UI, Telegram messages, subscription pages and DNS docs renamed to Yurich names
+✅ Yurich Panel branding refresh
+✅ Public UI, Telegram messages, subscription pages and DNS docs aligned with Yurich Panel
 ✅ Technical protocol names stay intact where they refer to real components
 ✅ Legacy `NaiveProxy Manager` marker kept so older self-update checks can accept the new release
 ✅ Self-update SHA256 verification via `naiveproxy.sh.sha256`
@@ -115,7 +115,7 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 ✅ `language` CLI command and menu item 28
 ✅ Main SSH panel labels and statuses translated
 ✅ Pinned defaults for `xcaddy v0.4.6`, `forwardproxy d62c80d`, `Xray v26.3.27` and `Hysteria app/v2.9.2`
-✅ One-shot `health` report for Caddy, Yurich DNS, Telegram bot, WARP, Xray and Hysteria
+✅ One-shot `health` report for Caddy, DNS (Unbound), Telegram bot, WARP, Xray and Hysteria
 ✅ `safe-apply` validates enabled configs and rolls Caddyfile back on failure
 ✅ Encrypted `/etc/naiveproxy` backup via OpenSSL
 ✅ Export/import users, subscription tokens and user metadata
@@ -152,17 +152,17 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 
 ### ⚡ New features
 
-🧭 **Yurich DNS** — production-ready Unbound resolver for VPN clients
+🧭 **DNS (Unbound)** — production-ready Unbound resolver for VPN clients
 🔐 **DNSSEC validation** — recursive DNS with `sigok` / `dnssec-failed` tests
 🔒 **VPN-only DNS access** — port 53 is allowed only from configured VPN CIDRs
 🛠️ **Port 53 fix** — safely disables only the systemd-resolved stub listener when needed
 🌉 **Auto DNS gateway** — can create `10.0.0.1/32` on `lo` for client TUN configs
 🧩 **Standalone project** — `aurum-dns/` with install, uninstall, examples and CLI tools
 ♻️ **Idempotent installer** — backups before changes and safe repeated runs
-📱 **Client configs** — sing-box Yurich Mobile VPN/TUN examples include Yurich DNS automatically
+📱 **Client configs** — sing-box Android VPN/TUN examples include DNS (Unbound) automatically
 🧭 **Telegram Menu** — Bot API `setMyCommands` + `setChatMenuButton`
 🤖 **Bot service helper** — Telegram setup can install and start `naiveproxy-bot.service` immediately
-🔐 **Yurich DNS env guard** — standalone status/uninstall scripts trust only root-owned env files
+🔐 **DNS (Unbound) env guard** — standalone status/uninstall scripts trust only root-owned env files
 🧩 **Bot install sync** — service install syncs the currently running valid script into `/usr/local/bin`
 🛠️ **bot-menu CLI** — refresh the Telegram command menu manually
 ⚡ **Per-user Hysteria 2** — Hysteria server config now uses `auth.type: userpass` for NaiveProxy users
@@ -194,7 +194,7 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 ⚡ **Hysteria 2** — separate UDP/8443 without conflicting with Caddy
 📱 **hy2:// configs** + QR for mobile clients
 🤖 **25+ bot commands** + multi-admin
-🛡️ **Yurich DNS** private recursive Unbound + DNSSEC
+🛡️ **DNS (Unbound)** private recursive Unbound + DNSSEC
 🔍 **Diagnostics** — 7 blocks, 18+ checks
 🔒 **SSH Hardening** — ED25519, `ssh.socket` fix
 🛡️ **Fail2Ban** 3 levels (iptables-multiport)
@@ -218,27 +218,11 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 
 **Yurich Panel** — a single bash script that turns a bare VPS into a protected proxy server with private DNS and Telegram management.
 
-## 🧭 Brand Architecture
-
-| Purpose | Name |
-|---|---|
-| Brand | **Yurich** |
-| Client app / client delivery | **Yurich Connect** |
-| SSH and Telegram panel | **Yurich Panel** |
-| Server core | **Yurich Core** |
-| DNS module | **Yurich DNS** |
-| Windows direction | **Yurich Desktop** |
-| Android direction | **Yurich Mobile** |
-| Personal subscription | **Yurich ID** |
-| Website and private pages | **Yurich Cloud** |
-
-`Yurich Net` is reserved for a future network/infrastructure direction. Technical names such as `NaiveProxy`, `Xray`, `Hysteria 2`, `Caddy` and `Unbound` remain in the docs where they describe actual protocols and components.
-
 ```
 ┌─────────────┐     ┌──────────────┐     ┌───────────────────────────┐     ┌──────────┐
 │   Your      │     │  Censor/DPI  │     │      Your VPS             │     │          │
 │   phone     │────▶│              │────▶│  Caddy + NaiveProxy       │────▶│ Internet │
-│   laptop    │     │ Sees Chrome  │     │  Yurich DNS / Unbound      │     │          │
+│   laptop    │     │ Sees Chrome  │     │  DNS / Unbound            │     │          │
 └─────────────┘     │  HTTPS/2 ✓   │     │  probe_resistance         │     └──────────┘
   Naive client       └──────────────┘     └───────────────────────────┘
   Chromium stack      Passes through        DNSSEC + cache
@@ -311,7 +295,7 @@ Uses `iptables-multiport` — faster than UFW
 Without login+password looks like a regular website
 
 🎭 **Camouflage page**
-Yurich Cloud IT blog — for random visitors
+Technical blog — for random visitors
 
 🛡️ **Last domain deletion protection**
 Script won't let you accidentally kill the server
@@ -329,7 +313,7 @@ Script won't let you accidentally kill the server
 </td>
 <td width="50%" valign="top">
 
-### 🛡️ Yurich DNS
+### 🛡️ DNS (Unbound)
 
 🧭 **Own recursive resolver**
 No Google/Cloudflare upstream dependency
@@ -402,7 +386,7 @@ No `0.0.0.0` bind and no public port 53 rule
    1)  📦 Install NaiveProxy        10) 📄 Logs
    2)  📊 Status + certificate      11) 🗑  Remove NaiveProxy
    3)  📱 Client config + QR        16) 🔍 Diagnostics
-   4)  👥 Users                     17) 🛡️ Yurich DNS
+   4)  👥 Users                     17) 🛡️ DNS (Unbound)
    5)  🌍 Domains                   18) 💛 Support project
    6)  📈 Monitoring + stats        ──────────────────
    7)  🤖 Telegram + Bot setup      12) 🔒 SSH Hardening
@@ -464,8 +448,8 @@ sudo bash naiveproxy.sh bot            # Run Telegram bot
 sudo bash naiveproxy.sh bot-install    # Bot as system service
 sudo bash naiveproxy.sh bot-menu       # Refresh Telegram Menu button
 
-# === Yurich DNS / Unbound ===
-sudo bash naiveproxy.sh dns            # Yurich DNS menu
+# === DNS / Unbound ===
+sudo bash naiveproxy.sh dns            # DNS (Unbound) menu
 sudo bash naiveproxy.sh dns-install    # Install private recursive DNS
 sudo bash naiveproxy.sh dns-vpn        # Configure VPN client access
 sudo bash naiveproxy.sh dns-status     # Status, port 53 and DNSSEC tests
@@ -599,7 +583,7 @@ sudo bash naiveproxy.sh subscription-reset ivan
 ```
 
 The page is created under a secret URL like `https://domain/s/<token>/`, with raw import links available as `links.txt`.
-It includes NaiveProxy URI, naive-client JSON, Xray/VLESS/Trojan links and setup hints for Yurich Desktop (Windows), Yurich Mobile (Android), iOS/macOS and Linux.
+It includes NaiveProxy URI, naive-client JSON, Xray/VLESS/Trojan links and setup hints for Windows, Android, iOS/macOS and Linux.
 
 ### 🔐 Multi-admin:
 
@@ -612,9 +596,9 @@ All commands protected — outsiders get `⛔ Access denied`.
 
 ---
 
-## 🛡️ Yurich DNS
+## 🛡️ DNS (Unbound)
 
-Yurich DNS is a private Unbound resolver for VPN clients. It resolves domains recursively on your server, validates DNSSEC and does not depend on Google DNS or Cloudflare DNS.
+DNS (Unbound) is a private Unbound resolver for VPN clients. It resolves domains recursively on your server, validates DNSSEC and does not depend on Google DNS or Cloudflare DNS.
 
 It is designed to be safe by default:
 
@@ -645,7 +629,7 @@ VPN client → VPN tunnel → 10.0.0.1:53 → Unbound
 ### 🛠️ Commands:
 
 ```bash
-sudo bash naiveproxy.sh dns-install    # Install / reinstall Yurich DNS
+sudo bash naiveproxy.sh dns-install    # Install / reinstall DNS (Unbound)
 sudo bash naiveproxy.sh dns-vpn        # Configure DNS for VPN clients
 sudo bash naiveproxy.sh dns-status     # Status, port 53 and DNSSEC tests
 sudo bash naiveproxy.sh dns-restart    # Restart Unbound
@@ -667,7 +651,7 @@ Do not enter any `/0` network as a VPN CIDR. The installer rejects it. Use only 
 
 If port `53` is busy by `systemd-resolved`, the installer disables only the local stub listener through `/etc/systemd/resolved.conf.d/no-stub.conf`. It does not rewrite `/etc/resolv.conf` unless Ubuntu already manages it.
 
-Full sing-box Yurich Mobile VPN/TUN examples generated by the manager automatically include Yurich DNS when VPN DNS is enabled.
+Full sing-box Android VPN/TUN examples generated by the manager automatically include DNS (Unbound) when VPN DNS is enabled.
 
 ---
 
@@ -850,7 +834,7 @@ naive+https://USERNAME:PASSWORD@YOUR_DOMAIN:443
 <th>🥈 Alternative</th>
 </tr>
 <tr>
-<td><strong>Yurich Mobile (Android)</strong></td>
+<td><strong>Android</strong></td>
 <td>
 
 [**NekoBox**](https://github.com/MatsuriDayo/NekoBoxForAndroid/releases) ⭐
@@ -880,7 +864,7 @@ Paid, but top tier
 </td>
 </tr>
 <tr>
-<td><strong>Yurich Desktop (Windows)</strong></td>
+<td><strong>Windows</strong></td>
 <td>
 
 [**Hiddify Next**](https://github.com/hiddify/hiddify-next/releases) ⭐
@@ -949,7 +933,7 @@ For servers
 └── backups/                                   ← Config backups
 
 /etc/unbound/
-└── unbound.conf.d/aurum-vpn.conf              ← Yurich DNS config
+└── unbound.conf.d/aurum-vpn.conf              ← DNS (Unbound) config
 
 /usr/local/bin/
 ├── aurum-dns-status                           ← DNS status and logs
@@ -1091,9 +1075,9 @@ journalctl -u caddy -n 30 --no-pager
 </details>
 
 <details>
-<summary><b>App for Yurich Desktop / Mac?</b></summary>
+<summary><b>App for Windows / Mac?</b></summary>
 
-**Yurich Desktop (Windows):**
+**Windows:**
 - **Hiddify Next** — UI client, easy setup
 - **NekoRay** — advanced GUI
 
@@ -1159,7 +1143,7 @@ sudo bash naiveproxy.sh
 
 </details>
 
-### 🛡️ Yurich DNS
+### 🛡️ DNS (Unbound)
 
 <details>
 <summary><b>DNS does not answer for VPN clients — how to check</b></summary>
@@ -1181,9 +1165,9 @@ Make sure the configured gateway IP exists on the server interface and the VPN C
 </details>
 
 <details>
-<summary><b>Can Yurich DNS block ads?</b></summary>
+<summary><b>Can DNS (Unbound) block ads?</b></summary>
 
-The main manager no longer ships DNS adblock lists. Yurich DNS is focused on a safe private recursive resolver for VPN clients.
+The main manager no longer ships DNS adblock lists. DNS (Unbound) is focused on a safe private recursive resolver for VPN clients.
 
 This avoids the previous startup problems caused by legacy blocklist/trust-anchor combinations and keeps the DNS role clean.
 
@@ -1367,7 +1351,7 @@ for donors
 | 💛 **Donate** | [DonationAlerts](https://www.donationalerts.com/r/ivan_yurievich) | Financial support |
 | ⭐ **GitHub Star** | [Give a star](https://github.com/ivan-yurich/naiveproxy) | Project visibility |
 | 📱 **Telegram channel** | [@ivan_it_net](https://t.me/ivan_it_net) | Subscribe for updates |
-| 🌐 **Yurich Cloud** | [ivan-it.net](https://ivan-it.net) | Visit |
+| 🌐 **Website** | [ivan-it.net](https://ivan-it.net) | Visit |
 | 📢 **Share** | — | Tell your friends |
 | 🐛 **Report bug** | [Issues](https://github.com/ivan-yurich/naiveproxy/issues) | Help improve |
 | 💡 **Suggest idea** | [Telegram](https://t.me/ivan_it_net) | Grow the project |
@@ -1379,12 +1363,12 @@ for donors
 ## 📜 Changelog
 
 <details>
-<summary><b>v5.6.2</b> — Yurich brand architecture ← CURRENT</summary>
+<summary><b>v5.6.2</b> — Yurich Panel branding ← CURRENT</summary>
 
 **🧭 Brand refresh:**
-- Renamed the public product architecture to `Yurich`
-- Added names for `Yurich Connect`, `Yurich Panel`, `Yurich Core`, `Yurich DNS`, `Yurich Desktop`, `Yurich Mobile`, `Yurich ID` and `Yurich Cloud`
-- Updated terminal UI, Telegram messages, subscription pages, DNS module text and documentation
+- Simplified the public product name to `Yurich Panel`
+- Removed the separate sub-brand architecture from the README
+- Kept terminal UI, Telegram messages, subscription pages, DNS module text and documentation aligned with `Yurich Panel`
 - Kept technical names like `NaiveProxy`, `Xray`, `Hysteria 2`, `Caddy` and `Unbound` where they describe actual protocols/components
 - Kept a legacy `NaiveProxy Manager` marker in the script so older self-update checks can accept this release
 
@@ -1416,7 +1400,7 @@ for donors
 
 **🛡️ Hardening fixes:**
 - Rejects every VPN DNS CIDR with mask `/0`, not only the literal `0.0.0.0/0`
-- Standalone Yurich DNS status/uninstall scripts source env only when it is root-owned and locked down
+- Standalone DNS (Unbound) status/uninstall scripts source env only when it is root-owned and locked down
 - Generated watchdog Telegram sender now uses `--data-urlencode`
 - `bot-install` syncs the current valid script into `/usr/local/bin/naiveproxy.sh`
 
@@ -1446,20 +1430,20 @@ for donors
 </details>
 
 <details>
-<summary><b>v5.5.12</b> — Yurich DNS auto gateway for VPN clients</summary>
+<summary><b>v5.5.12</b> — DNS (Unbound) auto gateway for VPN clients</summary>
 
 **🌉 Client DNS gateway:**
 - Added `aurum-dns-gateway.service` for a safe local `10.0.0.1/32` gateway on `lo`
 - Menu `17 → 2` can now create the gateway automatically when the IP is missing
-- Full sing-box Yurich Mobile VPN/TUN examples include Yurich DNS through `tcp://10.0.0.1:53`
-- Personal subscription pages now show the ready sing-box TUN config with Yurich DNS
+- Full sing-box Android VPN/TUN examples include DNS (Unbound) through `tcp://10.0.0.1:53`
+- Personal subscription pages now show the ready sing-box TUN config with DNS (Unbound)
 
 </details>
 
 <details>
-<summary><b>v5.5.11</b> — Yurich DNS without legacy adblock</summary>
+<summary><b>v5.5.11</b> — DNS (Unbound) without legacy adblock</summary>
 
-**🛡️ Yurich DNS:**
+**🛡️ DNS (Unbound):**
 - Replaced the old DNS adblock module with a safer private Unbound resolver
 - Added standalone `aurum-dns/` project with install, uninstall, examples and CLI tools
 - Removed blocklist/whitelist generation from the main manager
@@ -1678,7 +1662,7 @@ for donors
 **📱 Client config output fixed:**
 - The server stack is shown explicitly: `Caddy 2 + klzgrad/forwardproxy@naive`
 - sing-box now uses `type: naive` as the primary outbound
-- Added a complete sing-box Yurich Mobile VPN/TUN example
+- Added a complete sing-box Android VPN/TUN example
 - HTTPS proxy is kept as a fallback for clients without native NaiveProxy
 
 </details>
@@ -1805,7 +1789,7 @@ Personal, educational, research and other noncommercial use is allowed under the
 
 Commercial use, resale, paid panels, SaaS, hosting, VPN/proxy services, managed services and corporate products require a separate written commercial license from the author.
 
-📞 Licensing contact: [Telegram](https://t.me/ivan_it_net) · [Yurich Cloud](https://ivan-it.net)
+📞 Licensing contact: [Telegram](https://t.me/ivan_it_net) · [Website](https://ivan-it.net)
 
 Full license text: [LICENSE](LICENSE)
 
@@ -1821,7 +1805,7 @@ Full license text: [LICENSE](LICENSE)
 
 ---
 
-📱 [**Telegram**](https://t.me/ivan_it_net) · 🌐 [**Yurich Cloud**](https://ivan-it.net) · 💻 [**GitHub**](https://github.com/ivan-yurich/naiveproxy) · 💛 [**Donate**](https://www.donationalerts.com/r/ivan_yurievich)
+📱 [**Telegram**](https://t.me/ivan_it_net) · 🌐 [**Website**](https://ivan-it.net) · 💻 [**GitHub**](https://github.com/ivan-yurich/naiveproxy) · 💛 [**Donate**](https://www.donationalerts.com/r/ivan_yurievich)
 
 **Yurich Panel · by Ivan Yurievich**
 

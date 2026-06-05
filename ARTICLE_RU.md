@@ -178,7 +178,7 @@ https://<your-domain.example>/s/<secret-token>/
 - JSON для `naive-client`;
 - ссылки Xray/VLESS/Trojan, если Xray включён;
 - `links.txt` для импорта в клиенты;
-- подсказки для Yurich Desktop (Windows), Yurich Mobile (Android), iOS/macOS и Linux.
+- подсказки для Windows, Android, iOS/macOS и Linux.
 
 Отдельный raw-файл:
 

@@ -80,7 +80,7 @@ ensure_managed_gateway() {
     ip_bin=$(command -v ip || echo "/usr/sbin/ip")
     cat > "$GATEWAY_SERVICE" <<EOF
 [Unit]
-Description=Yurich DNS local gateway IP (${gateway})
+Description=DNS (Unbound) local gateway IP (${gateway})
 Before=unbound.service
 After=network.target
 
@@ -162,7 +162,7 @@ write_unbound_config() {
 
     cat > "$CONF" <<EOF
 server:
-    # Yurich DNS: private recursive resolver for VPN clients.
+    # DNS (Unbound): private recursive resolver for VPN clients.
     # Security rule: never bind 0.0.0.0 here.
     interface: 127.0.0.1
 EOF
@@ -225,8 +225,8 @@ apply_ufw() {
     IFS=',' read -r -a cidr_list <<< "$cidrs"
     for cidr in "${cidr_list[@]}"; do
         [[ -z "$cidr" ]] && continue
-        ufw allow from "$cidr" to any port 53 proto udp comment "Yurich DNS VPN" >/dev/null 2>&1 || true
-        ufw allow from "$cidr" to any port 53 proto tcp comment "Yurich DNS VPN" >/dev/null 2>&1 || true
+        ufw allow from "$cidr" to any port 53 proto udp comment "DNS (Unbound) VPN" >/dev/null 2>&1 || true
+        ufw allow from "$cidr" to any port 53 proto tcp comment "DNS (Unbound) VPN" >/dev/null 2>&1 || true
     done
 }
 
@@ -283,7 +283,7 @@ main() {
     apply_ufw "$cidrs"
     install_commands
     run_tests
-    ok "Yurich DNS installed. Commands: aurum-dns-status, aurum-dns-test, aurum-dns-restart"
+    ok "DNS (Unbound) installed. Commands: aurum-dns-status, aurum-dns-test, aurum-dns-restart"
 }
 
 main "$@"

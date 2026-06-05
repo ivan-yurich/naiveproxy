@@ -76,7 +76,7 @@ main() {
     rmdir /etc/aurum-dns 2>/dev/null || true
     systemctl daemon-reload 2>/dev/null || true
 
-    ok "Yurich DNS config removed. VPN config was not touched."
+    ok "DNS (Unbound) config removed. VPN config was not touched."
     if [[ -t 0 ]]; then
         printf 'Remove packages unbound/dnsutils too? [y/N]: '
         read -r ans

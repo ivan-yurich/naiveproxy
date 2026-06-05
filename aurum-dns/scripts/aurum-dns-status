@@ -24,7 +24,7 @@ source_env_if_safe() {
 
 source_env_if_safe
 
-echo "===== Yurich DNS status ====="
+echo "===== DNS (Unbound) status ====="
 systemctl status unbound --no-pager || true
 echo
 echo "===== Port 53 listeners ====="

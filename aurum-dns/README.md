@@ -1,6 +1,6 @@
-# Yurich DNS
+# DNS (Unbound)
 
-Yurich DNS - production-ready установщик Unbound для Ubuntu 24.04 LTS. Он поднимает собственный DNS-резолвер для VPN-клиентов, чтобы DNS-запросы шли через ваш сервер и не превращали VPS в открытый публичный resolver.
+DNS (Unbound) - production-ready установщик Unbound для Ubuntu 24.04 LTS. Он поднимает собственный DNS-резолвер для VPN-клиентов, чтобы DNS-запросы шли через ваш сервер и не превращали VPS в открытый публичный resolver.
 
 ## Что такое Unbound
 
@@ -187,4 +187,4 @@ sudo ss -lntup | grep ':53'
 - указана слишком широкая подсеть с маской `/0`;
 - в конфиг вручную добавили повторный `auto-trust-anchor-file`.
 
-На Ubuntu trust anchor уже управляется пакетом Unbound, поэтому Yurich DNS не дублирует `auto-trust-anchor-file`.
+На Ubuntu trust anchor уже управляется пакетом Unbound, поэтому DNS (Unbound) не дублирует `auto-trust-anchor-file`.
