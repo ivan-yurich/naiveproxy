@@ -2,7 +2,6 @@
 # ============================================================
 #   Yurich Panel v5.6.2 — by Иван Юрьевич
 #   Стек: Caddy 2 + klzgrad/forwardproxy@naive + Hysteria 2 + WARP + Xray Modern
-#   Legacy update marker: NaiveProxy Manager
 #   ОС: Ubuntu 20.04 / 22.04 / 24.04
 #
 #   Copyright (C) 2026 Иван Юрьевич (Ivan Yurievich)
@@ -5539,7 +5538,7 @@ cmd_self_update() {
         return 1
     fi
 
-    # Проверяем что это действительно наш скрипт; legacy-маркер нужен для self-update старых релизов.
+    # Проверяем что это действительно наш скрипт; второй маркер нужен только для совместимости старых self-update.
     if ! grep -Eq "Yurich Panel|NaiveProxy Manager" "$tmp_script" 2>/dev/null; then
         err "Скачанный файл не является Yurich Panel. Отменяю."
         rm -f "$tmp_script"

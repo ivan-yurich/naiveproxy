@@ -109,7 +109,7 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 ✅ Yurich Panel branding refresh
 ✅ Public UI, Telegram messages, subscription pages and DNS docs aligned with Yurich Panel
 ✅ Technical protocol names stay intact where they refer to real components
-✅ Legacy `NaiveProxy Manager` marker kept so older self-update checks can accept the new release
+✅ Self-update remains compatible with older releases
 ✅ Self-update SHA256 verification via `naiveproxy.sh.sha256`
 ✅ SSH panel language selector: Russian / English
 ✅ `language` CLI command and menu item 28
@@ -1370,7 +1370,7 @@ for donors
 - Removed the separate sub-brand architecture from the README
 - Kept terminal UI, Telegram messages, subscription pages, DNS module text and documentation aligned with `Yurich Panel`
 - Kept technical names like `NaiveProxy`, `Xray`, `Hysteria 2`, `Caddy` and `Unbound` where they describe actual protocols/components
-- Kept a legacy `NaiveProxy Manager` marker in the script so older self-update checks can accept this release
+- Kept self-update compatibility for older releases
 
 **🌐 SSH panel language:**
 - Added Russian / English language selector for the terminal panel
