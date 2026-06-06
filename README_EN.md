@@ -26,7 +26,7 @@
 
 ---
 
-[![Version](https://img.shields.io/badge/version-5.6.2-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
+[![Version](https://img.shields.io/badge/version-5.6.3-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
 [![ShellCheck](https://img.shields.io/badge/ShellCheck-passing-3FB950?style=for-the-badge&logo=gnu-bash&logoColor=white)](https://www.shellcheck.net)
 [![Bash](https://img.shields.io/badge/Bash-5.0+-4EAA25?style=for-the-badge&logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-20.04%2B-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://ubuntu.com)
@@ -98,7 +98,7 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 
 ---
 
-## 🎉 What's new in v5.6.2
+## 🎉 What's new in v5.6.3
 
 <table>
 <tr>
@@ -107,10 +107,11 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 ### 🐛 Bug fixes
 
 ✅ Yurich Panel branding refresh
+✅ Main script renamed to `yurich-panel.sh`, with `naiveproxy.sh` kept as a compatibility alias
 ✅ Public UI, Telegram messages, subscription pages and DNS docs aligned with Yurich Panel
 ✅ Technical protocol names stay intact where they refer to real components
 ✅ Self-update remains compatible with older releases
-✅ Self-update SHA256 verification via `naiveproxy.sh.sha256`
+✅ Self-update SHA256 verification via `yurich-panel.sh.sha256`
 ✅ SSH panel language selector: Russian / English
 ✅ `language` CLI command and menu item 28
 ✅ Main SSH panel labels and statuses translated
@@ -243,7 +244,7 @@ NaiveProxy disguises traffic as regular Chrome — invisible to censors
 ### 🎬 One command — all set:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/naiveproxy.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/yurich-panel.sh)
 ```
 
 ### 📊 Installation process:
@@ -379,7 +380,7 @@ No `0.0.0.0` bind and no public port 53 rule
 
 ```
 ──────────────────────────────────────────────────────
-   Yurich Panel v5.6.2  [ENG]
+   Yurich Panel v5.6.3  [ENG]
    Status: ● running  │  Domain: proxy.example.com
    Telegram: connected  │  Users: 3  │  SSH: 52847
 ──────────────────────────────────────────────────────
@@ -403,90 +404,90 @@ No `0.0.0.0` bind and no public port 53 rule
 
 ```bash
 # === Main ===
-sudo bash naiveproxy.sh install        # Full installation
-sudo bash naiveproxy.sh status         # Status + certificate
-sudo bash naiveproxy.sh config         # Config + QR code
-sudo bash naiveproxy.sh config ivan    # Unique user link
-sudo bash naiveproxy.sh qr             # QR code only
-sudo bash naiveproxy.sh cert           # Certificate only
-sudo bash naiveproxy.sh users          # User management
-sudo bash naiveproxy.sh domains        # Domain management
-sudo bash naiveproxy.sh monitor        # Monitoring
-sudo bash naiveproxy.sh restart        # Restart Caddy
-sudo bash naiveproxy.sh update         # Update Caddy
-sudo bash naiveproxy.sh logs           # Logs
+sudo bash yurich-panel.sh install        # Full installation
+sudo bash yurich-panel.sh status         # Status + certificate
+sudo bash yurich-panel.sh config         # Config + QR code
+sudo bash yurich-panel.sh config ivan    # Unique user link
+sudo bash yurich-panel.sh qr             # QR code only
+sudo bash yurich-panel.sh cert           # Certificate only
+sudo bash yurich-panel.sh users          # User management
+sudo bash yurich-panel.sh domains        # Domain management
+sudo bash yurich-panel.sh monitor        # Monitoring
+sudo bash yurich-panel.sh restart        # Restart Caddy
+sudo bash yurich-panel.sh update         # Update Caddy
+sudo bash yurich-panel.sh logs           # Logs
 
 # === Device limit ===
-sudo bash naiveproxy.sh devices        # Anti-sharing menu
-sudo bash naiveproxy.sh devices-scan   # Check violations now
+sudo bash yurich-panel.sh devices        # Anti-sharing menu
+sudo bash yurich-panel.sh devices-scan   # Check violations now
 
 # === Xray Modern ===
-sudo bash naiveproxy.sh xray           # Xray menu
-sudo bash naiveproxy.sh xray-install   # VLESS/Trojan/REALITY + fallback
-sudo bash naiveproxy.sh xray-add-user USER 12
-sudo bash naiveproxy.sh xray-config    # Show Xray links
-sudo bash naiveproxy.sh xray-status    # Xray status
-sudo bash naiveproxy.sh xray-remove    # Remove Xray / return Caddy
+sudo bash yurich-panel.sh xray           # Xray menu
+sudo bash yurich-panel.sh xray-install   # VLESS/Trojan/REALITY + fallback
+sudo bash yurich-panel.sh xray-add-user USER 12
+sudo bash yurich-panel.sh xray-config    # Show Xray links
+sudo bash yurich-panel.sh xray-status    # Xray status
+sudo bash yurich-panel.sh xray-remove    # Remove Xray / return Caddy
 
 # === Hysteria 2 ===
-sudo bash naiveproxy.sh hysteria       # Hysteria menu
-sudo bash naiveproxy.sh hysteria-install
-sudo bash naiveproxy.sh hysteria-config USER
-sudo bash naiveproxy.sh hysteria-port  # Default UDP/8443 or custom UDP port
-sudo bash naiveproxy.sh hysteria-status
-sudo bash naiveproxy.sh hysteria-remove
+sudo bash yurich-panel.sh hysteria       # Hysteria menu
+sudo bash yurich-panel.sh hysteria-install
+sudo bash yurich-panel.sh hysteria-config USER
+sudo bash yurich-panel.sh hysteria-port  # Default UDP/8443 or custom UDP port
+sudo bash yurich-panel.sh hysteria-status
+sudo bash yurich-panel.sh hysteria-remove
 
 # === Subscriptions and pages ===
-sudo bash naiveproxy.sh subscription ivan       # User subscription page
-sudo bash naiveproxy.sh subscription-reset ivan # Rotate secret URL
-sudo bash naiveproxy.sh private-page            # Private camouflage page
-sudo bash naiveproxy.sh private-page reset      # Rotate page secret URL
+sudo bash yurich-panel.sh subscription ivan       # User subscription page
+sudo bash yurich-panel.sh subscription-reset ivan # Rotate secret URL
+sudo bash yurich-panel.sh private-page            # Private camouflage page
+sudo bash yurich-panel.sh private-page reset      # Rotate page secret URL
 
 # === Telegram ===
-sudo bash naiveproxy.sh tg-stats       # Stats to Telegram
-sudo bash naiveproxy.sh bot            # Run Telegram bot
-sudo bash naiveproxy.sh bot-install    # Bot as system service
-sudo bash naiveproxy.sh bot-menu       # Refresh Telegram Menu button
+sudo bash yurich-panel.sh tg-stats       # Stats to Telegram
+sudo bash yurich-panel.sh bot            # Run Telegram bot
+sudo bash yurich-panel.sh bot-install    # Bot as system service
+sudo bash yurich-panel.sh bot-menu       # Refresh Telegram Menu button
 
 # === DNS / Unbound ===
-sudo bash naiveproxy.sh dns            # DNS (Unbound) menu
-sudo bash naiveproxy.sh dns-install    # Install private recursive DNS
-sudo bash naiveproxy.sh dns-vpn        # Configure VPN client access
-sudo bash naiveproxy.sh dns-status     # Status, port 53 and DNSSEC tests
-sudo bash naiveproxy.sh dns-restart    # Restart Unbound
-sudo bash naiveproxy.sh aurum-dns      # Alias for DNS menu
-sudo bash naiveproxy.sh aurum-dns-test # Alias for DNS status/test
+sudo bash yurich-panel.sh dns            # DNS (Unbound) menu
+sudo bash yurich-panel.sh dns-install    # Install private recursive DNS
+sudo bash yurich-panel.sh dns-vpn        # Configure VPN client access
+sudo bash yurich-panel.sh dns-status     # Status, port 53 and DNSSEC tests
+sudo bash yurich-panel.sh dns-restart    # Restart Unbound
+sudo bash yurich-panel.sh aurum-dns      # Alias for DNS menu
+sudo bash yurich-panel.sh aurum-dns-test # Alias for DNS status/test
 
 # === Cloudflare WARP modes ===
-sudo bash naiveproxy.sh warp           # WARP menu
-sudo bash naiveproxy.sh warp-proxy     # Local proxy mode: 127.0.0.1:40000
-sudo bash naiveproxy.sh warp-full      # Full tunnel for all outgoing VPS traffic
-sudo bash naiveproxy.sh warp-protocol  # Select auto / MASQUE / WireGuard
-sudo bash naiveproxy.sh warp-test      # Test local proxy mode
-sudo bash naiveproxy.sh warp-full-test # Test full tunnel mode
-sudo bash naiveproxy.sh warp-disable   # Disconnect WARP
+sudo bash yurich-panel.sh warp           # WARP menu
+sudo bash yurich-panel.sh warp-proxy     # Local proxy mode: 127.0.0.1:40000
+sudo bash yurich-panel.sh warp-full      # Full tunnel for all outgoing VPS traffic
+sudo bash yurich-panel.sh warp-protocol  # Select auto / MASQUE / WireGuard
+sudo bash yurich-panel.sh warp-test      # Test local proxy mode
+sudo bash yurich-panel.sh warp-full-test # Test full tunnel mode
+sudo bash yurich-panel.sh warp-disable   # Disconnect WARP
 
 # === Diagnostics ===
-sudo bash naiveproxy.sh diagnose       # 7-block diagnostics
-sudo bash naiveproxy.sh diagnose --fix # Auto-fix common issues
+sudo bash yurich-panel.sh diagnose       # 7-block diagnostics
+sudo bash yurich-panel.sh diagnose --fix # Auto-fix common issues
 
 # === SSH ===
-sudo bash naiveproxy.sh ssh-hardening  # SSH Hardening
-sudo bash naiveproxy.sh ssh-key        # Show SSH key
+sudo bash yurich-panel.sh ssh-hardening  # SSH Hardening
+sudo bash yurich-panel.sh ssh-key        # Show SSH key
 
 # === Management ===
-sudo bash naiveproxy.sh sysupdate      # Update system
-sudo bash naiveproxy.sh self-update    # Update script
-sudo bash naiveproxy.sh language       # Switch SSH panel language
-sudo bash naiveproxy.sh health         # Full stack health-check
-sudo bash naiveproxy.sh safe-apply     # Validate configs and apply safely
-sudo bash naiveproxy.sh backup         # Encrypted backup
-sudo bash naiveproxy.sh export         # Export users/subscriptions
-sudo bash naiveproxy.sh import FILE    # Import users/subscriptions
-sudo bash naiveproxy.sh bridge         # Bridge profile builder
-sudo bash naiveproxy.sh camouflage     # Reinstall camouflage
-sudo bash naiveproxy.sh version        # Version
-sudo bash naiveproxy.sh remove         # Remove everything
+sudo bash yurich-panel.sh sysupdate      # Update system
+sudo bash yurich-panel.sh self-update    # Update script
+sudo bash yurich-panel.sh language       # Switch SSH panel language
+sudo bash yurich-panel.sh health         # Full stack health-check
+sudo bash yurich-panel.sh safe-apply     # Validate configs and apply safely
+sudo bash yurich-panel.sh backup         # Encrypted backup
+sudo bash yurich-panel.sh export         # Export users/subscriptions
+sudo bash yurich-panel.sh import FILE    # Import users/subscriptions
+sudo bash yurich-panel.sh bridge         # Bridge profile builder
+sudo bash yurich-panel.sh camouflage     # Reinstall camouflage
+sudo bash yurich-panel.sh version        # Version
+sudo bash yurich-panel.sh remove         # Remove everything
 ```
 
 </details>
@@ -501,7 +502,7 @@ Full server management directly from Telegram. Runs 24/7 as system service.
 
 ```bash
 # Install as system service (auto-start):
-sudo bash naiveproxy.sh bot-install
+sudo bash yurich-panel.sh bot-install
 
 # Stop:
 systemctl stop naiveproxy-bot
@@ -517,7 +518,7 @@ The bot also shows a persistent Russian reply keyboard after `/start`, `/help` o
 The Telegram `Menu` button is configured automatically through Bot API. If it does not appear immediately, run:
 
 ```bash
-sudo bash naiveproxy.sh bot-menu
+sudo bash yurich-panel.sh bot-menu
 systemctl restart naiveproxy-bot
 ```
 
@@ -576,10 +577,10 @@ systemctl restart naiveproxy-bot
 
 ```bash
 # Create/show user subscription page:
-sudo bash naiveproxy.sh subscription ivan
+sudo bash yurich-panel.sh subscription ivan
 
 # If the link leaks, rotate the token:
-sudo bash naiveproxy.sh subscription-reset ivan
+sudo bash yurich-panel.sh subscription-reset ivan
 ```
 
 The page is created under a secret URL like `https://domain/s/<token>/`, with raw import links available as `links.txt`.
@@ -613,7 +614,7 @@ It is designed to be safe by default:
 ### ⚡ Install:
 
 ```bash
-sudo bash naiveproxy.sh dns-install
+sudo bash yurich-panel.sh dns-install
 ```
 
 ### 🔍 How it works:
@@ -629,11 +630,11 @@ VPN client → VPN tunnel → 10.0.0.1:53 → Unbound
 ### 🛠️ Commands:
 
 ```bash
-sudo bash naiveproxy.sh dns-install    # Install / reinstall DNS (Unbound)
-sudo bash naiveproxy.sh dns-vpn        # Configure DNS for VPN clients
-sudo bash naiveproxy.sh dns-status     # Status, port 53 and DNSSEC tests
-sudo bash naiveproxy.sh dns-restart    # Restart Unbound
-sudo bash naiveproxy.sh dns-remove     # Remove created DNS config and commands
+sudo bash yurich-panel.sh dns-install    # Install / reinstall DNS (Unbound)
+sudo bash yurich-panel.sh dns-vpn        # Configure DNS for VPN clients
+sudo bash yurich-panel.sh dns-status     # Status, port 53 and DNSSEC tests
+sudo bash yurich-panel.sh dns-restart    # Restart Unbound
+sudo bash yurich-panel.sh dns-remove     # Remove created DNS config and commands
 ```
 
 The standalone project is also included in [`aurum-dns/`](aurum-dns/):
@@ -667,12 +668,12 @@ Menu `21` now supports two WARP modes:
 ### Commands:
 
 ```bash
-sudo bash naiveproxy.sh warp           # WARP menu
-sudo bash naiveproxy.sh warp-proxy     # Local proxy mode
-sudo bash naiveproxy.sh warp-full      # Full tunnel mode
-sudo bash naiveproxy.sh warp-protocol  # auto / MASQUE / WireGuard
-sudo bash naiveproxy.sh warp-full-test # Verify full tunnel output
-sudo bash naiveproxy.sh warp-disable   # Rollback / disconnect
+sudo bash yurich-panel.sh warp           # WARP menu
+sudo bash yurich-panel.sh warp-proxy     # Local proxy mode
+sudo bash yurich-panel.sh warp-full      # Full tunnel mode
+sudo bash yurich-panel.sh warp-protocol  # auto / MASQUE / WireGuard
+sudo bash yurich-panel.sh warp-full-test # Verify full tunnel output
+sudo bash yurich-panel.sh warp-disable   # Rollback / disconnect
 ```
 
 In proxy mode Xray can use `127.0.0.1:40000` as outbound. In full tunnel mode Xray and regular server processes use the system route automatically. For Russia and unstable networks, `auto` tries MASQUE first, then WireGuard.
@@ -682,14 +683,14 @@ In proxy mode Xray can use `127.0.0.1:40000` as outbound. In full tunnel mode Xr
 ## 🔍 Diagnostics
 
 ```bash
-sudo bash naiveproxy.sh diagnose
+sudo bash yurich-panel.sh diagnose
 ```
 
 ### 📊 Example output:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  🔍 Diagnostics Yurich Panel v5.6.2               │
+│  🔍 Diagnostics Yurich Panel v5.6.3               │
 │  2026-05-23 14:32:18 · proxy.example.com               │
 └─────────────────────────────────────────────────────────┘
 
@@ -729,7 +730,7 @@ sudo bash naiveproxy.sh diagnose
   ✅ journald: no critical errors
 
 [7/7] Version and updates
-  ✅ Script up to date: v5.6.2
+  ✅ Script up to date: v5.6.3
   ✅ SSH Hardening done
 
 ══════════════════════════════════════════════════════════
@@ -776,7 +777,7 @@ your-domain.com:443 { ... }
 ## 🔒 SSH Hardening
 
 ```bash
-sudo bash naiveproxy.sh ssh-hardening
+sudo bash yurich-panel.sh ssh-hardening
 ```
 
 > 💡 **Can be skipped** by pressing `n` during installation.
@@ -952,7 +953,7 @@ For servers
 ├── access.log                                 ← All requests
 └── naive.log                                  ← CONNECT tunnels
 
-/usr/local/bin/naiveproxy.sh                   ← The script itself
+/usr/local/bin/yurich-panel.sh                   ← The script itself
 ```
 
 </details>
@@ -1012,7 +1013,7 @@ sudo mkswap /swapfile
 sudo swapon /swapfile
 
 # Run install again
-sudo bash /usr/local/bin/naiveproxy.sh install
+sudo bash /usr/local/bin/yurich-panel.sh install
 ```
 
 </details>
@@ -1022,12 +1023,12 @@ sudo bash /usr/local/bin/naiveproxy.sh install
 
 ```bash
 # Method 1 — from menu
-sudo bash /usr/local/bin/naiveproxy.sh
+sudo bash /usr/local/bin/yurich-panel.sh
 # → Option 14) Update script
 
 # Method 2 — one command
-curl -fsSL https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/naiveproxy.sh \
-  -o /usr/local/bin/naiveproxy.sh && chmod +x /usr/local/bin/naiveproxy.sh
+curl -fsSL https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/yurich-panel.sh \
+  -o /usr/local/bin/yurich-panel.sh && chmod +x /usr/local/bin/yurich-panel.sh
 ```
 
 </details>
@@ -1041,7 +1042,7 @@ curl -fsSL https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/naivepr
 
 ```bash
 # 1. Run full diagnostics
-sudo bash naiveproxy.sh diagnose
+sudo bash yurich-panel.sh diagnose
 
 # 2. Check Caddyfile
 cat /etc/caddy/Caddyfile | grep ":443"
@@ -1107,7 +1108,7 @@ journalctl -u naiveproxy-bot -n 30 --no-pager
 systemctl restart naiveproxy-bot
 
 # 4. If doesn't help — reinstall
-sudo bash naiveproxy.sh bot-install
+sudo bash yurich-panel.sh bot-install
 ```
 
 </details>
@@ -1123,7 +1124,7 @@ sudo bash naiveproxy.sh bot-install
 
 Enter token in script:
 ```bash
-sudo bash naiveproxy.sh
+sudo bash yurich-panel.sh
 # → 7) Telegram + Bot setup
 ```
 
@@ -1150,14 +1151,14 @@ sudo bash naiveproxy.sh
 
 ```bash
 # Check Unbound, port 53 and DNSSEC
-sudo bash naiveproxy.sh dns-status
+sudo bash yurich-panel.sh dns-status
 aurum-dns-test
 
 # Reconfigure VPN client access
-sudo bash naiveproxy.sh dns-vpn
+sudo bash yurich-panel.sh dns-vpn
 
 # Restart safely
-sudo bash naiveproxy.sh dns-restart
+sudo bash yurich-panel.sh dns-restart
 ```
 
 Make sure the configured gateway IP exists on the server interface and the VPN CIDR matches your real tunnel network.
@@ -1240,7 +1241,7 @@ tar -czf naiveproxy-backup-$(date +%Y%m%d).tar.gz \
 scp root@YOUR_IP:~/naiveproxy-backup-*.tar.gz ~/Downloads/
 
 # Restore
-sudo bash naiveproxy.sh install
+sudo bash yurich-panel.sh install
 tar -xzf naiveproxy-backup.tar.gz -C /
 systemctl restart caddy
 ```
@@ -1251,7 +1252,7 @@ systemctl restart caddy
 <summary><b>How to completely remove NaiveProxy</b></summary>
 
 ```bash
-sudo bash naiveproxy.sh remove
+sudo bash yurich-panel.sh remove
 # Removes: Caddy, configs, logs, systemd services
 
 # Additional cleanup:
@@ -1363,10 +1364,13 @@ for donors
 ## 📜 Changelog
 
 <details>
-<summary><b>v5.6.2</b> — Yurich Panel branding ← CURRENT</summary>
+<summary><b>v5.6.3</b> — Yurich Panel branding ← CURRENT</summary>
 
 **🧭 Brand refresh:**
 - Simplified the public product name to `Yurich Panel`
+- Renamed the main script to `yurich-panel.sh`
+- Kept `naiveproxy.sh` in the repository and on installed servers as a compatibility alias
+- Self-update now downloads `yurich-panel.sh` and verifies `yurich-panel.sh.sha256`
 - Removed the separate sub-brand architecture from the README
 - Kept terminal UI, Telegram messages, subscription pages, DNS module text and documentation aligned with `Yurich Panel`
 - Kept technical names like `NaiveProxy`, `Xray`, `Hysteria 2`, `Caddy` and `Unbound` where they describe actual protocols/components
@@ -1385,7 +1389,7 @@ for donors
 <summary><b>v5.6.0</b> — Production tools, safe apply and expiring subscriptions</summary>
 
 **🧰 Production operations:**
-- Added SHA256 verification for `self-update` through `naiveproxy.sh.sha256`
+- Added SHA256 verification for `self-update` through `yurich-panel.sh.sha256`
 - Added pinned defaults for `xcaddy`, `forwardproxy`, Xray and Hysteria releases
 - Added `health` for one-shot Caddy + DNS + Telegram bot + WARP + Xray + Hysteria checks
 - Added `safe-apply` with config validation and Caddyfile rollback
@@ -1402,7 +1406,7 @@ for donors
 - Rejects every VPN DNS CIDR with mask `/0`, not only the literal `0.0.0.0/0`
 - Standalone DNS (Unbound) status/uninstall scripts source env only when it is root-owned and locked down
 - Generated watchdog Telegram sender now uses `--data-urlencode`
-- `bot-install` syncs the current valid script into `/usr/local/bin/naiveproxy.sh`
+- `bot-install` syncs the current valid script into `/usr/local/bin/yurich-panel.sh`
 
 </details>
 
@@ -1412,7 +1416,7 @@ for donors
 **🤖 Telegram bot runtime:**
 - Fixed Telegram long polling: `allowed_updates` is now sent as a JSON array
 - Telegram setup can install and start `naiveproxy-bot.service` immediately
-- `bot-install` checks `/usr/local/bin/naiveproxy.sh` and restores it before writing the systemd unit
+- `bot-install` checks `/usr/local/bin/yurich-panel.sh` and restores it before writing the systemd unit
 - `/start`, `/help` and `/menu` are now documented as requiring the running bot service
 
 </details>
