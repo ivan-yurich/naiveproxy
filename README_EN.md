@@ -26,7 +26,7 @@
 
 ---
 
-[![Version](https://img.shields.io/badge/version-5.6.11-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
+[![Version](https://img.shields.io/badge/version-5.6.12-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
 [![ShellCheck](https://img.shields.io/badge/ShellCheck-passing-3FB950?style=for-the-badge&logo=gnu-bash&logoColor=white)](https://www.shellcheck.net)
 [![Bash](https://img.shields.io/badge/Bash-5.0+-4EAA25?style=for-the-badge&logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-20.04%2B-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://ubuntu.com)
@@ -98,7 +98,7 @@ Yurich Proxy uses a Naive-compatible Chrome-like transport
 
 ---
 
-## 🎉 What's new in v5.6.11
+## 🎉 What's new in v5.6.12
 
 <table>
 <tr>
@@ -106,6 +106,9 @@ Yurich Proxy uses a Naive-compatible Chrome-like transport
 
 ### 🐛 Bug fixes
 
+✅ Subscription pages now include Yurich Connect Android and Windows release links
+✅ Project contacts are shown on subscription pages: Telegram, VK and email
+✅ Windows/Android setup cards link to the official client releases
 ✅ REALITY target presets for RU/Global candidate domains
 ✅ Live TLS/SNI check before applying the selected target
 ✅ New Xray menu action: `REALITY target presets / test`
@@ -410,7 +413,7 @@ No `0.0.0.0` bind and no public port 53 rule
 
 ```
 ──────────────────────────────────────────────────────
-   Yurich Panel v5.6.11  [ENG]
+   Yurich Panel v5.6.12  [ENG]
    Status: ● running  │  Domain: proxy.example.com
    Telegram: connected  │  Users: 3  │  SSH: 52847
 ──────────────────────────────────────────────────────
@@ -720,7 +723,7 @@ sudo bash yurich-panel.sh diagnose
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  🔍 Diagnostics Yurich Panel v5.6.11              │
+│  🔍 Diagnostics Yurich Panel v5.6.12              │
 │  2026-05-23 14:32:18 · proxy.example.com               │
 └─────────────────────────────────────────────────────────┘
 
@@ -760,7 +763,7 @@ sudo bash yurich-panel.sh diagnose
   ✅ journald: no critical errors
 
 [7/7] Version and updates
-  ✅ Script up to date: v5.6.11
+  ✅ Script up to date: v5.6.12
   ✅ SSH Hardening done
 
 ══════════════════════════════════════════════════════════
@@ -1400,7 +1403,18 @@ for donors
 ## 📜 Changelog
 
 <details>
-<summary><b>v5.6.11</b> — REALITY target presets and TLS check ← CURRENT</summary>
+<summary><b>v5.6.12</b> — Subscription app links and contacts ← CURRENT</summary>
+
+**Subscription pages:**
+- Added Yurich Connect Android release link
+- Added Yurich Connect Windows release link
+- Added Telegram, VK and email contact buttons
+- Windows/Android setup cards now point to official client releases
+
+</details>
+
+<details>
+<summary><b>v5.6.11</b> — REALITY target presets and TLS check</summary>
 
 **Xray REALITY:**
 - Added RU/Global candidate list for REALITY target selection

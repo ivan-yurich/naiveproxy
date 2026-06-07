@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-#   Yurich Panel v5.6.11 — by Иван Юрьевич
+#   Yurich Panel v5.6.12 — by Иван Юрьевич
 #   Стек: Caddy 2 + klzgrad/forwardproxy@naive + Hysteria 2 + WARP + Xray Modern
 #   ОС: Ubuntu 20.04 / 22.04 / 24.04
 #
@@ -16,11 +16,16 @@
 
 set -euo pipefail
 
-VERSION="5.6.11"
+VERSION="5.6.12"
 LANG_UI="${NAIVEPROXY_LANG:-ru}"  # ru или en — export NAIVEPROXY_LANG=en
 GITHUB_RAW="https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/yurich-panel.sh"
 GITHUB_SHA256_RAW="https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/yurich-panel.sh.sha256"
 GITHUB_API="https://api.github.com/repos/ivan-yurich/naiveproxy/releases/latest"
+ANDROID_APP_RELEASES_URL="https://github.com/ivan-yurich/Yurich-Connect-Android/releases"
+WINDOWS_APP_RELEASES_URL="https://github.com/ivan-yurich/yurich-connect-windows/releases"
+TELEGRAM_COMMUNITY_URL="https://t.me/ivan_it_net"
+VK_COMMUNITY_URL="https://vk.com/ivan_yurievich_it"
+SUPPORT_EMAIL="ai@ivan-it.net"
 SCRIPT_PATH="/usr/local/bin/yurich-panel.sh"
 LEGACY_SCRIPT_PATH="/usr/local/bin/naiveproxy.sh"
 XCADDY_VERSION_PIN="${NAIVEPROXY_XCADDY_VERSION:-v0.4.6}"
@@ -3847,6 +3852,7 @@ EOF
     chmod 644 "$links_file"
 
     local sub_url links_url title safe_user safe_domain safe_expiry_label safe_naive_uri safe_yurich_uri safe_naive_json safe_naive_singbox_tun_json safe_hy2_uri safe_hy2_json
+    local safe_android_url safe_windows_url safe_telegram_url safe_vk_url safe_support_email safe_support_mailto
     sub_url="https://${DOMAIN}/s/${token}/"
     links_url="${sub_url}links.txt"
     title="Yurich Panel subscription for ${user}"
@@ -3859,6 +3865,12 @@ EOF
     safe_naive_singbox_tun_json=$(html_escape_text "$naive_singbox_tun_json")
     safe_hy2_uri=$(html_escape_text "$hy2_uri")
     safe_hy2_json=$(html_escape_text "$hy2_json")
+    safe_android_url=$(html_escape_text "$ANDROID_APP_RELEASES_URL")
+    safe_windows_url=$(html_escape_text "$WINDOWS_APP_RELEASES_URL")
+    safe_telegram_url=$(html_escape_text "$TELEGRAM_COMMUNITY_URL")
+    safe_vk_url=$(html_escape_text "$VK_COMMUNITY_URL")
+    safe_support_email=$(html_escape_text "$SUPPORT_EMAIL")
+    safe_support_mailto=$(html_escape_text "mailto:${SUPPORT_EMAIL}")
 
     local safe_reality safe_vision safe_ws safe_hu safe_xhttp safe_xhttp_443 safe_trojan safe_mkcp safe_grpc safe_links_url
     safe_reality=$(html_escape_text "$reality_link")
@@ -3882,7 +3894,7 @@ EOF
 <title>${title}</title>
 <style>
 :root{--bg:#0b0f14;--panel:#121922;--panel2:#17202b;--line:#263241;--text:#e8eef5;--muted:#9aa8b7;--accent:#4fd1c5;--blue:#60a5fa;--ok:#7ddc83;--warn:#f6c86f}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,Arial,sans-serif;line-height:1.55}.wrap{max-width:1040px;margin:0 auto;padding:28px 18px 48px}.top{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;border-bottom:1px solid var(--line);padding-bottom:18px}.brand{font-size:13px;color:var(--accent);letter-spacing:.08em;text-transform:uppercase}.h1{font-size:30px;font-weight:800;margin:6px 0}.muted{color:var(--muted)}.pill{border:1px solid var(--line);border-radius:8px;padding:8px 12px;color:var(--muted);white-space:nowrap}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:20px}.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px}.card h2{font-size:16px;margin:0 0 10px}.card h3{font-size:14px;margin:16px 0 8px;color:var(--accent)}pre{white-space:pre-wrap;word-break:break-all;background:#080b10;border:1px solid var(--line);border-radius:7px;padding:12px;color:#d8dee9;overflow:auto}.btn{display:inline-flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:7px;padding:9px 12px;text-decoration:none;font-weight:700;margin:4px 6px 4px 0}.btn:hover{border-color:var(--accent)}.copy{cursor:pointer}.ok{color:var(--ok)}.warn{color:var(--warn)}.os{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}.os div{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:12px}.foot{margin-top:22px;border-top:1px solid var(--line);padding-top:14px;color:var(--muted);font-size:13px}@media(max-width:760px){.top{display:block}.grid,.os{grid-template-columns:1fr}.pill{display:inline-block;margin-top:10px}.h1{font-size:24px}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,Arial,sans-serif;line-height:1.55}.wrap{max-width:1040px;margin:0 auto;padding:28px 18px 48px}.top{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;border-bottom:1px solid var(--line);padding-bottom:18px}.brand{font-size:13px;color:var(--accent);letter-spacing:.08em;text-transform:uppercase}.h1{font-size:30px;font-weight:800;margin:6px 0}.muted{color:var(--muted)}.pill{border:1px solid var(--line);border-radius:8px;padding:8px 12px;color:var(--muted);white-space:nowrap}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:20px}.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px}.card h2{font-size:16px;margin:0 0 10px}.card h3{font-size:14px;margin:16px 0 8px;color:var(--accent)}pre{white-space:pre-wrap;word-break:break-all;background:#080b10;border:1px solid var(--line);border-radius:7px;padding:12px;color:#d8dee9;overflow:auto}.btn{display:inline-flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:7px;padding:9px 12px;text-decoration:none;font-weight:700;margin:4px 6px 4px 0}.btn:hover{border-color:var(--accent)}.copy{cursor:pointer}.ok{color:var(--ok)}.warn{color:var(--warn)}.os{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}.os div{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:12px}.mini{display:inline-block;margin-top:8px;color:var(--accent);text-decoration:none;font-weight:700}.mini:hover{text-decoration:underline}.foot{margin-top:22px;border-top:1px solid var(--line);padding-top:14px;color:var(--muted);font-size:13px}@media(max-width:760px){.top{display:block}.grid,.os{grid-template-columns:1fr}.pill{display:inline-block;margin-top:10px}.h1{font-size:24px}}
 </style>
 </head>
 <body>
@@ -3900,6 +3912,8 @@ EOF
     <h2>Быстрый импорт</h2>
     <a class="btn" href="${safe_links_url}">links.txt</a>
     <button class="btn copy" data-copy="${safe_links_url}">Скопировать URL подписки</button>
+    <a class="btn" href="${safe_android_url}" target="_blank" rel="noopener noreferrer">Yurich Connect Android</a>
+    <a class="btn" href="${safe_windows_url}" target="_blank" rel="noopener noreferrer">Yurich Connect Windows</a>
     <p class="muted">Импортируй ссылку подписки в Hiddify, NekoBox, v2rayN, Streisand или другой клиент с поддержкой URI. Raw links остаются совместимыми и не содержат экспериментальный yurich:// alias.</p>
   </section>
 
@@ -3941,11 +3955,19 @@ EOF
   <section class="card">
     <h2>Настройки под системы</h2>
     <div class="os">
-      <div><b>Windows</b><br><span class="muted">v2rayN, NekoRay или Hiddify. Импортируй links.txt или вставь нужную URI.</span></div>
-      <div><b>Android</b><br><span class="muted">Hiddify, NekoBox, v2rayNG. Для Yurich Proxy пока нужен клиент с поддержкой native naive transport.</span></div>
+      <div><b>Windows</b><br><span class="muted">Yurich Connect Windows, v2rayN, NekoRay или Hiddify. Импортируй links.txt или вставь нужную URI.</span><br><a class="mini" href="${safe_windows_url}" target="_blank" rel="noopener noreferrer">Скачать Windows</a></div>
+      <div><b>Android</b><br><span class="muted">Yurich Connect Android, Hiddify, NekoBox, v2rayNG. Для Yurich Proxy пока нужен клиент с поддержкой native naive transport.</span><br><a class="mini" href="${safe_android_url}" target="_blank" rel="noopener noreferrer">Скачать Android</a></div>
       <div><b>iOS/macOS</b><br><span class="muted">Streisand, FoXray, Shadowrocket. Импортируй подписку или отдельную ссылку.</span></div>
       <div><b>Linux</b><br><span class="muted">naive-client JSON для SOCKS 127.0.0.1:1080 или sing-box/v2rayN GUI.</span></div>
     </div>
+  </section>
+
+  <section class="card">
+    <h2>Контакты и поддержка</h2>
+    <a class="btn" href="${safe_telegram_url}" target="_blank" rel="noopener noreferrer">Telegram</a>
+    <a class="btn" href="${safe_vk_url}" target="_blank" rel="noopener noreferrer">VK</a>
+    <a class="btn" href="${safe_support_mailto}">${safe_support_email}</a>
+    <p class="muted">По вопросам приложения, подписки и коммерческого использования проекта.</p>
   </section>
 
   <div class="foot">Если этот URL утёк, перевыпусти токен: <code>sudo bash yurich-panel.sh subscription-reset ${safe_user}</code>.</div>
