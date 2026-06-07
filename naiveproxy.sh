@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-#   Yurich Panel v5.6.9 — by Иван Юрьевич
+#   Yurich Panel v5.6.10 — by Иван Юрьевич
 #   Стек: Caddy 2 + klzgrad/forwardproxy@naive + Hysteria 2 + WARP + Xray Modern
 #   ОС: Ubuntu 20.04 / 22.04 / 24.04
 #
@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-VERSION="5.6.9"
+VERSION="5.6.10"
 LANG_UI="${NAIVEPROXY_LANG:-ru}"  # ru или en — export NAIVEPROXY_LANG=en
 GITHUB_RAW="https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/yurich-panel.sh"
 GITHUB_SHA256_RAW="https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/yurich-panel.sh.sha256"
@@ -119,6 +119,7 @@ DEVICE_CRON="/etc/cron.d/naiveproxy-device-limit"
 XRAY_REALITY_PORT_DEFAULT="8444"
 XRAY_MKCP_PORT_DEFAULT="8446"
 XRAY_GRPC_PORT_DEFAULT="8447"
+XRAY_XHTTP_PORT_DEFAULT="8448"
 XRAY_CADDY_FALLBACK_PORT_DEFAULT="7443"
 
 
@@ -770,6 +771,7 @@ save_config() {
         printf 'XRAY_REALITY_PORT=%q\n' "${XRAY_REALITY_PORT:-$XRAY_REALITY_PORT_DEFAULT}"
         printf 'XRAY_MKCP_PORT=%q\n' "${XRAY_MKCP_PORT:-$XRAY_MKCP_PORT_DEFAULT}"
         printf 'XRAY_GRPC_PORT=%q\n' "${XRAY_GRPC_PORT:-$XRAY_GRPC_PORT_DEFAULT}"
+        printf 'XRAY_XHTTP_PORT=%q\n' "${XRAY_XHTTP_PORT:-$XRAY_XHTTP_PORT_DEFAULT}"
         printf 'XRAY_CADDY_FALLBACK_PORT=%q\n' "${XRAY_CADDY_FALLBACK_PORT:-$XRAY_CADDY_FALLBACK_PORT_DEFAULT}"
         printf 'XRAY_REALITY_TARGET=%q\n' "${XRAY_REALITY_TARGET:-www.microsoft.com:443}"
         printf 'XRAY_REALITY_SERVER_NAME=%q\n' "${XRAY_REALITY_SERVER_NAME:-www.microsoft.com}"
@@ -2047,6 +2049,7 @@ cmd_health_check() {
             ufw_has_port_rule "${XRAY_REALITY_PORT:-$XRAY_REALITY_PORT_DEFAULT}/tcp" && health_line "UFW Xray REALITY" ok "open" || health_line "UFW Xray REALITY" warn "нет правила"
             ufw_has_port_rule "${XRAY_MKCP_PORT:-$XRAY_MKCP_PORT_DEFAULT}/udp" && health_line "UFW Xray mKCP" ok "open" || health_line "UFW Xray mKCP" warn "нет правила"
             ufw_has_port_rule "${XRAY_GRPC_PORT:-$XRAY_GRPC_PORT_DEFAULT}/tcp" && health_line "UFW Xray gRPC" ok "open" || health_line "UFW Xray gRPC" warn "нет правила"
+            ufw_has_port_rule "${XRAY_XHTTP_PORT:-$XRAY_XHTTP_PORT_DEFAULT}/tcp" && health_line "UFW Xray XHTTP" ok "open" || health_line "UFW Xray XHTTP" warn "нет правила"
         fi
         if [[ "${UNBOUND_VPN_ENABLED:-0}" == "1" ]]; then
             ufw_has_port_rule "53/udp" && ufw_has_port_rule "53/tcp" && health_line "UFW DNS 53" ok "VPN-only rules present" || health_line "UFW DNS 53" warn "проверь VPN CIDR rules"
@@ -3233,12 +3236,13 @@ write_xray_config() {
     fi
     ensure_xray_reality_keys || return 1
 
-    local cert key fallback_enabled fallback_port reality_port mkcp_port grpc_port trojan_pass reality_target reality_sni
+    local cert key fallback_enabled fallback_port reality_port mkcp_port grpc_port xhttp_port trojan_pass reality_target reality_sni
     fallback_enabled="${XRAY_FALLBACK_ENABLED:-0}"
     fallback_port="${XRAY_CADDY_FALLBACK_PORT:-$XRAY_CADDY_FALLBACK_PORT_DEFAULT}"
     reality_port="${XRAY_REALITY_PORT:-$XRAY_REALITY_PORT_DEFAULT}"
     mkcp_port="${XRAY_MKCP_PORT:-$XRAY_MKCP_PORT_DEFAULT}"
     grpc_port="${XRAY_GRPC_PORT:-$XRAY_GRPC_PORT_DEFAULT}"
+    xhttp_port="${XRAY_XHTTP_PORT:-$XRAY_XHTTP_PORT_DEFAULT}"
     trojan_pass="${XRAY_TROJAN_PASSWORD:-$(random_safe_token 24)}"
     XRAY_TROJAN_PASSWORD="$trojan_pass"
     reality_target="${XRAY_REALITY_TARGET:-www.microsoft.com:443}"
@@ -3405,6 +3409,25 @@ $(xray_clients_json)
         },
         "grpcSettings": { "serviceName": "vless-grpc" }
       }
+    },
+    {
+      "tag": "vless-xhttp-tls",
+      "listen": "0.0.0.0",
+      "port": ${xhttp_port},
+      "protocol": "vless",
+      "settings": { "clients": [$(xray_clients_json_no_flow)], "decryption": "none" },
+      "streamSettings": {
+        "network": "xhttp",
+        "security": "tls",
+        "tlsSettings": {
+          "serverName": "${DOMAIN}",
+          "alpn": ["h2", "http/1.1"],
+          "certificates": [
+            { "certificateFile": "${cert:-}", "keyFile": "${key:-}" }
+          ]
+        },
+        "xhttpSettings": { "path": "/vless-xhttp" }
+      }
     }
   ],
   "outbounds": [
@@ -3479,7 +3502,7 @@ print_xray_client_config() {
         echo "  vless://${uuid}@${DOMAIN}:443?security=tls&type=httpupgrade&host=${DOMAIN}&path=%2Fvless-hu&sni=${DOMAIN}&fp=chrome#${user}-vless-httpupgrade"
         echo
         echo -e "${CYAN}  VLESS XHTTP TLS:${RESET}"
-        echo "  vless://${uuid}@${DOMAIN}:443?security=tls&type=xhttp&host=${DOMAIN}&path=%2Fvless-xhttp&sni=${DOMAIN}&fp=chrome#${user}-vless-xhttp"
+        echo "  vless://${uuid}@${DOMAIN}:443?security=tls&type=xhttp&host=${DOMAIN}&path=%2Fvless-xhttp&sni=${DOMAIN}&alpn=h2&fp=chrome#${user}-xhttp-443"
         echo
         echo -e "${CYAN}  Trojan WebSocket TLS:${RESET}"
         echo "  trojan://${XRAY_TROJAN_PASSWORD:-PASSWORD}@${DOMAIN}:443?security=tls&type=ws&host=${DOMAIN}&path=%2Ftrojan-ws&sni=${DOMAIN}&fp=chrome#trojan-ws"
@@ -3490,6 +3513,9 @@ print_xray_client_config() {
     echo
     echo -e "${CYAN}  VLESS gRPC TLS:${RESET}"
     echo "  vless://${uuid}@${DOMAIN}:${XRAY_GRPC_PORT:-$XRAY_GRPC_PORT_DEFAULT}?security=tls&type=grpc&serviceName=vless-grpc&sni=${DOMAIN}&fp=chrome#${user}-grpc"
+    echo
+    echo -e "${CYAN}  VLESS XHTTP TLS:${RESET}"
+    echo "  vless://${uuid}@${DOMAIN}:${XRAY_XHTTP_PORT:-$XRAY_XHTTP_PORT_DEFAULT}?security=tls&type=xhttp&host=${DOMAIN}&path=%2Fvless-xhttp&sni=${DOMAIN}&alpn=h2&fp=chrome#${user}-xhttp"
     if [[ -n "$(yurich_dns_client_ip)" ]]; then
         echo
         echo -e "${CYAN}  DNS (Unbound) для full TUN/sing-box:${RESET}"
@@ -3667,13 +3693,14 @@ EOF
         fi
     fi
 
-    local uuid reality_link vision_link ws_link hu_link xhttp_link trojan_link mkcp_link grpc_link
+    local uuid reality_link vision_link ws_link hu_link xhttp_link xhttp_443_link trojan_link mkcp_link grpc_link
     uuid=$(get_xray_user_uuid "$user" 2>/dev/null || true)
     reality_link=""
     vision_link=""
     ws_link=""
     hu_link=""
     xhttp_link=""
+    xhttp_443_link=""
     trojan_link=""
     mkcp_link=""
     grpc_link=""
@@ -3681,11 +3708,12 @@ EOF
         reality_link="vless://${uuid}@${DOMAIN}:${XRAY_REALITY_PORT:-$XRAY_REALITY_PORT_DEFAULT}?security=reality&type=tcp&flow=xtls-rprx-vision&sni=${XRAY_REALITY_SERVER_NAME:-www.microsoft.com}&fp=chrome&pbk=${XRAY_REALITY_PUBLIC_KEY:-PUBLIC_KEY}&sid=${XRAY_REALITY_SHORT_ID:-SHORT_ID}#${user}-reality-${expiry_tag}"
         mkcp_link="vless://${uuid}@${DOMAIN}:${XRAY_MKCP_PORT:-$XRAY_MKCP_PORT_DEFAULT}?security=none&type=mkcp#${user}-mkcp-${expiry_tag}"
         grpc_link="vless://${uuid}@${DOMAIN}:${XRAY_GRPC_PORT:-$XRAY_GRPC_PORT_DEFAULT}?security=tls&type=grpc&serviceName=vless-grpc&sni=${DOMAIN}&fp=chrome#${user}-grpc-${expiry_tag}"
+        xhttp_link="vless://${uuid}@${DOMAIN}:${XRAY_XHTTP_PORT:-$XRAY_XHTTP_PORT_DEFAULT}?security=tls&type=xhttp&host=${DOMAIN}&path=%2Fvless-xhttp&sni=${DOMAIN}&alpn=h2&fp=chrome#${user}-xhttp-${expiry_tag}"
         if [[ "${XRAY_FALLBACK_ENABLED:-0}" == "1" ]]; then
             vision_link="vless://${uuid}@${DOMAIN}:443?security=tls&type=tcp&flow=xtls-rprx-vision&sni=${DOMAIN}&fp=chrome#${user}-vless-vision-${expiry_tag}"
             ws_link="vless://${uuid}@${DOMAIN}:443?security=tls&type=ws&host=${DOMAIN}&path=%2Fvless-ws&sni=${DOMAIN}&fp=chrome#${user}-vless-ws-${expiry_tag}"
             hu_link="vless://${uuid}@${DOMAIN}:443?security=tls&type=httpupgrade&host=${DOMAIN}&path=%2Fvless-hu&sni=${DOMAIN}&fp=chrome#${user}-vless-httpupgrade-${expiry_tag}"
-            xhttp_link="vless://${uuid}@${DOMAIN}:443?security=tls&type=xhttp&host=${DOMAIN}&path=%2Fvless-xhttp&sni=${DOMAIN}&fp=chrome#${user}-vless-xhttp-${expiry_tag}"
+            xhttp_443_link="vless://${uuid}@${DOMAIN}:443?security=tls&type=xhttp&host=${DOMAIN}&path=%2Fvless-xhttp&sni=${DOMAIN}&alpn=h2&fp=chrome#${user}-xhttp-443-${expiry_tag}"
             trojan_link="trojan://${XRAY_TROJAN_PASSWORD:-PASSWORD}@${DOMAIN}:443?security=tls&type=ws&host=${DOMAIN}&path=%2Ftrojan-ws&sni=${DOMAIN}&fp=chrome#trojan-ws-${expiry_tag}"
         fi
     fi
@@ -3698,6 +3726,7 @@ EOF
         [[ -n "$ws_link" ]] && printf '%s\n' "$ws_link"
         [[ -n "$hu_link" ]] && printf '%s\n' "$hu_link"
         [[ -n "$xhttp_link" ]] && printf '%s\n' "$xhttp_link"
+        [[ -n "$xhttp_443_link" ]] && printf '%s\n' "$xhttp_443_link"
         [[ -n "$trojan_link" ]] && printf '%s\n' "$trojan_link"
         [[ -n "$mkcp_link" ]] && printf '%s\n' "$mkcp_link"
         [[ -n "$grpc_link" ]] && printf '%s\n' "$grpc_link"
@@ -3718,12 +3747,13 @@ EOF
     safe_hy2_uri=$(html_escape_text "$hy2_uri")
     safe_hy2_json=$(html_escape_text "$hy2_json")
 
-    local safe_reality safe_vision safe_ws safe_hu safe_xhttp safe_trojan safe_mkcp safe_grpc safe_links_url
+    local safe_reality safe_vision safe_ws safe_hu safe_xhttp safe_xhttp_443 safe_trojan safe_mkcp safe_grpc safe_links_url
     safe_reality=$(html_escape_text "$reality_link")
     safe_vision=$(html_escape_text "$vision_link")
     safe_ws=$(html_escape_text "$ws_link")
     safe_hu=$(html_escape_text "$hu_link")
     safe_xhttp=$(html_escape_text "$xhttp_link")
+    safe_xhttp_443=$(html_escape_text "$xhttp_443_link")
     safe_trojan=$(html_escape_text "$trojan_link")
     safe_mkcp=$(html_escape_text "$mkcp_link")
     safe_grpc=$(html_escape_text "$grpc_link")
@@ -3782,10 +3812,13 @@ EOF
       <h2>Xray Modern</h2>
       <p class="muted">VLESS/Trojan ссылки, если Xray установлен и пользователь создан.</p>
       <pre>${safe_reality:-Xray пользователь не найден}</pre>
+      <h3>XHTTP TLS (standalone 8448)</h3>
+      <pre>${safe_xhttp:-XHTTP standalone недоступен}</pre>
+      <h3>443 fallback transports</h3>
       <pre>${safe_vision:-Fallback 443 выключен или недоступен}</pre>
       <pre>${safe_ws:-WebSocket недоступен без fallback hub}</pre>
       <pre>${safe_hu:-HTTPUpgrade недоступен без fallback hub}</pre>
-      <pre>${safe_xhttp:-XHTTP недоступен без fallback hub}</pre>
+      <pre>${safe_xhttp_443:-XHTTP 443 недоступен без fallback hub}</pre>
       <pre>${safe_trojan:-Trojan WS недоступен без fallback hub}</pre>
       <pre>${safe_mkcp:-mKCP недоступен}</pre>
       <pre>${safe_grpc:-gRPC недоступен}</pre>
@@ -3958,6 +3991,7 @@ cmd_xray_install() {
     ufw allow "${XRAY_REALITY_PORT:-$XRAY_REALITY_PORT_DEFAULT}/tcp" comment "Xray REALITY" >/dev/null 2>&1 || true
     ufw allow "${XRAY_MKCP_PORT:-$XRAY_MKCP_PORT_DEFAULT}/udp" comment "Xray mKCP" >/dev/null 2>&1 || true
     ufw allow "${XRAY_GRPC_PORT:-$XRAY_GRPC_PORT_DEFAULT}/tcp" comment "Xray gRPC" >/dev/null 2>&1 || true
+    ufw allow "${XRAY_XHTTP_PORT:-$XRAY_XHTTP_PORT_DEFAULT}/tcp" comment "Xray XHTTP" >/dev/null 2>&1 || true
     systemctl restart xray
     XRAY_ENABLED="1"
     save_config
@@ -4024,6 +4058,7 @@ provision_xray_user() {
     ufw allow "${XRAY_REALITY_PORT:-$XRAY_REALITY_PORT_DEFAULT}/tcp" comment "Xray REALITY" >/dev/null 2>&1 || true
     ufw allow "${XRAY_MKCP_PORT:-$XRAY_MKCP_PORT_DEFAULT}/udp" comment "Xray mKCP" >/dev/null 2>&1 || true
     ufw allow "${XRAY_GRPC_PORT:-$XRAY_GRPC_PORT_DEFAULT}/tcp" comment "Xray gRPC" >/dev/null 2>&1 || true
+    ufw allow "${XRAY_XHTTP_PORT:-$XRAY_XHTTP_PORT_DEFAULT}/tcp" comment "Xray XHTTP" >/dev/null 2>&1 || true
     systemctl restart xray || return 1
     XRAY_ENABLED="1"
     save_config
@@ -4070,7 +4105,7 @@ cmd_xray_status() {
     hr
     [[ -x "$XRAY_BIN" ]] && "$XRAY_BIN" version | head -1 || warn "Xray не установлен"
     systemctl status xray --no-pager -l 2>/dev/null || true
-    ss -tulpn | grep -E ":(443|${XRAY_REALITY_PORT:-$XRAY_REALITY_PORT_DEFAULT}|${XRAY_MKCP_PORT:-$XRAY_MKCP_PORT_DEFAULT}|${XRAY_GRPC_PORT:-$XRAY_GRPC_PORT_DEFAULT})\b" || true
+    ss -tulpn | grep -E ":(443|${XRAY_REALITY_PORT:-$XRAY_REALITY_PORT_DEFAULT}|${XRAY_MKCP_PORT:-$XRAY_MKCP_PORT_DEFAULT}|${XRAY_GRPC_PORT:-$XRAY_GRPC_PORT_DEFAULT}|${XRAY_XHTTP_PORT:-$XRAY_XHTTP_PORT_DEFAULT})\b" || true
     [[ -f "$XRAY_CONFIG" ]] && "$XRAY_BIN" run -test -config "$XRAY_CONFIG" || true
     hr
 }
@@ -4089,6 +4124,7 @@ cmd_xray_remove() {
     ufw delete allow "${XRAY_REALITY_PORT:-$XRAY_REALITY_PORT_DEFAULT}/tcp" >/dev/null 2>&1 || true
     ufw delete allow "${XRAY_MKCP_PORT:-$XRAY_MKCP_PORT_DEFAULT}/udp" >/dev/null 2>&1 || true
     ufw delete allow "${XRAY_GRPC_PORT:-$XRAY_GRPC_PORT_DEFAULT}/tcp" >/dev/null 2>&1 || true
+    ufw delete allow "${XRAY_XHTTP_PORT:-$XRAY_XHTTP_PORT_DEFAULT}/tcp" >/dev/null 2>&1 || true
     XRAY_ENABLED="0"
     XRAY_FALLBACK_ENABLED="0"
     save_config
@@ -5969,6 +6005,7 @@ cmd_diagnose_fix() {
             ufw allow "${XRAY_REALITY_PORT:-$XRAY_REALITY_PORT_DEFAULT}/tcp" comment "Xray REALITY" >/dev/null 2>&1 || true
             ufw allow "${XRAY_MKCP_PORT:-$XRAY_MKCP_PORT_DEFAULT}/udp" comment "Xray mKCP" >/dev/null 2>&1 || true
             ufw allow "${XRAY_GRPC_PORT:-$XRAY_GRPC_PORT_DEFAULT}/tcp" comment "Xray gRPC" >/dev/null 2>&1 || true
+            ufw allow "${XRAY_XHTTP_PORT:-$XRAY_XHTTP_PORT_DEFAULT}/tcp" comment "Xray XHTTP" >/dev/null 2>&1 || true
         fi
         ok "UFW правила проверены/обновлены"
     else
@@ -8482,6 +8519,7 @@ cmd_remove() {
     ufw delete allow "${XRAY_REALITY_PORT:-8444}/tcp" >/dev/null 2>&1 || true
     ufw delete allow "${XRAY_MKCP_PORT:-8446}/udp" >/dev/null 2>&1 || true
     ufw delete allow "${XRAY_GRPC_PORT:-8447}/tcp" >/dev/null 2>&1 || true
+    ufw delete allow "${XRAY_XHTTP_PORT:-8448}/tcp" >/dev/null 2>&1 || true
 
     ( crontab -l 2>/dev/null | grep -v "naiveproxy\|monitor\.sh" || true ) | crontab -
 
@@ -8570,6 +8608,7 @@ show_menu() {
         systemctl is-active --quiet xray 2>/dev/null \
             && xray_str="${GREEN}active${RESET}" \
             || xray_str="${RED}$(t "остановлен" "stopped")${RESET}"
+        xray_str="${xray_str} ${CYAN}XHTTP:${XRAY_XHTTP_PORT:-$XRAY_XHTTP_PORT_DEFAULT}${RESET}"
         [[ "${XRAY_FALLBACK_ENABLED:-0}" == "1" ]] && xray_str="${xray_str} ${CYAN}443-fallback${RESET}"
     fi
     echo -e "   Xray Modern: ${xray_str}"
