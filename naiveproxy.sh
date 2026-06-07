@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-#   Yurich Panel v5.6.7 — by Иван Юрьевич
+#   Yurich Panel v5.6.8 — by Иван Юрьевич
 #   Стек: Caddy 2 + klzgrad/forwardproxy@naive + Hysteria 2 + WARP + Xray Modern
 #   ОС: Ubuntu 20.04 / 22.04 / 24.04
 #
@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-VERSION="5.6.7"
+VERSION="5.6.8"
 LANG_UI="${NAIVEPROXY_LANG:-ru}"  # ru или en — export NAIVEPROXY_LANG=en
 GITHUB_RAW="https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/yurich-panel.sh"
 GITHUB_SHA256_RAW="https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/yurich-panel.sh.sha256"
@@ -72,11 +72,11 @@ show_banner() {
     echo -e "  ${BOLD}  Yurich Panel${RESET} ${DIM}v${VERSION}${RESET}  ${DIM}·${RESET}  ${CYAN}by Иван Юрьевич${RESET}"
     echo -e "  ${DIM}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
     echo
-    echo -e "  ${YELLOW}🔔 Обновления выходят раз в месяц${RESET}"
-    echo -e "  ${CYAN}📱 Telegram:${RESET} https://t.me/ivan_it_net"
-    echo -e "  ${CYAN}🌐 Сайт:${RESET}     https://ivan-it.net"
-    echo -e "  ${CYAN}💻 GitHub:${RESET}   github.com/ivan-yurich/naiveproxy"
-    echo -e "  ${BOLD}${GOLD}💛 Донат:${RESET}    donationalerts.com/r/ivan_yurievich"
+    echo -e "  ${YELLOW}[INFO] Обновления выходят раз в месяц${RESET}"
+    echo -e "  ${CYAN}[TG] Telegram:${RESET} https://t.me/ivan_it_net"
+    echo -e "  ${CYAN}[WEB] Сайт:${RESET}     https://ivan-it.net"
+    echo -e "  ${CYAN}[GH] GitHub:${RESET}    github.com/ivan-yurich/naiveproxy"
+    echo -e "  ${BOLD}${GOLD}[DONATE] Донат:${RESET} donationalerts.com/r/ivan_yurievich"
     echo -e "  ${DIM}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
     echo
 }
@@ -1007,7 +1007,7 @@ if [[ -n "$cert_info" ]]; then
     echo "📅 Истекает: ${not_after}"
     echo "⏳ Осталось: ${cert_days} дней"
 else
-    echo "❓ Недоступен"
+    echo "N/A"
 fi
 )"
 }
@@ -2522,7 +2522,7 @@ EOF
         echo
         info "Все пользователи ($count):"
         while IFS=: read -r u p; do
-            echo -e "  👤 ${BOLD}$u${RESET} : Yurich $(yurich_proxy_uri "$u" "$p" "${u}-yurich")"
+            echo -e "  [USER] ${BOLD}$u${RESET} : Yurich $(yurich_proxy_uri "$u" "$p" "${u}-yurich")"
             echo -e "     native: naive+https://${u}:${p}@${DOMAIN}:443"
         done < <(get_users)
     fi
@@ -4969,7 +4969,7 @@ cmd_domains() {
                 local _dom_total
                 _dom_total=$(echo "$current_domains" | tr ',' '\n' | grep -c '\S' || echo 0)
                 if [[ ${_dom_total} -le 1 ]]; then
-                    err "❌ Нельзя удалить последний домен!"
+                    err "Нельзя удалить последний домен!"
                     err "Сервер перестанет работать без домена."
                     err "Сначала добавь новый домен (вариант 1), потом удаляй старый."
                     echo -ne "${YELLOW}Enter для продолжения...${RESET}"; read -r
@@ -5605,7 +5605,7 @@ cmd_monitor() {
         echo
         echo -e "  ${BOLD}Трафик ($iface, с ребута):${RESET}"
         echo -e "  ⬇ Входящий:  $(numfmt --to=iec "$rx" 2>/dev/null || echo $rx)"
-        echo -e "  ⬆ Исходящий: $(numfmt --to=iec "$tx" 2>/dev/null || echo $tx)"
+        echo -e "  TX: $(numfmt --to=iec "$tx" 2>/dev/null || echo $tx)"
     fi
 
     echo
@@ -5906,7 +5906,7 @@ check_update_available() {
         local latest_ver
         latest_ver=$(curl -s --max-time 5 "$GITHUB_RAW" 2>/dev/null             | grep '^VERSION='             | grep -oP '"\K[^"]+' || echo "")
         if [[ -n "$latest_ver" && "$latest_ver" != "$VERSION" ]]; then
-            echo -e "\n  ${YELLOW}⬆  Доступно обновление скрипта: v${VERSION} → v${latest_ver}${RESET}"
+            echo -e "\n  ${YELLOW}[UPDATE] Доступно обновление скрипта: v${VERSION} → v${latest_ver}${RESET}"
             echo -e "  ${YELLOW}   Меню → 14) Обновить скрипт${RESET}\n"
         fi
     ) &
@@ -5918,7 +5918,7 @@ cmd_diagnose_fix() {
     load_config 2>/dev/null || true
     load_users 2>/dev/null || true
     hr
-    echo -e "${BOLD}  🛠 Автофикс Yurich Panel${RESET}"
+    echo -e "${BOLD}  [FIX] Автофикс Yurich Panel${RESET}"
     hr
 
     local changed=0
@@ -6009,14 +6009,14 @@ cmd_diagnose() {
     local report=""
 
     # Хелперы вывода — используем pass+=1 вместо pass=$((pass+1)) из-за set -e
-    _ok()   { echo -e "  ${GREEN}✅ $1${RESET}";   report+="✅ $1\n"; pass=$((pass+1)); }
-    _warn() { echo -e "  ${YELLOW}⚠️  $1${RESET}"; report+="⚠️  $1\n"; warn=$((warn+1)); }
-    _fail() { echo -e "  ${RED}❌ $1${RESET}";    report+="❌ $1\n"; fail=$((fail+1)); }
-    _info() { echo -e "  ${CYAN}ℹ️  $1${RESET}"; }
+    _ok()   { echo -e "  ${GREEN}[OK] $1${RESET}";   report+="[OK] $1\n"; pass=$((pass+1)); }
+    _warn() { echo -e "  ${YELLOW}[WARN] $1${RESET}"; report+="[WARN] $1\n"; warn=$((warn+1)); }
+    _fail() { echo -e "  ${RED}[FAIL] $1${RESET}";    report+="[FAIL] $1\n"; fail=$((fail+1)); }
+    _info() { echo -e "  ${CYAN}[INFO] $1${RESET}"; }
     _sep()  { echo -e "  ${DIM}──────────────────────────────────────${RESET}"; }
 
     hr
-    echo -e "${BOLD}  🔍 Диагностика Yurich Panel v${VERSION}${RESET}"
+    echo -e "${BOLD}  [DIAG] Диагностика Yurich Panel v${VERSION}${RESET}"
     echo -e "  $(date '+%Y-%m-%d %H:%M:%S') · $(hostname)"
     hr
     echo
@@ -6460,19 +6460,19 @@ print(errs)
     # ── ИТОГ ──────────────────────────────────────────────────
     echo
     hr
-    echo -e "  ${BOLD}📊 ИТОГ ДИАГНОСТИКИ${RESET}"
+    echo -e "  ${BOLD}[SUMMARY] ИТОГ ДИАГНОСТИКИ${RESET}"
     hr
-    echo -e "  ${GREEN}✅ Пройдено:  ${pass}${RESET}"
-    echo -e "  ${YELLOW}⚠️  Внимание: ${warn}${RESET}"
-    echo -e "  ${RED}❌ Проблемы: ${fail}${RESET}"
+    echo -e "  ${GREEN}[OK] Пройдено:  ${pass}${RESET}"
+    echo -e "  ${YELLOW}[WARN] Внимание: ${warn}${RESET}"
+    echo -e "  ${RED}[FAIL] Проблемы: ${fail}${RESET}"
     echo
 
     if [[ ${fail} -eq 0 && ${warn} -eq 0 ]]; then
-        echo -e "  ${GREEN}${BOLD}🎉 Всё работает отлично!${RESET}"
+        echo -e "  ${GREEN}${BOLD}[OK] Всё работает отлично!${RESET}"
     elif [[ ${fail} -eq 0 ]]; then
-        echo -e "  ${YELLOW}${BOLD}⚠️  Есть предупреждения — рекомендуется проверить${RESET}"
+        echo -e "  ${YELLOW}${BOLD}[WARN] Есть предупреждения — рекомендуется проверить${RESET}"
     else
-        echo -e "  ${RED}${BOLD}❌ Найдены проблемы — требуется вмешательство${RESET}"
+        echo -e "  ${RED}${BOLD}[FAIL] Найдены проблемы — требуется вмешательство${RESET}"
     fi
 
     hr
@@ -7970,7 +7970,7 @@ remove_unbound_ufw_rules() {
 
 cmd_dns_install() {
     hr
-    echo -e "${BOLD}  🛡️ Установка Yurich DNS (Unbound)${RESET}"
+    echo -e "${BOLD}  [DNS] Установка Yurich DNS (Unbound)${RESET}"
     hr
 
     info "Обновляю apt cache и устанавливаю зависимости..."
@@ -8042,7 +8042,7 @@ cmd_dns_install() {
 # Старый adblock/blocklists режим удалён: DNS (Unbound) теперь только безопасный resolver.
 cmd_dns_update() {
     hr
-    echo -e "${BOLD}  🛡️ DNS (Unbound)${RESET}"
+    echo -e "${BOLD}  [DNS] DNS (Unbound)${RESET}"
     hr
     warn "Блокировка рекламы временно удалена из скрипта."
     info "DNS (Unbound) не скачивает blocklists и не логирует DNS-запросы."
@@ -8052,7 +8052,7 @@ cmd_dns_update() {
 cmd_dns_restart() {
     load_config
     hr
-    echo -e "${BOLD}  🔄 Restart DNS (Unbound)${RESET}"
+    echo -e "${BOLD}  [DNS] Restart DNS (Unbound)${RESET}"
     hr
     if ! command -v unbound &>/dev/null; then
         err "unbound не установлен"
@@ -8070,7 +8070,7 @@ cmd_dns_restart() {
 cmd_dns_status() {
     load_config
     hr
-    echo -e "${BOLD}  🛡️ Yurich DNS (Unbound)${RESET}"
+    echo -e "${BOLD}  [DNS] Yurich DNS (Unbound)${RESET}"
     hr
 
     if ! command -v unbound &>/dev/null; then
@@ -8105,23 +8105,23 @@ cmd_dns_status() {
         local result
         result=$(dig "@127.0.0.1" "${domain}" +short +time=3 +tries=1 2>/dev/null | head -1)
         if [[ -n "${result}" ]]; then
-            echo -e "  ${GREEN}✅ ${domain} → ${result}${RESET}"
+            echo -e "  ${GREEN}[OK] ${domain} → ${result}${RESET}"
         else
-            echo -e "  ${RED}❌ ${domain} — не резолвится!${RESET}"
+            echo -e "  ${RED}[FAIL] ${domain} — не резолвится!${RESET}"
         fi
     done
 
     echo
     info "DNSSEC test..."
     if dig "@127.0.0.1" sigok.verteiltesysteme.net A +time=4 +tries=1 2>/dev/null | grep -q "status: NOERROR"; then
-        echo -e "  ${GREEN}✅ DNSSEC valid domain: OK${RESET}"
+        echo -e "  ${GREEN}[OK] DNSSEC valid domain: OK${RESET}"
     else
-        echo -e "  ${YELLOW}⚠️ DNSSEC valid test не дал NOERROR${RESET}"
+        echo -e "  ${YELLOW}[WARN] DNSSEC valid test не дал NOERROR${RESET}"
     fi
     if dig "@127.0.0.1" dnssec-failed.org A +time=4 +tries=1 2>/dev/null | grep -q "status: SERVFAIL"; then
-        echo -e "  ${GREEN}✅ DNSSEC invalid domain отклонён${RESET}"
+        echo -e "  ${GREEN}[OK] DNSSEC invalid domain отклонён${RESET}"
     else
-        echo -e "  ${YELLOW}⚠️ DNSSEC invalid test не подтвердил SERVFAIL${RESET}"
+        echo -e "  ${YELLOW}[WARN] DNSSEC invalid test не подтвердил SERVFAIL${RESET}"
     fi
     echo
     info "Последние логи Unbound:"
@@ -8132,7 +8132,7 @@ cmd_dns_status() {
 cmd_dns_set_mode() {
     load_config
     hr
-    echo -e "${BOLD}  🛡️ DNS (Unbound) mode${RESET}"
+    echo -e "${BOLD}  [DNS] DNS (Unbound) mode${RESET}"
     hr
     warn "Forward/adblock режимы удалены. DNS (Unbound) работает только как безопасный recursive resolver."
     UNBOUND_MODE="recursive"
@@ -8214,7 +8214,7 @@ cmd_dns_vpn_access() {
 # Совместимость со старым пунктом whitelist.
 cmd_dns_whitelist() {
     hr
-    echo -e "${BOLD}  🛡️ DNS (Unbound)${RESET}"
+    echo -e "${BOLD}  [DNS] DNS (Unbound)${RESET}"
     hr
     warn "Whitelist больше не нужен: блокировка рекламы удалена."
     info "DNS (Unbound) только резолвит DNS для сервера/VPN и не блокирует домены."
@@ -8256,7 +8256,7 @@ cmd_donate() {
     clear 2>/dev/null || true
     echo
     echo -e "${BOLD}${GOLD}  ╔════════════════════════════════════════════╗${RESET}"
-    echo -e "${BOLD}${GOLD}  ║     💛 ПОДДЕРЖАТЬ ПРОЕКТ                   ║${RESET}"
+    echo -e "${BOLD}${GOLD}  ║     ПОДДЕРЖАТЬ ПРОЕКТ                      ║${RESET}"
     echo -e "${BOLD}${GOLD}  ╚════════════════════════════════════════════╝${RESET}"
     echo
     echo -e "  ${CYAN}Если Yurich Panel помог тебе —${RESET}"
@@ -8267,7 +8267,7 @@ cmd_donate() {
     echo
     echo -e "  ${DIM}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
     echo -e "  ${BOLD}Что даст твой донат:${RESET}"
-    echo -e "  ${GREEN}🚀${RESET} Больше времени на разработку"
+    echo -e "  ${GREEN}-${RESET} Больше времени на разработку"
     echo -e "  ${GREEN}🐛${RESET} Быстрые фиксы багов"
     echo -e "  ${GREEN}✨${RESET} Новые фичи каждый месяц"
     echo -e "  ${GREEN}📚${RESET} Документация и поддержка"
@@ -8276,8 +8276,8 @@ cmd_donate() {
     echo
     echo -e "  ${BOLD}Другие способы поддержки:${RESET}"
     echo -e "  ${CYAN}⭐${RESET} Поставь звезду:  github.com/ivan-yurich/naiveproxy"
-    echo -e "  ${CYAN}📱${RESET} Telegram канал:  t.me/ivan_it_net"
-    echo -e "  ${CYAN}🌐${RESET} Сайт:            ivan-it.net"
+    echo -e "  ${CYAN}[TG]${RESET} Telegram канал:  t.me/ivan_it_net"
+    echo -e "  ${CYAN}[WEB]${RESET} Сайт:            ivan-it.net"
     echo -e "  ${CYAN}📢${RESET} Расскажи друзьям!"
     echo
     echo -e "  ${BOLD}${GOLD}Спасибо за поддержку! 🙏${RESET}"
@@ -8299,7 +8299,7 @@ cmd_dns_menu() {
     while true; do
         load_config
         hr
-        echo -e "${BOLD}  🛡️ Yurich DNS (Unbound)${RESET}"
+        echo -e "${BOLD}  [DNS] Yurich DNS (Unbound)${RESET}"
         hr
 
         local dns_status="${RED}не установлен${RESET}"
@@ -8587,31 +8587,31 @@ show_menu() {
     echo -e "   ${BOLD}2)${RESET}  $(t "Статус" "Status")"
     echo -e "   ${BOLD}3)${RESET}  $(t "Клиентский конфиг" "Client config")"
     echo -e "   ${BOLD}4)${RESET}  $(t "Управление пользователями" "User management")"
-    echo -e "   ${BOLD}5)${RESET}  🌐 $(t "Управление доменами" "Domain management")"
+    echo -e "   ${BOLD}5)${RESET}  [DOM] $(t "Управление доменами" "Domain management")"
     echo -e "   ${BOLD}6)${RESET}  $(t "Мониторинг и статистика" "Monitoring and stats")"
     echo -e "   ${BOLD}7)${RESET}  $(t "Настройка Telegram + Бот" "Telegram + Bot setup")"
     echo -e "   ${BOLD}8)${RESET}  $(t "Перезапустить Caddy" "Restart Caddy")"
     echo -e "   ${BOLD}9)${RESET}  $(t "Обновить Caddy" "Update Caddy")"
     echo -e "   ${BOLD}10)${RESET} $(t "Логи" "Logs")"
     echo -e "   ${BOLD}11)${RESET} $(t "Удалить Yurich Panel" "Remove Yurich Panel")"
-    echo -e "   ${BOLD}16)${RESET} 🔍 $(t "Диагностика системы" "System diagnostics")"
-    echo -e "   ${BOLD}17)${RESET} 🛡️ Yurich DNS (Unbound)"
-    echo -e "   ${BOLD}18)${RESET} 💛 $(t "Поддержать проект (донат)" "Support project (donation)")"
+    echo -e "   ${BOLD}16)${RESET} [DIAG] $(t "Диагностика системы" "System diagnostics")"
+    echo -e "   ${BOLD}17)${RESET} [DNS] Yurich DNS (Unbound)"
+    echo -e "   ${BOLD}18)${RESET} [DONATE] $(t "Поддержать проект (донат)" "Support project (donation)")"
     echo -e "   ──────────────────────────"
-    echo -e "   ${BOLD}12)${RESET} 🔒 SSH Hardening"
-    echo -e "   ${BOLD}13)${RESET} 🔄 $(t "Обновить систему" "Update system")"
-    echo -e "   ${BOLD}14)${RESET} ⬆️  $(t "Обновить скрипт" "Update script")"
-    echo -e "   ${BOLD}15)${RESET} 🎭 $(t "Обновить камуфляж" "Update camouflage")"
-    echo -e "   ${BOLD}19)${RESET} ♻️  $(t "Reload Caddy без разрыва" "Reload Caddy without restart")"
-    echo -e "   ${BOLD}20)${RESET} ⚡ Hysteria 2 ($(t "UDP порт на выбор" "custom UDP port"))"
-    echo -e "   ${BOLD}21)${RESET} 🌀 WARP modes (proxy/full tunnel)"
-    echo -e "   ${BOLD}22)${RESET} 📱 $(t "Лимит устройств / анти-шаринг" "Device limit / anti-sharing")"
-    echo -e "   ${BOLD}23)${RESET} 🧬 Xray VLESS/Trojan/REALITY fallback"
-    echo -e "   ${BOLD}24)${RESET} 🛠 Diagnose --fix"
-    echo -e "   ${BOLD}25)${RESET} 🔗 $(t "Страница подписки пользователя" "User subscription page")"
-    echo -e "   ${BOLD}26)${RESET} 🎭 $(t "Личная фейковая страница" "Private camouflage page")"
-    echo -e "   ${BOLD}27)${RESET} 🧩 Production tools / Bridge"
-    echo -e "   ${BOLD}28)${RESET} 🌐 $(t "Язык панели RU/EN" "Panel language RU/EN")"
+    echo -e "   ${BOLD}12)${RESET} [SSH] SSH Hardening"
+    echo -e "   ${BOLD}13)${RESET} [SYS] $(t "Обновить систему" "Update system")"
+    echo -e "   ${BOLD}14)${RESET} [UPD] $(t "Обновить скрипт" "Update script")"
+    echo -e "   ${BOLD}15)${RESET} [CAMO] $(t "Обновить камуфляж" "Update camouflage")"
+    echo -e "   ${BOLD}19)${RESET} [RLD] $(t "Reload Caddy без разрыва" "Reload Caddy without restart")"
+    echo -e "   ${BOLD}20)${RESET} [HY2] Hysteria 2 ($(t "UDP порт на выбор" "custom UDP port"))"
+    echo -e "   ${BOLD}21)${RESET} [WARP] WARP modes (proxy/full tunnel)"
+    echo -e "   ${BOLD}22)${RESET} [DEV] $(t "Лимит устройств / анти-шаринг" "Device limit / anti-sharing")"
+    echo -e "   ${BOLD}23)${RESET} [XRAY] Xray VLESS/Trojan/REALITY fallback"
+    echo -e "   ${BOLD}24)${RESET} [FIX] Diagnose --fix"
+    echo -e "   ${BOLD}25)${RESET} [SUB] $(t "Страница подписки пользователя" "User subscription page")"
+    echo -e "   ${BOLD}26)${RESET} [PAGE] $(t "Личная фейковая страница" "Private camouflage page")"
+    echo -e "   ${BOLD}27)${RESET} [PROD] Production tools / Bridge"
+    echo -e "   ${BOLD}28)${RESET} [LANG] $(t "Язык панели RU/EN" "Panel language RU/EN")"
     echo -e "   ${BOLD}0)${RESET}  $(t "Выход" "Exit")"
     hr
     echo -ne "${CYAN}$(t "Выбор" "Choice") [0-28]: ${RESET}"

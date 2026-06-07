@@ -26,7 +26,7 @@
 
 ---
 
-[![Version](https://img.shields.io/badge/version-5.6.7-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
+[![Version](https://img.shields.io/badge/version-5.6.8-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
 [![ShellCheck](https://img.shields.io/badge/ShellCheck-passing-3FB950?style=for-the-badge&logo=gnu-bash&logoColor=white)](https://www.shellcheck.net)
 [![Bash](https://img.shields.io/badge/Bash-5.0+-4EAA25?style=for-the-badge&logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-20.04%2B-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://ubuntu.com)
@@ -98,7 +98,7 @@ Yurich Proxy uses a Naive-compatible Chrome-like transport
 
 ---
 
-## 🎉 What's new in v5.6.7
+## 🎉 What's new in v5.6.8
 
 <table>
 <tr>
@@ -106,6 +106,10 @@ Yurich Proxy uses a Naive-compatible Chrome-like transport
 
 ### 🐛 Bug fixes
 
+✅ Terminal SSH panel no longer depends on emoji fonts
+✅ Main menu icons changed to ASCII labels like `[DNS]`, `[WARP]`, `[XRAY]`
+✅ Diagnostics now use `[OK]`, `[WARN]`, `[FAIL]` in terminal output
+✅ DNS and donate terminal screens are emoji-safe
 ✅ WARP proxy mode now regenerates Caddy with `forward_proxy upstream socks5://127.0.0.1:40000`
 ✅ Hysteria 2 server config now gets a WARP SOCKS5 `outbounds` block
 ✅ Xray WARP outbound now uses SOCKS plus explicit routing
@@ -395,7 +399,7 @@ No `0.0.0.0` bind and no public port 53 rule
 
 ```
 ──────────────────────────────────────────────────────
-   Yurich Panel v5.6.7  [ENG]
+   Yurich Panel v5.6.8  [ENG]
    Status: ● running  │  Domain: proxy.example.com
    Telegram: connected  │  Users: 3  │  SSH: 52847
 ──────────────────────────────────────────────────────
@@ -705,7 +709,7 @@ sudo bash yurich-panel.sh diagnose
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  🔍 Diagnostics Yurich Panel v5.6.7               │
+│  🔍 Diagnostics Yurich Panel v5.6.8               │
 │  2026-05-23 14:32:18 · proxy.example.com               │
 └─────────────────────────────────────────────────────────┘
 
@@ -745,7 +749,7 @@ sudo bash yurich-panel.sh diagnose
   ✅ journald: no critical errors
 
 [7/7] Version and updates
-  ✅ Script up to date: v5.6.7
+  ✅ Script up to date: v5.6.8
   ✅ SSH Hardening done
 
 ══════════════════════════════════════════════════════════
@@ -1385,7 +1389,15 @@ for donors
 ## 📜 Changelog
 
 <details>
-<summary><b>v5.6.7</b> — WARP upstreams and Xray stability ← CURRENT</summary>
+<summary><b>v5.6.8</b> — Terminal-safe SSH panel ← CURRENT</summary>
+
+**Terminal UI:**
+- Replaced emoji icons in the SSH panel with ASCII labels
+- Main menu now uses labels such as `[DNS]`, `[WARP]`, `[XRAY]`, `[DIAG]`
+- Diagnostics now use `[OK]`, `[WARN]`, `[FAIL]`
+- DNS and donate terminal screens no longer depend on emoji fonts
+
+**🌀 WARP routing:**
 
 **🌀 WARP routing:**
 - WARP proxy mode now regenerates Caddy with `forward_proxy upstream socks5://127.0.0.1:40000`
