@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-#   Yurich Panel v5.6.12 — by Иван Юрьевич
+#   Yurich Panel v5.6.13 — by Иван Юрьевич
 #   Стек: Caddy 2 + klzgrad/forwardproxy@naive + Hysteria 2 + WARP + Xray Modern
 #   ОС: Ubuntu 20.04 / 22.04 / 24.04
 #
@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-VERSION="5.6.12"
+VERSION="5.6.13"
 LANG_UI="${NAIVEPROXY_LANG:-ru}"  # ru или en — export NAIVEPROXY_LANG=en
 GITHUB_RAW="https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/yurich-panel.sh"
 GITHUB_SHA256_RAW="https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/yurich-panel.sh.sha256"
@@ -115,6 +115,7 @@ LOG_DIR="/var/log/caddy"
 BACKUP_DIR="/etc/naiveproxy/backups"
 EXPORT_DIR="/etc/naiveproxy/exports"
 BRIDGE_CONFIG="/etc/naiveproxy/bridge.conf"
+NODES_FILE="/etc/naiveproxy/nodes.conf"
 MONITOR_SCRIPT="/etc/naiveproxy/monitor.sh"
 SSH_HARDENING_DONE="/etc/naiveproxy/.ssh_hardened"
 SYSUPDATE_DONE="/etc/naiveproxy/.sysupdate_done"
@@ -2156,7 +2157,7 @@ cmd_export_state() {
     local ts out items=()
     ts=$(date +%Y%m%d_%H%M%S)
     out="$EXPORT_DIR/naiveproxy-state-${ts}.tar.gz"
-    for item in naive.conf users.conf users.d subscriptions xray-users.conf xray-users.disabled users.disabled bridge.conf; do
+    for item in naive.conf users.conf users.d subscriptions xray-users.conf xray-users.disabled users.disabled bridge.conf nodes.conf; do
         [[ -e "$CONFIG_DIR/$item" ]] && items+=("$item")
     done
     [[ "${#items[@]}" -gt 0 ]] || { err "Нет данных для export"; return 1; }
@@ -2173,7 +2174,7 @@ cmd_import_state() {
         err "Архив содержит небезопасные пути"
         return 1
     fi
-    if tar -tzf "$archive" | grep -Ev '^(naive\.conf|users\.conf|users\.disabled|xray-users\.conf|xray-users\.disabled|bridge\.conf|users\.d/|subscriptions/)' >/dev/null; then
+    if tar -tzf "$archive" | grep -Ev '^(naive\.conf|users\.conf|users\.disabled|xray-users\.conf|xray-users\.disabled|bridge\.conf|nodes\.conf|users\.d/|subscriptions/)' >/dev/null; then
         err "Архив содержит неизвестные файлы. Импорт остановлен."
         return 1
     fi
@@ -2187,7 +2188,7 @@ cmd_import_state() {
     tar -xzf "$archive" -C "$tmp"
     mkdir -p "$CONFIG_DIR"
     chmod 700 "$CONFIG_DIR"
-    for name in naive.conf users.conf users.disabled xray-users.conf xray-users.disabled bridge.conf; do
+    for name in naive.conf users.conf users.disabled xray-users.conf xray-users.disabled bridge.conf nodes.conf; do
         [[ -f "$tmp/$name" ]] && install -m 600 "$tmp/$name" "$CONFIG_DIR/$name"
     done
     [[ -d "$tmp/users.d" ]] && mkdir -p "$USER_META_DIR" && cp -a "$tmp/users.d/." "$USER_META_DIR/" && chmod 700 "$USER_META_DIR" && chmod 600 "$USER_META_DIR"/* 2>/dev/null || true
@@ -2288,6 +2289,404 @@ cmd_bridge_menu() {
             1) cmd_bridge_configure ;;
             2) cmd_bridge_show ;;
             3) cmd_bridge_remove ;;
+            0) break ;;
+            *) warn "Неверный выбор" ;;
+        esac
+        echo -ne "${YELLOW}Enter для продолжения...${RESET}"
+        read -r
+    done
+}
+
+# ─── MULTI-SERVER NODES ───────────────────────────────────────
+is_valid_node_name() {
+    [[ "${1:-}" =~ ^[a-zA-Z0-9_-]{2,32}$ ]]
+}
+
+is_valid_ssh_user() {
+    [[ "${1:-}" =~ ^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,31}$ ]]
+}
+
+is_valid_node_host() {
+    local host="${1:-}"
+    [[ -n "$host" && "$host" != *"|"* ]] || return 1
+    if is_valid_domain "$host"; then
+        return 0
+    fi
+    [[ "$host" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || return 1
+    local IFS=. part
+    for part in $host; do
+        [[ "$part" =~ ^[0-9]+$ && "$part" -ge 0 && "$part" -le 255 ]] || return 1
+    done
+}
+
+is_valid_node_role() {
+    case "${1:-}" in
+        edge|bridge|exit|backup) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+is_valid_node_weight() {
+    [[ "${1:-}" =~ ^[0-9]+$ ]] && [[ "$1" -ge 1 ]] && [[ "$1" -le 999 ]]
+}
+
+nodes_ensure_file() {
+    mkdir -p "$CONFIG_DIR"
+    if [[ ! -f "$NODES_FILE" ]]; then
+        {
+            echo "# Yurich Panel nodes"
+            echo "# format: name|host|ssh_port|ssh_user|domain|role|weight|enabled"
+        } > "$NODES_FILE"
+        chmod 600 "$NODES_FILE"
+    fi
+}
+
+nodes_list_lines() {
+    [[ -f "$NODES_FILE" ]] || return 0
+    grep -v '^#\|^[[:space:]]*$' "$NODES_FILE" 2>/dev/null || true
+}
+
+nodes_count() {
+    nodes_list_lines | wc -l
+}
+
+nodes_get_line() {
+    local lookup="${1:-}"
+    local line
+    is_valid_node_name "$lookup" || return 1
+    line=$(nodes_list_lines | awk -F'|' -v name="$lookup" '$1 == name {print; exit}')
+    [[ -n "$line" ]] || return 1
+    printf '%s\n' "$line"
+}
+
+nodes_validate_line() {
+    local line="$1"
+    local name host port ssh_user node_domain role weight enabled
+    IFS='|' read -r name host port ssh_user node_domain role weight enabled <<< "$line"
+    is_valid_node_name "$name" || return 1
+    is_valid_node_host "$host" || return 1
+    is_valid_port "$port" || return 1
+    is_valid_ssh_user "$ssh_user" || return 1
+    if [[ -n "$node_domain" && "$node_domain" != "-" ]]; then
+        is_valid_domain "$node_domain" || return 1
+    fi
+    is_valid_node_role "$role" || return 1
+    is_valid_node_weight "$weight" || return 1
+    [[ "$enabled" == "1" || "$enabled" == "0" ]] || return 1
+}
+
+nodes_upsert_line() {
+    local line="$1"
+    local name tmp
+    nodes_validate_line "$line" || { err "Некорректная запись node"; return 1; }
+    name="${line%%|*}"
+    nodes_ensure_file
+    tmp=$(mktemp)
+    awk -F'|' -v name="$name" 'BEGIN{OFS=FS} /^#/ || /^[[:space:]]*$/ {print; next} $1 != name {print}' "$NODES_FILE" > "$tmp"
+    printf '%s\n' "$line" >> "$tmp"
+    install -m 600 "$tmp" "$NODES_FILE"
+    rm -f "$tmp"
+}
+
+nodes_remove_line() {
+    local name="${1:-}" tmp
+    is_valid_node_name "$name" || { err "Некорректное имя node"; return 1; }
+    nodes_ensure_file
+    tmp=$(mktemp)
+    awk -F'|' -v name="$name" 'BEGIN{OFS=FS} /^#/ || /^[[:space:]]*$/ {print; next} $1 != name {print}' "$NODES_FILE" > "$tmp"
+    install -m 600 "$tmp" "$NODES_FILE"
+    rm -f "$tmp"
+}
+
+nodes_prompt_name() {
+    local provided="${1:-}" name
+    if [[ -n "$provided" ]]; then
+        is_valid_node_name "$provided" || return 1
+        printf '%s\n' "$provided"
+        return 0
+    fi
+    cmd_nodes_list >&2
+    echo -ne "${CYAN}Node name: ${RESET}" >&2
+    read -r name
+    is_valid_node_name "$name" || return 1
+    printf '%s\n' "$name"
+}
+
+nodes_ssh() {
+    local line="$1" remote_cmd="$2"
+    local node_name node_host node_port node_user node_domain node_role node_weight node_enabled
+    IFS='|' read -r node_name node_host node_port node_user node_domain node_role node_weight node_enabled <<< "$line"
+    ssh \
+        -o BatchMode=yes \
+        -o ConnectTimeout=8 \
+        -o ServerAliveInterval=5 \
+        -o ServerAliveCountMax=2 \
+        -o StrictHostKeyChecking=accept-new \
+        -p "$node_port" \
+        "${node_user}@${node_host}" \
+        "$remote_cmd"
+}
+
+nodes_scp_to() {
+    local line="$1" src="$2" dest="$3"
+    local node_name node_host node_port node_user node_domain node_role node_weight node_enabled
+    IFS='|' read -r node_name node_host node_port node_user node_domain node_role node_weight node_enabled <<< "$line"
+    scp \
+        -P "$node_port" \
+        -o BatchMode=yes \
+        -o ConnectTimeout=8 \
+        -o StrictHostKeyChecking=accept-new \
+        -- "$src" "${node_user}@${node_host}:${dest}"
+}
+
+nodes_remote_sudo_prefix() {
+    local ssh_user="${1:-root}"
+    if [[ "$ssh_user" == "root" ]]; then
+        printf ''
+    else
+        printf 'sudo -n '
+    fi
+}
+
+nodes_local_script_source() {
+    if [[ -r "${BASH_SOURCE[0]:-}" && "${BASH_SOURCE[0]}" != /dev/fd/* ]]; then
+        printf '%s\n' "${BASH_SOURCE[0]}"
+        return 0
+    fi
+    if [[ -r "$SCRIPT_PATH" ]]; then
+        printf '%s\n' "$SCRIPT_PATH"
+        return 0
+    fi
+    err "Не найден локальный файл скрипта для отправки на node"
+    return 1
+}
+
+cmd_nodes_list() {
+    nodes_ensure_file
+    hr
+    echo -e "${BOLD}  Multi-server nodes${RESET}"
+    hr
+    if [[ "$(nodes_count)" -eq 0 ]]; then
+        warn "Ноды не добавлены"
+        echo -e "  Файл: ${NODES_FILE}"
+        return 0
+    fi
+    printf '  %-14s %-22s %-7s %-10s %-24s %-8s %-6s %s\n' "NAME" "HOST" "SSH" "USER" "DOMAIN" "ROLE" "WEIGHT" "ON"
+    nodes_list_lines | while IFS='|' read -r name host port ssh_user node_domain role weight enabled; do
+        [[ "$enabled" == "1" ]] && enabled="yes" || enabled="no"
+        [[ -z "$node_domain" || "$node_domain" == "-" ]] && node_domain="-"
+        printf '  %-14s %-22s %-7s %-10s %-24s %-8s %-6s %s\n' "$name" "$host" "$port" "$ssh_user" "$node_domain" "$role" "$weight" "$enabled"
+    done
+}
+
+cmd_nodes_add() {
+    nodes_ensure_file
+    local name host port ssh_user node_domain role weight enabled ans line
+    hr
+    echo -e "${BOLD}  Добавить / изменить node${RESET}"
+    hr
+    echo -ne "${CYAN}Node name [eu-1]: ${RESET}"
+    read -r name
+    name="${name:-eu-1}"
+    echo -ne "${CYAN}SSH host/IP: ${RESET}"
+    read -r host
+    echo -ne "${CYAN}SSH port [22]: ${RESET}"
+    read -r port
+    port="${port:-22}"
+    echo -ne "${CYAN}SSH user [root]: ${RESET}"
+    read -r ssh_user
+    ssh_user="${ssh_user:-root}"
+    echo -ne "${CYAN}Публичный домен node для ссылок (Enter = host если это домен): ${RESET}"
+    read -r node_domain
+    if [[ -z "$node_domain" && "$host" =~ [a-zA-Z] ]]; then
+        node_domain="$host"
+    fi
+    [[ -z "$node_domain" ]] && node_domain="-"
+    echo -ne "${CYAN}Role [edge/bridge/exit/backup, Enter=edge]: ${RESET}"
+    read -r role
+    role="${role:-edge}"
+    echo -ne "${CYAN}Weight [100]: ${RESET}"
+    read -r weight
+    weight="${weight:-100}"
+    echo -ne "${CYAN}Включить node в подписки? [Y/n]: ${RESET}"
+    read -r ans
+    [[ "${ans,,}" == "n" ]] && enabled="0" || enabled="1"
+
+    if ! is_valid_node_name "$name"; then err "Node name: 2-32 символа A-Z a-z 0-9 _ -"; return 1; fi
+    if ! is_valid_node_host "$host"; then err "Некорректный host/IP"; return 1; fi
+    if ! is_valid_port "$port"; then err "Некорректный SSH порт"; return 1; fi
+    if ! is_valid_ssh_user "$ssh_user"; then err "Некорректный SSH user"; return 1; fi
+    if [[ "$node_domain" != "-" ]] && ! is_valid_domain "$node_domain"; then err "Некорректный домен node"; return 1; fi
+    if ! is_valid_node_role "$role"; then err "Role должен быть edge, bridge, exit или backup"; return 1; fi
+    if ! is_valid_node_weight "$weight"; then err "Weight: 1-999"; return 1; fi
+
+    line="${name}|${host}|${port}|${ssh_user}|${node_domain}|${role}|${weight}|${enabled}"
+    nodes_upsert_line "$line"
+    ok "Node сохранена: ${name}"
+    warn "Для управления node нужен SSH key login и, если user не root, NOPASSWD sudo."
+}
+
+cmd_nodes_remove() {
+    local name
+    name=$(nodes_prompt_name "${1:-}") || { err "Node не выбрана"; return 1; }
+    nodes_remove_line "$name"
+    ok "Node удалена из реестра: $name"
+}
+
+cmd_nodes_test() {
+    local name="${1:-}" line failed=0
+    nodes_ensure_file
+    if [[ -n "$name" && "$name" != "all" ]]; then
+        line=$(nodes_get_line "$name") || { err "Node не найдена: $name"; return 1; }
+        set -- "$line"
+    else
+        mapfile -t _nodes_to_check < <(nodes_list_lines)
+        if [[ "${#_nodes_to_check[@]}" -eq 0 ]]; then
+            warn "Ноды не добавлены"
+            return 0
+        fi
+        set -- "${_nodes_to_check[@]}"
+    fi
+    for line in "$@"; do
+        local node_name node_host node_port node_user node_domain node_role node_weight node_enabled
+        IFS='|' read -r node_name node_host node_port node_user node_domain node_role node_weight node_enabled <<< "$line"
+        hr
+        echo -e "${BOLD}  Node status: ${node_name}${RESET} (${node_user}@${node_host}:${node_port})"
+        hr
+        if nodes_ssh "$line" 'printf "host=%s\n" "$(hostname)"; printf "time=%s\n" "$(date "+%Y-%m-%d %H:%M:%S")"; uptime; printf "caddy="; systemctl is-active caddy 2>/dev/null || true; printf "xray="; systemctl is-active xray 2>/dev/null || true; printf "hysteria="; systemctl is-active hysteria 2>/dev/null || true; printf "unbound="; systemctl is-active unbound 2>/dev/null || true; ss -tulpn 2>/dev/null | grep -E ":(443|8443|8444|8446|8447|8448)\b" || true'; then
+            ok "SSH/status OK: ${node_name}"
+        else
+            err "SSH/status failed: ${node_name}"
+            failed=1
+        fi
+    done
+    return "$failed"
+}
+
+cmd_nodes_deploy_script() {
+    local name line src remote_tmp node_name node_host node_port node_user node_domain node_role node_weight node_enabled sudo_cmd
+    name=$(nodes_prompt_name "${1:-}") || { err "Node не выбрана"; return 1; }
+    line=$(nodes_get_line "$name") || { err "Node не найдена: $name"; return 1; }
+    IFS='|' read -r node_name node_host node_port node_user node_domain node_role node_weight node_enabled <<< "$line"
+    src=$(nodes_local_script_source) || return 1
+    remote_tmp="/tmp/yurich-panel-node-${RANDOM}-$$.sh"
+    sudo_cmd=$(nodes_remote_sudo_prefix "$node_user")
+    info "Отправляю текущий скрипт на ${node_name}..."
+    nodes_scp_to "$line" "$src" "$remote_tmp" || return 1
+    nodes_ssh "$line" "${sudo_cmd}install -m 755 ${remote_tmp} ${SCRIPT_PATH} && ${sudo_cmd}install -m 755 ${remote_tmp} ${LEGACY_SCRIPT_PATH} && ${sudo_cmd}rm -f ${remote_tmp} && ${sudo_cmd}bash ${SCRIPT_PATH} version" || return 1
+    ok "Скрипт установлен/обновлён на node: ${node_name}"
+    echo -ne "${CYAN}Запустить интерактивную установку Yurich Panel на node сейчас? [y/N]: ${RESET}"
+    read -r ans
+    if [[ "${ans,,}" == "y" ]]; then
+        ssh -tt \
+            -o BatchMode=yes \
+            -o ConnectTimeout=8 \
+            -o StrictHostKeyChecking=accept-new \
+            -p "$node_port" \
+            "${node_user}@${node_host}" \
+            "${sudo_cmd}bash ${SCRIPT_PATH} install"
+    fi
+}
+
+cmd_nodes_sync_users() {
+    local target="${1:-}" archive remote_tmp failed=0 lines=() items=()
+    load_config
+    load_users
+    nodes_ensure_file
+    [[ -s "$USERS_FILE" ]] || { err "users.conf пустой, нечего синхронизировать"; return 1; }
+    for item in users.conf users.d xray-users.conf xray-users.disabled users.disabled; do
+        [[ -e "$CONFIG_DIR/$item" ]] && items+=("$item")
+    done
+    [[ "${#items[@]}" -gt 0 ]] || { err "Нет файлов состояния для sync"; return 1; }
+    archive=$(mktemp /tmp/yurich-panel-node-sync-XXXXXX.tar.gz)
+    tar -C "$CONFIG_DIR" -czf "$archive" "${items[@]}"
+
+    if [[ -n "$target" && "$target" != "all" ]]; then
+        local selected
+        selected=$(nodes_get_line "$target") || { rm -f "$archive"; err "Node не найдена: $target"; return 1; }
+        lines+=("$selected")
+    else
+        mapfile -t lines < <(nodes_list_lines)
+    fi
+    if [[ "${#lines[@]}" -eq 0 ]]; then
+        rm -f "$archive"
+        warn "Ноды не добавлены"
+        return 0
+    fi
+
+    for line in "${lines[@]}"; do
+        local node_name node_host node_port node_user node_domain node_role node_weight node_enabled sudo_cmd
+        IFS='|' read -r node_name node_host node_port node_user node_domain node_role node_weight node_enabled <<< "$line"
+        [[ "$node_enabled" == "1" ]] || { warn "Node ${node_name} выключена, пропускаю"; continue; }
+        remote_tmp="/tmp/yurich-panel-node-sync-${RANDOM}-$$.tar.gz"
+        sudo_cmd=$(nodes_remote_sudo_prefix "$node_user")
+        info "Синхронизирую пользователей на ${node_name}..."
+        if ! nodes_scp_to "$line" "$archive" "$remote_tmp"; then
+            err "Не удалось отправить архив на ${node_name}"
+            failed=1
+            continue
+        fi
+        if nodes_ssh "$line" "${sudo_cmd}mkdir -p ${CONFIG_DIR} ${BACKUP_DIR} && ${sudo_cmd}tar -C ${CONFIG_DIR} -czf ${BACKUP_DIR}/node-sync-before-\$(date +%Y%m%d_%H%M%S).tar.gz users.conf users.d xray-users.conf xray-users.disabled users.disabled 2>/dev/null || true; ${sudo_cmd}tar -C ${CONFIG_DIR} -xzf ${remote_tmp}; ${sudo_cmd}chmod 700 ${CONFIG_DIR} ${USER_META_DIR} 2>/dev/null || true; ${sudo_cmd}chmod 600 ${USERS_FILE} ${DISABLED_USERS_FILE} ${XRAY_USERS_FILE} ${XRAY_DISABLED_USERS_FILE} ${USER_META_DIR}/*.env 2>/dev/null || true; sync_status=0; if [ -x ${SCRIPT_PATH} ]; then if [ -x ${CADDY_BIN} ] && [ -f ${CADDYFILE} ]; then ${sudo_cmd}bash ${SCRIPT_PATH} safe-apply || sync_status=20; fi; ${sudo_cmd}bash ${SCRIPT_PATH} hysteria-sync >/dev/null 2>&1 || true; ${sudo_cmd}bash ${SCRIPT_PATH} xray-rebuild >/dev/null 2>&1 || true; fi; ${sudo_cmd}rm -f ${remote_tmp}; exit \$sync_status"; then
+            ok "Users synced: ${node_name}"
+        else
+            err "Sync failed: ${node_name}"
+            failed=1
+        fi
+    done
+    rm -f "$archive"
+    return "$failed"
+}
+
+node_links_for_user() {
+    local user="$1" pass="$2" expiry_tag="${3:-active}"
+    [[ -n "$pass" ]] || return 0
+    [[ -f "$NODES_FILE" ]] || return 0
+    nodes_list_lines | while IFS='|' read -r name host port ssh_user node_domain role weight enabled; do
+        [[ "$enabled" == "1" ]] || continue
+        [[ -n "$node_domain" && "$node_domain" != "-" ]] || continue
+        is_valid_domain "$node_domain" || continue
+        printf 'naive+https://%s:%s@%s:443#%s-%s-naive-%s\n' "$user" "$pass" "$node_domain" "$user" "$name" "$expiry_tag"
+    done
+}
+
+cmd_nodes_rebuild_subscriptions() {
+    load_config
+    load_users
+    local count=0 user pass
+    while IFS=: read -r user pass; do
+        [[ -z "$user" ]] && continue
+        if generate_subscription_page "$user" >/dev/null 2>&1; then
+            count=$((count + 1))
+        fi
+    done < <(get_users)
+    ok "Пересобраны страницы подписки: ${count}"
+}
+
+cmd_nodes_menu() {
+    while true; do
+        hr
+        echo -e "${BOLD}  Multi-server nodes${RESET}"
+        hr
+        echo -e "  ${BOLD}1)${RESET} Список серверов"
+        echo -e "  ${BOLD}2)${RESET} Добавить / изменить сервер"
+        echo -e "  ${BOLD}3)${RESET} Проверить SSH/status"
+        echo -e "  ${BOLD}4)${RESET} Установить / обновить скрипт на node"
+        echo -e "  ${BOLD}5)${RESET} Синхронизировать пользователей на node"
+        echo -e "  ${BOLD}6)${RESET} Пересобрать подписки с node-ссылками"
+        echo -e "  ${BOLD}7)${RESET} Удалить сервер из реестра"
+        echo -e "  ${BOLD}0)${RESET} Назад"
+        hr
+        echo -e "  Registry: ${NODES_FILE} | Nodes: $(nodes_count)"
+        echo -ne "${CYAN}Выбор: ${RESET}"
+        read -r choice
+        case "$choice" in
+            1) cmd_nodes_list ;;
+            2) cmd_nodes_add ;;
+            3) echo -ne "${CYAN}Node name (Enter = all): ${RESET}"; read -r n; cmd_nodes_test "${n:-all}" ;;
+            4) cmd_nodes_deploy_script ;;
+            5) echo -ne "${CYAN}Node name (Enter = all): ${RESET}"; read -r n; cmd_nodes_sync_users "${n:-all}" ;;
+            6) cmd_nodes_rebuild_subscriptions ;;
+            7) cmd_nodes_remove ;;
             0) break ;;
             *) warn "Неверный выбор" ;;
         esac
@@ -3010,6 +3409,16 @@ cmd_hysteria_menu() {
         esac
         echo -ne "${DIM}Enter для продолжения...${RESET}"; read -r _
     done
+}
+
+cmd_hysteria_sync_cli() {
+    load_config
+    load_users
+    if [[ -f "$HYSTERIA_CONFIG" || -x "$HYSTERIA_BIN" ]]; then
+        sync_hysteria_users_if_active
+    else
+        warn "Hysteria 2 не установлен — sync пропущен"
+    fi
 }
 
 # ─── XRAY MODERN: VLESS / TROJAN / REALITY / FALLBACK ─────────
@@ -3756,7 +4165,7 @@ generate_subscription_page() {
 
     ensure_web_privacy_files
 
-    local token token_file page_dir links_file naive_pass naive_uri yurich_uri naive_json naive_singbox_tun_json hy2_uri hy2_json expiry_label expiry_tag
+    local token token_file page_dir links_file naive_pass naive_uri yurich_uri naive_json naive_singbox_tun_json hy2_uri hy2_json expiry_label expiry_tag node_links
     token_file="${SUBS_DIR}/${user}.token"
     token=$(get_or_create_token_file "$token_file")
     page_dir="${SUBS_WEB_DIR}/${token}"
@@ -3835,9 +4244,11 @@ EOF
             trojan_link="trojan://${XRAY_TROJAN_PASSWORD:-PASSWORD}@${DOMAIN}:443?security=tls&type=ws&host=${DOMAIN}&path=%2Ftrojan-ws&sni=${DOMAIN}&fp=chrome#trojan-ws-${expiry_tag}"
         fi
     fi
+    node_links=$(node_links_for_user "$user" "$naive_pass" "$expiry_tag" 2>/dev/null || true)
 
     {
         [[ -n "$naive_uri" ]] && printf '%s\n' "$naive_uri"
+        [[ -n "$node_links" ]] && printf '%s\n' "$node_links"
         [[ -n "$hy2_uri" ]] && printf '%s\n' "$hy2_uri"
         [[ -n "$reality_link" ]] && printf '%s\n' "$reality_link"
         [[ -n "$vision_link" ]] && printf '%s\n' "$vision_link"
@@ -3851,7 +4262,7 @@ EOF
     } > "$links_file"
     chmod 644 "$links_file"
 
-    local sub_url links_url title safe_user safe_domain safe_expiry_label safe_naive_uri safe_yurich_uri safe_naive_json safe_naive_singbox_tun_json safe_hy2_uri safe_hy2_json
+    local sub_url links_url title safe_user safe_domain safe_expiry_label safe_naive_uri safe_yurich_uri safe_naive_json safe_naive_singbox_tun_json safe_hy2_uri safe_hy2_json safe_node_links
     local safe_android_url safe_windows_url safe_telegram_url safe_vk_url safe_support_email safe_support_mailto
     sub_url="https://${DOMAIN}/s/${token}/"
     links_url="${sub_url}links.txt"
@@ -3865,6 +4276,7 @@ EOF
     safe_naive_singbox_tun_json=$(html_escape_text "$naive_singbox_tun_json")
     safe_hy2_uri=$(html_escape_text "$hy2_uri")
     safe_hy2_json=$(html_escape_text "$hy2_json")
+    safe_node_links=$(html_escape_text "$node_links")
     safe_android_url=$(html_escape_text "$ANDROID_APP_RELEASES_URL")
     safe_windows_url=$(html_escape_text "$WINDOWS_APP_RELEASES_URL")
     safe_telegram_url=$(html_escape_text "$TELEGRAM_COMMUNITY_URL")
@@ -3915,6 +4327,12 @@ EOF
     <a class="btn" href="${safe_android_url}" target="_blank" rel="noopener noreferrer">Yurich Connect Android</a>
     <a class="btn" href="${safe_windows_url}" target="_blank" rel="noopener noreferrer">Yurich Connect Windows</a>
     <p class="muted">Импортируй ссылку подписки в Hiddify, NekoBox, v2rayN, Streisand или другой клиент с поддержкой URI. Raw links остаются совместимыми и не содержат экспериментальный yurich:// alias.</p>
+  </section>
+
+  <section class="card">
+    <h2>Multi-server nodes</h2>
+    <p class="muted">Если администратор добавил несколько серверов, здесь будут ссылки на дополнительные node. Клиент может выбрать ближайший или резервный сервер.</p>
+    <pre>${safe_node_links:-Дополнительные node не настроены}</pre>
   </section>
 
   <section class="grid">
@@ -4228,6 +4646,28 @@ cmd_xray_add_user() {
     fi
 
     print_xray_client_config "$xuser"
+}
+
+cmd_xray_rebuild() {
+    load_config
+    if [[ ! -x "$XRAY_BIN" ]]; then
+        warn "Xray не установлен — rebuild пропущен"
+        return 0
+    fi
+    if [[ ! -s "$XRAY_USERS_FILE" ]]; then
+        warn "xray-users.conf пустой — rebuild пропущен"
+        return 0
+    fi
+    write_xray_config || return 1
+    write_xray_service
+    ufw allow "${XRAY_REALITY_PORT:-$XRAY_REALITY_PORT_DEFAULT}/tcp" comment "Xray REALITY" >/dev/null 2>&1 || true
+    ufw allow "${XRAY_MKCP_PORT:-$XRAY_MKCP_PORT_DEFAULT}/udp" comment "Xray mKCP" >/dev/null 2>&1 || true
+    ufw allow "${XRAY_GRPC_PORT:-$XRAY_GRPC_PORT_DEFAULT}/tcp" comment "Xray gRPC" >/dev/null 2>&1 || true
+    ufw allow "${XRAY_XHTTP_PORT:-$XRAY_XHTTP_PORT_DEFAULT}/tcp" comment "Xray XHTTP" >/dev/null 2>&1 || true
+    systemctl restart xray || return 1
+    XRAY_ENABLED="1"
+    save_config
+    ok "Xray config пересобран"
 }
 
 cmd_xray_status() {
@@ -8775,6 +9215,11 @@ show_menu() {
         device_str="${GREEN}${DEVICE_LIMIT:-$DEVICE_LIMIT_DEFAULT}/${DEVICE_WINDOW_HOURS:-$DEVICE_WINDOW_HOURS_DEFAULT}ч ${DEVICE_LIMIT_MODE:-alert}${RESET}"
     fi
     echo -e "   $(t "Лимит устройств" "Device limit"): ${device_str}"
+    local nodes_str="${YELLOW}0${RESET}"
+    if [[ -f "$NODES_FILE" ]]; then
+        nodes_str="${GREEN}$(nodes_count)${RESET}"
+    fi
+    echo -e "   Multi-server nodes: ${nodes_str}"
     hr
     echo -e "   ${BOLD}1)${RESET}  $(t "Установить Yurich Panel" "Install Yurich Panel")"
     echo -e "   ${BOLD}2)${RESET}  $(t "Статус" "Status")"
@@ -8805,9 +9250,10 @@ show_menu() {
     echo -e "   ${BOLD}26)${RESET} [PAGE] $(t "Личная фейковая страница" "Private camouflage page")"
     echo -e "   ${BOLD}27)${RESET} [PROD] Production tools / Bridge"
     echo -e "   ${BOLD}28)${RESET} [LANG] $(t "Язык панели RU/EN" "Panel language RU/EN")"
+    echo -e "   ${BOLD}29)${RESET} [NODES] Multi-server management"
     echo -e "   ${BOLD}0)${RESET}  $(t "Выход" "Exit")"
     hr
-    echo -ne "${CYAN}$(t "Выбор" "Choice") [0-28]: ${RESET}"
+    echo -ne "${CYAN}$(t "Выбор" "Choice") [0-29]: ${RESET}"
 }
 
 # ─── MAIN ────────────────────────────────────────────────────
@@ -8824,7 +9270,7 @@ main() {
             help|--help|-h)
                 echo "Yurich Panel v${VERSION}"
                 echo "Usage: sudo bash yurich-panel.sh [command]"
-                echo "Commands: install status config [user] reload restart update remove logs monitor users hysteria hy2 hysteria-port warp warp-proxy warp-full warp-protocol warp-ssh-allow xray xray-target xray-add-user [user] devices subscription private-page tg-stats bot-menu health safe-apply backup export import bridge fail2ban language ssh-hardening ssh-rescue sysupdate cert domains dns unbound yurich-dns yurich-dns-status yurich-dns-restart self-update version camouflage"
+                echo "Commands: install status config [user] reload restart update remove logs monitor users hysteria hy2 hysteria-sync hysteria-port warp warp-proxy warp-full warp-protocol warp-ssh-allow xray xray-target xray-add-user [user] xray-rebuild devices subscription private-page tg-stats bot-menu health safe-apply backup export import bridge nodes fail2ban language ssh-hardening ssh-rescue sysupdate cert domains dns unbound yurich-dns yurich-dns-status yurich-dns-restart self-update version camouflage"
                 return 0
                 ;;
         esac
@@ -8851,6 +9297,7 @@ main() {
             hysteria-config|hy2-config) print_hysteria_client_config "${2:-}" ;;
             hysteria-status|hy2-status) cmd_hysteria_status ;;
             hysteria-logs|hy2-logs) cmd_hysteria_logs ;;
+            hysteria-sync|hy2-sync) cmd_hysteria_sync_cli ;;
             hysteria-port|hy2-port) cmd_hysteria_change_port ;;
             hysteria-remove|hy2-remove) cmd_hysteria_remove ;;
             warp) cmd_warp_menu ;;
@@ -8869,6 +9316,7 @@ main() {
             xray-install) cmd_xray_install ;;
             xray-target|xray-reality-target) cmd_xray_reality_target ;;
             xray-add-user|xray-user) cmd_xray_add_user "${2:-}" "${3:-}" ;;
+            xray-rebuild) cmd_xray_rebuild ;;
             xray-config) print_xray_client_config "${2:-}" ;;
             xray-status) cmd_xray_status ;;
             xray-logs) cmd_xray_logs ;;
@@ -8910,6 +9358,14 @@ main() {
             bridge)       cmd_bridge_menu ;;
             bridge-show)  cmd_bridge_show ;;
             bridge-remove) cmd_bridge_remove ;;
+            nodes|node|multi-server) cmd_nodes_menu ;;
+            nodes-list|node-list) cmd_nodes_list ;;
+            nodes-add|node-add) cmd_nodes_add ;;
+            nodes-test|node-test) cmd_nodes_test "${2:-all}" ;;
+            nodes-deploy|node-deploy) cmd_nodes_deploy_script "${2:-}" ;;
+            nodes-sync|node-sync) cmd_nodes_sync_users "${2:-all}" ;;
+            nodes-subscriptions|nodes-rebuild-subscriptions) cmd_nodes_rebuild_subscriptions ;;
+            nodes-remove|node-remove) cmd_nodes_remove "${2:-}" ;;
             fail2ban|f2b|security) setup_fail2ban "$(current_ssh_port)" ;;
             language|lang) cmd_language ;;
             self-update)  load_config; cmd_self_update ;;
@@ -8921,7 +9377,7 @@ main() {
                 echo "GitHub:   github.com/ivan-yurich/naiveproxy"
                 ;;
             *) err "Неизвестная команда: $1"
-               echo "Доступные: install status config [user] reload restart update remove logs monitor users hysteria hy2 hysteria-port warp warp-proxy warp-full warp-protocol warp-ssh-allow xray xray-target xray-add-user [user] devices subscription private-page tg-stats bot-menu health safe-apply backup export import bridge fail2ban language ssh-hardening ssh-rescue sysupdate cert domains dns unbound yurich-dns yurich-dns-status yurich-dns-restart self-update version camouflage"
+               echo "Доступные: install status config [user] reload restart update remove logs monitor users hysteria hy2 hysteria-sync hysteria-port warp warp-proxy warp-full warp-protocol warp-ssh-allow xray xray-target xray-add-user [user] xray-rebuild devices subscription private-page tg-stats bot-menu health safe-apply backup export import bridge nodes fail2ban language ssh-hardening ssh-rescue sysupdate cert domains dns unbound yurich-dns yurich-dns-status yurich-dns-restart self-update version camouflage"
                exit 1 ;;
         esac
         exit 0
@@ -8963,6 +9419,7 @@ main() {
             26) install_private_camouflage_page ;;
             27) cmd_production_tools_menu ;;
             28) cmd_language ;;
+            29) cmd_nodes_menu ;;
             0)  echo -e "${GREEN}$(t "Пока!" "Bye!")${RESET}"; exit 0 ;;
             *)  warn "$(t "Неверный выбор" "Invalid choice")" ;;
         esac

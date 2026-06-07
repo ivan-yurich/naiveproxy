@@ -26,7 +26,7 @@
 
 ---
 
-[![Version](https://img.shields.io/badge/version-5.6.12-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
+[![Version](https://img.shields.io/badge/version-5.6.13-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
 [![ShellCheck](https://img.shields.io/badge/ShellCheck-passing-3FB950?style=for-the-badge&logo=gnu-bash&logoColor=white)](https://www.shellcheck.net)
 [![Bash](https://img.shields.io/badge/Bash-5.0+-4EAA25?style=for-the-badge&logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-20.04%2B-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://ubuntu.com)
@@ -98,7 +98,7 @@ Yurich Proxy uses a Naive-compatible Chrome-like transport
 
 ---
 
-## 🎉 What's new in v5.6.12
+## 🎉 What's new in v5.6.13
 
 <table>
 <tr>
@@ -106,7 +106,16 @@ Yurich Proxy uses a Naive-compatible Chrome-like transport
 
 ### 🐛 Bug fixes
 
-✅ Subscription pages now include Yurich Connect Android and Windows release links
+✅ New `29) [NODES] Multi-server management` menu
+✅ Root-only node registry: `/etc/naiveproxy/nodes.conf`
+✅ Node SSH/status checks for hostname, uptime, services and active ports
+✅ Deploy the current `yurich-panel.sh` / `naiveproxy.sh` to a selected node
+✅ Sync users and metadata to one node or all enabled nodes
+✅ Remote backup before applying synced users
+✅ Remote `safe-apply`, `hysteria-sync` and `xray-rebuild`
+✅ Subscription `links.txt` can include additional `naive+https` links for enabled node domains
+✅ CLI commands: `nodes`, `nodes-add`, `nodes-test`, `nodes-deploy`, `nodes-sync`, `nodes-subscriptions`
+✅ Subscription pages include Yurich Connect Android and Windows release links
 ✅ Project contacts are shown on subscription pages: Telegram, VK and email
 ✅ Windows/Android setup cards link to the official client releases
 ✅ REALITY target presets for RU/Global candidate domains
@@ -413,7 +422,7 @@ No `0.0.0.0` bind and no public port 53 rule
 
 ```
 ──────────────────────────────────────────────────────
-   Yurich Panel v5.6.12  [ENG]
+   Yurich Panel v5.6.13  [ENG]
    Status: ● running  │  Domain: proxy.example.com
    Telegram: connected  │  Users: 3  │  SSH: 52847
 ──────────────────────────────────────────────────────
@@ -723,7 +732,7 @@ sudo bash yurich-panel.sh diagnose
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  🔍 Diagnostics Yurich Panel v5.6.12              │
+│  🔍 Diagnostics Yurich Panel v5.6.13              │
 │  2026-05-23 14:32:18 · proxy.example.com               │
 └─────────────────────────────────────────────────────────┘
 
@@ -763,7 +772,7 @@ sudo bash yurich-panel.sh diagnose
   ✅ journald: no critical errors
 
 [7/7] Version and updates
-  ✅ Script up to date: v5.6.12
+  ✅ Script up to date: v5.6.13
   ✅ SSH Hardening done
 
 ══════════════════════════════════════════════════════════
@@ -1403,7 +1412,22 @@ for donors
 ## 📜 Changelog
 
 <details>
-<summary><b>v5.6.12</b> — Subscription app links and contacts ← CURRENT</summary>
+<summary><b>v5.6.13</b> — Multi-server node management ← CURRENT</summary>
+
+**Multi-server nodes:**
+- Added `29) [NODES] Multi-server management`
+- Added root-only `/etc/naiveproxy/nodes.conf`
+- Added node SSH/status checks
+- Added script deploy to node
+- Added user sync to one node or all enabled nodes
+- Added remote backup + `safe-apply`
+- Added `hysteria-sync` and `xray-rebuild`
+- Subscription pages can include extra node links
+
+</details>
+
+<details>
+<summary><b>v5.6.12</b> — Subscription app links and contacts</summary>
 
 **Subscription pages:**
 - Added Yurich Connect Android release link
