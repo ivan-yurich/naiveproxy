@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CONF="/etc/unbound/unbound.conf.d/yurich-dns.conf"
+LEGACY_CONF="/etc/unbound/unbound.conf.d/aurum-vpn.conf"
+ENV_FILE="/etc/yurich-dns/yurich-dns.env"
+LEGACY_ENV_FILE="/etc/aurum-dns/aurum-dns.env"
+
+source_env_if_safe() {
+    local env_file="$ENV_FILE"
+    [[ -f "$env_file" ]] || env_file="$LEGACY_ENV_FILE"
+    [[ -f "$env_file" ]] || return 0
+
+    local owner perms
+    owner=$(stat -c '%U' "$env_file" 2>/dev/null || echo "unknown")
+    perms=$(stat -c '%a' "$env_file" 2>/dev/null || echo "000")
+    if [[ "$owner" != "root" ]]; then
+        echo "Skip unsafe env file owner: $env_file belongs to $owner" >&2
+        return 0
+    fi
+    if [[ "$perms" != "600" ]]; then
+        chmod 600 "$env_file" 2>/dev/null || true
+    fi
+
+    # shellcheck disable=SC1090
+    source "$env_file"
+}
+
+source_env_if_safe
+
+echo "===== DNS (Unbound) status ====="
+systemctl status unbound --no-pager || true
+echo
+echo "===== Port 53 listeners ====="
+ss -H -lntup 2>/dev/null | awk '$5 ~ /:53$/ || $5 ~ /:53%/ {print}' || true
+echo
+echo "===== Config check ====="
+if [[ -f "$CONF" ]]; then
+    unbound-checkconf "$CONF" || true
+elif [[ -f "$LEGACY_CONF" ]]; then
+    unbound-checkconf "$LEGACY_CONF" || true
+else
+    echo "Config not found: $CONF"
+fi
+echo
+echo "===== Config summary ====="
+echo "Gateway: ${YURICH_DNS_GATEWAY:-127.0.0.1}"
+echo "CIDRs:   ${YURICH_DNS_CIDRS:-unknown}"
+echo
+echo "===== Last logs ====="
+journalctl -u unbound -n 40 --no-pager || true

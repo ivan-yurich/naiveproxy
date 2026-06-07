@@ -1,9 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
-CONF="/etc/unbound/unbound.conf.d/aurum-vpn.conf"
-
-unbound-checkconf "$CONF"
-systemctl reset-failed unbound 2>/dev/null || true
-systemctl restart unbound
-systemctl status unbound --no-pager

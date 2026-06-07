@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CONF="/etc/unbound/unbound.conf.d/aurum-vpn.conf"
-ENV_FILE="/etc/aurum-dns/aurum-dns.env"
+CONF="/etc/unbound/unbound.conf.d/yurich-dns.conf"
+LEGACY_CONF="/etc/unbound/unbound.conf.d/aurum-vpn.conf"
+ENV_FILE="/etc/yurich-dns/yurich-dns.env"
+LEGACY_ENV_FILE="/etc/aurum-dns/aurum-dns.env"
 NO_STUB="/etc/systemd/resolved.conf.d/no-stub.conf"
-GATEWAY_SERVICE="/etc/systemd/system/aurum-dns-gateway.service"
+GATEWAY_SERVICE="/etc/systemd/system/yurich-dns-gateway.service"
+LEGACY_GATEWAY_SERVICE="/etc/systemd/system/aurum-dns-gateway.service"
 
 log() { printf '[i] %s\n' "$*"; }
 ok() { printf '[OK] %s\n' "$*"; }
@@ -22,25 +25,27 @@ backup_file() {
 }
 
 source_env_if_safe() {
-    [[ -f "$ENV_FILE" ]] || return 0
+    local env_file="$ENV_FILE"
+    [[ -f "$env_file" ]] || env_file="$LEGACY_ENV_FILE"
+    [[ -f "$env_file" ]] || return 0
 
     local owner perms
-    owner=$(stat -c '%U' "$ENV_FILE" 2>/dev/null || echo "unknown")
-    perms=$(stat -c '%a' "$ENV_FILE" 2>/dev/null || echo "000")
+    owner=$(stat -c '%U' "$env_file" 2>/dev/null || echo "unknown")
+    perms=$(stat -c '%a' "$env_file" 2>/dev/null || echo "000")
     if [[ "$owner" != "root" ]]; then
-        warn "Skip unsafe env file owner: $ENV_FILE belongs to $owner"
+        warn "Skip unsafe env file owner: $env_file belongs to $owner"
         return 0
     fi
     if [[ "$perms" != "600" ]]; then
-        chmod 600 "$ENV_FILE" 2>/dev/null || true
+        chmod 600 "$env_file" 2>/dev/null || true
     fi
 
     # shellcheck disable=SC1090
-    source "$ENV_FILE"
+    source "$env_file"
 }
 
 remove_ufw_rules() {
-    local cidr cidrs="${AURUM_DNS_CIDRS:-10.0.0.0/24}"
+    local cidr cidrs="${YURICH_DNS_CIDRS:-10.0.0.0/24}"
     local -a cidr_list
     command -v ufw >/dev/null 2>&1 || return 0
     IFS=',' read -r -a cidr_list <<< "$cidrs"
@@ -58,12 +63,15 @@ main() {
 
     systemctl stop unbound 2>/dev/null || true
     systemctl disable unbound 2>/dev/null || true
-    systemctl disable --now aurum-dns-gateway.service 2>/dev/null || true
-    rm -f "$GATEWAY_SERVICE"
+    systemctl disable --now "$(basename "$GATEWAY_SERVICE")" 2>/dev/null || true
+    systemctl disable --now "$(basename "$LEGACY_GATEWAY_SERVICE")" 2>/dev/null || true
+    rm -f "$GATEWAY_SERVICE" "$LEGACY_GATEWAY_SERVICE"
     remove_ufw_rules
 
     backup_file "$CONF"
-    rm -f "$CONF"
+    backup_file "$LEGACY_CONF"
+    rm -f "$CONF" "$LEGACY_CONF"
+    rm -f /usr/local/bin/yurich-dns-status /usr/local/bin/yurich-dns-test /usr/local/bin/yurich-dns-restart
     rm -f /usr/local/bin/aurum-dns-status /usr/local/bin/aurum-dns-test /usr/local/bin/aurum-dns-restart
 
     if [[ -f "$NO_STUB" ]]; then
@@ -72,7 +80,8 @@ main() {
         systemctl restart systemd-resolved 2>/dev/null || true
     fi
 
-    rm -f "$ENV_FILE"
+    rm -f "$ENV_FILE" "$LEGACY_ENV_FILE"
+    rmdir /etc/yurich-dns 2>/dev/null || true
     rmdir /etc/aurum-dns 2>/dev/null || true
     systemctl daemon-reload 2>/dev/null || true
 

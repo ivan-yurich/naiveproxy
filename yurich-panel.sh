@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-#   Yurich Panel v5.6.4 — by Иван Юрьевич
+#   Yurich Panel v5.6.7 — by Иван Юрьевич
 #   Стек: Caddy 2 + klzgrad/forwardproxy@naive + Hysteria 2 + WARP + Xray Modern
 #   ОС: Ubuntu 20.04 / 22.04 / 24.04
 #
@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-VERSION="5.6.4"
+VERSION="5.6.7"
 LANG_UI="${NAIVEPROXY_LANG:-ru}"  # ru или en — export NAIVEPROXY_LANG=en
 GITHUB_RAW="https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/yurich-panel.sh"
 GITHUB_SHA256_RAW="https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/yurich-panel.sh.sha256"
@@ -485,59 +485,7 @@ cmd_ssh_hardening() {
         return 1
     fi
 
-    # Fail2Ban
-    apt-get update -qq 2>/dev/null || true
-    apt-get install -y -q fail2ban
-
-    cat > /etc/fail2ban/jail.local << EOF
-[DEFAULT]
-# Глобальные настройки
-bantime   = 86400    # Бан 24 часа
-findtime  = 600      # Окно поиска 10 минут
-maxretry  = 3        # Максимум попыток
-backend   = systemd
-banaction = iptables-multiport
-
-[sshd]
-enabled   = true
-port      = ${new_ssh_port}
-logpath   = %(sshd_log)s
-maxretry  = 3
-bantime   = 604800   # Бан 7 дней за брутфорс SSH
-
-[sshd-ddos]
-enabled   = true
-port      = ${new_ssh_port}
-logpath   = %(sshd_log)s
-maxretry  = 10
-findtime  = 60       # 10 попыток за 1 минуту = DDoS бан
-bantime   = 604800
-
-[recidive]
-enabled   = true
-logpath   = /var/log/fail2ban.log
-banaction = ufw
-bantime   = 2592000  # Рецидивисты — бан на 30 дней
-findtime  = 86400
-maxretry  = 3
-EOF
-
-    # Настройка action для UFW
-    cat > /etc/fail2ban/action.d/ufw.conf << 'UEOF'
-[Definition]
-actionstart =
-actionstop  =
-actioncheck =
-actionban   = ufw insert 1 deny from <ip> to any
-actionunban = ufw delete deny from <ip> to any
-UEOF
-
-    systemctl enable fail2ban --quiet
-    systemctl restart fail2ban
-    ok "Fail2Ban настроен:"
-    ok "  SSH брутфорс: 3 попытки → бан 7 дней"
-    ok "  SSH DDoS: 10 попыток за 1 мин → бан 7 дней"
-    ok "  Рецидивисты: → бан 30 дней"
+    setup_fail2ban "$new_ssh_port" || return 1
 
     # Маркер
     mkdir -p "$CONFIG_DIR"
@@ -812,6 +760,7 @@ save_config() {
         printf 'WARP_PROXY_ENABLED=%q\n' "${WARP_PROXY_ENABLED:-0}"
         printf 'WARP_MODE=%q\n' "${WARP_MODE:-off}"
         printf 'WARP_PROTOCOL=%q\n' "${WARP_PROTOCOL:-auto}"
+        printf 'WARP_SSH_ALLOW_CIDRS=%q\n' "${WARP_SSH_ALLOW_CIDRS:-}"
         printf 'DEVICE_LIMIT_ENABLED=%q\n' "${DEVICE_LIMIT_ENABLED:-0}"
         printf 'DEVICE_LIMIT=%q\n' "${DEVICE_LIMIT:-$DEVICE_LIMIT_DEFAULT}"
         printf 'DEVICE_WINDOW_HOURS=%q\n' "${DEVICE_WINDOW_HOURS:-$DEVICE_WINDOW_HOURS_DEFAULT}"
@@ -1351,6 +1300,10 @@ write_caddyfile_multi() {
         err "Нет активных пользователей. Caddyfile не обновляю, чтобы не открыть прокси без auth."
         return 1
     fi
+    local caddy_upstream=""
+    if [[ "${WARP_PROXY_ENABLED:-0}" == "1" ]]; then
+        caddy_upstream="    upstream socks5://127.0.0.1:${WARP_PROXY_PORT:-$WARP_PROXY_PORT_DEFAULT}"$'\n'
+    fi
 
     # Глобальный блок
     cat > "$CADDYFILE" <<EOF
@@ -1385,7 +1338,7 @@ ${dom}:443 {
     tls ${EMAIL}
 
   forward_proxy {
-${auth_blocks}    hide_ip
+${auth_blocks}${caddy_upstream}    hide_ip
     hide_via
     probe_resistance
   }
@@ -1676,6 +1629,10 @@ write_caddyfile() {
         err "Нет активных пользователей. Caddyfile не обновляю, чтобы не открыть прокси без auth."
         return 1
     fi
+    local caddy_upstream=""
+    if [[ "${WARP_PROXY_ENABLED:-0}" == "1" ]]; then
+        caddy_upstream="        upstream socks5://127.0.0.1:${WARP_PROXY_PORT:-$WARP_PROXY_PORT_DEFAULT}"$'\n'
+    fi
 
     local site_label=":443, ${DOMAIN}"
     local tls_line="  tls ${EMAIL}"
@@ -1703,7 +1660,7 @@ ${site_label} {
 ${tls_line}
 
     forward_proxy {
-${auth_blocks}        hide_ip
+${auth_blocks}${caddy_upstream}        hide_ip
         hide_via
         probe_resistance
     }
@@ -1813,12 +1770,12 @@ setup_firewall() {
     fi
 
     # Базовые порты Yurich Panel
-    ufw allow 80/tcp  comment "Yurich Panel ACME"  >/dev/null 2>&1 || true
+    ufw delete allow 80/tcp >/dev/null 2>&1 || true
+    ufw limit 80/tcp comment "Yurich Panel ACME limited" >/dev/null 2>&1 \
+        || ufw allow 80/tcp comment "Yurich Panel ACME" >/dev/null 2>&1 \
+        || true
     ufw allow 443/tcp comment "Yurich Panel HTTPS" >/dev/null 2>&1 || true
     ufw allow 443/udp comment "Yurich Panel HTTP3" >/dev/null 2>&1 || true
-
-    # Лимит подключений — защита от DDoS и сканирования
-    ufw allow 80/tcp  >/dev/null 2>&1 || true
 
     # Блокируем типичные порты для сканеров
     for port in 3306 5432 6379 27017 8080 8888 9200; do
@@ -1828,7 +1785,99 @@ setup_firewall() {
     ok "UFW: открыт SSH порт ${ssh_port}/tcp"
     ok "UFW: открыты 80, 443/tcp, 443/udp"
     ok "UFW: заблокированы порты БД и типичные цели сканеров"
-    ok "UFW: лимит на 80/tcp для защиты от DDoS"
+    ok "UFW: limit на 80/tcp для снижения шума сканеров"
+}
+
+setup_fail2ban() {
+    local ssh_port="${1:-}"
+    [[ "$ssh_port" =~ ^[0-9]+$ ]] || ssh_port=$(current_ssh_port)
+    [[ "$ssh_port" =~ ^[0-9]+$ ]] || ssh_port="22"
+
+    info "Настраиваю Fail2Ban..."
+    apt-get update -qq 2>/dev/null || true
+    apt-get install -y -q fail2ban
+
+    mkdir -p /etc/fail2ban/jail.d /etc/fail2ban/filter.d /etc/fail2ban/action.d "$LOG_DIR"
+    touch "$LOG_DIR/naive.log" "$LOG_DIR/access.log" 2>/dev/null || true
+
+    if [[ -f /etc/fail2ban/jail.local ]] && grep -Eq "Глобальные настройки|SSH DDoS|Рецидивисты" /etc/fail2ban/jail.local; then
+        cp -a /etc/fail2ban/jail.local "/etc/fail2ban/jail.local.bak.$(date '+%Y%m%d-%H%M%S')" 2>/dev/null || true
+        rm -f /etc/fail2ban/jail.local
+    fi
+
+    cat > /etc/fail2ban/action.d/yurich-ufw.conf <<'EOF'
+[Definition]
+actionstart =
+actionstop  =
+actioncheck =
+actionban   = ufw insert 1 deny from <ip> to any
+actionunban = ufw delete deny from <ip> to any
+EOF
+
+    cat > /etc/fail2ban/filter.d/yurich-caddy-auth.conf <<'EOF'
+[Definition]
+failregex = ^.*"remote_ip":"<HOST>".*"status":(?:401|407).*
+            ^.*"client_ip":"<HOST>".*"status":(?:401|407).*
+ignoreregex =
+EOF
+
+    cat > /etc/fail2ban/jail.d/yurich-panel.local <<EOF
+[DEFAULT]
+ignoreip  = 127.0.0.1/8 ::1
+bantime   = 86400
+findtime  = 600
+maxretry  = 3
+backend   = systemd
+banaction = yurich-ufw
+
+[sshd]
+enabled   = true
+filter    = sshd
+port      = ${ssh_port}
+logpath   = %(sshd_log)s
+maxretry  = 3
+bantime   = 604800
+
+[sshd-ddos]
+enabled   = true
+filter    = sshd
+port      = ${ssh_port}
+logpath   = %(sshd_log)s
+maxretry  = 10
+findtime  = 60
+bantime   = 604800
+
+[yurich-caddy-auth]
+enabled   = true
+filter    = yurich-caddy-auth
+port      = http,https
+logpath   = ${LOG_DIR}/*.log
+maxretry  = 8
+findtime  = 600
+bantime   = 86400
+
+[recidive]
+enabled   = true
+logpath   = /var/log/fail2ban.log
+banaction = yurich-ufw
+bantime   = 2592000
+findtime  = 86400
+maxretry  = 3
+EOF
+
+    if ! fail2ban-client -t >/dev/null 2>&1; then
+        err "Fail2Ban config не прошёл проверку:"
+        fail2ban-client -t || true
+        return 1
+    fi
+
+    systemctl enable fail2ban --quiet
+    systemctl restart fail2ban
+    ok "Fail2Ban настроен:"
+    ok "  SSH брутфорс: 3 попытки → бан 7 дней"
+    ok "  SSH DDoS: 10 попыток за 1 мин → бан 7 дней"
+    ok "  Caddy/Yurich Proxy auth: 8 ошибок → бан 24 часа"
+    ok "  Рецидивисты: → бан 30 дней"
 }
 
 # ─── BBR ─────────────────────────────────────────────────────
@@ -1955,6 +2004,12 @@ health_line() {
     esac
 }
 
+ufw_has_port_rule() {
+    local rule="$1"
+    command -v ufw >/dev/null 2>&1 || return 1
+    ufw status 2>/dev/null | grep -Eiq "(^|[[:space:]])${rule//\//\\/}([[:space:]]|[[:space:]].*ALLOW|.*ALLOW|.*LIMIT)"
+}
+
 cmd_health_check() {
     load_config 2>/dev/null || true
     load_users 2>/dev/null || true
@@ -1966,6 +2021,46 @@ cmd_health_check() {
     systemctl is-active --quiet caddy 2>/dev/null && health_line "Caddy service" ok "active" || health_line "Caddy service" warn "не active"
     [[ -f "$CADDYFILE" ]] && "$CADDY_BIN" validate --config "$CADDYFILE" >/dev/null 2>&1 && health_line "Caddyfile" ok "valid" || health_line "Caddyfile" warn "нет validate"
     ss -tulpn 2>/dev/null | grep -q ':443' && health_line "Port 443" ok "listening" || health_line "Port 443" warn "не слушается"
+
+    if command -v ufw >/dev/null 2>&1; then
+        if ufw status 2>/dev/null | grep -q "Status: active"; then
+            health_line "UFW" ok "active"
+        else
+            health_line "UFW" warn "не active"
+        fi
+        local ssh_port
+        ssh_port=$(current_ssh_port)
+        [[ "$ssh_port" =~ ^[0-9]+$ ]] || ssh_port="22"
+        ufw_has_port_rule "${ssh_port}/tcp" && health_line "UFW SSH ${ssh_port}/tcp" ok "open" || health_line "UFW SSH ${ssh_port}/tcp" warn "нет правила"
+        ufw_has_port_rule "80/tcp" && health_line "UFW 80/tcp" ok "open/limit" || health_line "UFW 80/tcp" warn "нет правила"
+        ufw_has_port_rule "443/tcp" && health_line "UFW 443/tcp" ok "open" || health_line "UFW 443/tcp" warn "нет правила"
+        ufw_has_port_rule "443/udp" && health_line "UFW 443/udp" ok "open" || health_line "UFW 443/udp" warn "нет правила"
+        if [[ -f "$HYSTERIA_CONFIG" || -x "$HYSTERIA_BIN" ]]; then
+            ufw_has_port_rule "${HYSTERIA_PORT:-8443}/udp" && health_line "UFW Hysteria ${HYSTERIA_PORT:-8443}/udp" ok "open" || health_line "UFW Hysteria ${HYSTERIA_PORT:-8443}/udp" warn "нет правила"
+        fi
+        if [[ -x "$XRAY_BIN" || -f "$XRAY_CONFIG" ]]; then
+            ufw_has_port_rule "${XRAY_REALITY_PORT:-$XRAY_REALITY_PORT_DEFAULT}/tcp" && health_line "UFW Xray REALITY" ok "open" || health_line "UFW Xray REALITY" warn "нет правила"
+            ufw_has_port_rule "${XRAY_MKCP_PORT:-$XRAY_MKCP_PORT_DEFAULT}/udp" && health_line "UFW Xray mKCP" ok "open" || health_line "UFW Xray mKCP" warn "нет правила"
+            ufw_has_port_rule "${XRAY_GRPC_PORT:-$XRAY_GRPC_PORT_DEFAULT}/tcp" && health_line "UFW Xray gRPC" ok "open" || health_line "UFW Xray gRPC" warn "нет правила"
+        fi
+        if [[ "${UNBOUND_VPN_ENABLED:-0}" == "1" ]]; then
+            ufw_has_port_rule "53/udp" && ufw_has_port_rule "53/tcp" && health_line "UFW DNS 53" ok "VPN-only rules present" || health_line "UFW DNS 53" warn "проверь VPN CIDR rules"
+        fi
+    else
+        health_line "UFW" warn "не установлен"
+    fi
+
+    if command -v fail2ban-client >/dev/null 2>&1; then
+        if systemctl is-active --quiet fail2ban 2>/dev/null; then
+            health_line "Fail2Ban" ok "active"
+            fail2ban-client status sshd >/dev/null 2>&1 && health_line "Fail2Ban sshd" ok "jail active" || health_line "Fail2Ban sshd" warn "jail не найден"
+            fail2ban-client status yurich-caddy-auth >/dev/null 2>&1 && health_line "Fail2Ban Caddy auth" ok "jail active" || health_line "Fail2Ban Caddy auth" warn "jail не найден"
+        else
+            health_line "Fail2Ban" warn "не active"
+        fi
+    else
+        health_line "Fail2Ban" warn "не установлен"
+    fi
 
     if command -v unbound >/dev/null 2>&1; then
         systemctl is-active --quiet unbound 2>/dev/null && health_line "DNS (Unbound)" ok "active" || health_line "DNS (Unbound)" warn "не active"
@@ -2199,6 +2294,7 @@ cmd_production_tools_menu() {
         echo -e "  ${BOLD}4)${RESET} Export users + subscriptions"
         echo -e "  ${BOLD}5)${RESET} Import users + subscriptions"
         echo -e "  ${BOLD}6)${RESET} Bridge builder"
+        echo -e "  ${BOLD}7)${RESET} Setup / refresh Fail2Ban"
         echo -e "  ${BOLD}0)${RESET} Назад"
         hr
         echo -ne "${CYAN}Выбор: ${RESET}"
@@ -2210,6 +2306,7 @@ cmd_production_tools_menu() {
             4) cmd_export_state ;;
             5) cmd_import_state ;;
             6) cmd_bridge_menu ;;
+            7) setup_fail2ban "$(current_ssh_port)" ;;
             0) break ;;
             *) warn "Неверный выбор" ;;
         esac
@@ -2219,7 +2316,7 @@ cmd_production_tools_menu() {
 }
 
 # ─── Клиентский конфиг ───────────────────────────────────────
-aurum_dns_client_ip() {
+yurich_dns_client_ip() {
     if [[ "${UNBOUND_VPN_ENABLED:-0}" == "1" && -n "${UNBOUND_GATEWAY_IP:-}" ]]; then
         printf '%s\n' "$UNBOUND_GATEWAY_IP"
     fi
@@ -2234,19 +2331,19 @@ yurich_proxy_uri() {
 
 singbox_naive_tun_json() {
     local user="$1" pass="$2" dns_ip
-    dns_ip=$(aurum_dns_client_ip)
+    dns_ip=$(yurich_dns_client_ip)
     if [[ -n "$dns_ip" ]]; then
         cat <<EOF
 {
   "dns": {
     "servers": [
       {
-        "tag": "aurum-dns",
+        "tag": "yurich-dns",
         "address": "tcp://${dns_ip}:53",
         "detour": "naiveproxy-out"
       }
     ],
-    "final": "aurum-dns",
+    "final": "yurich-dns",
     "strategy": "ipv4_only"
   },
   "inbounds": [
@@ -2373,8 +2470,8 @@ EOF
 EOF
     echo
     echo -e "${CYAN}  JSON (sing-box полный пример, Android VPN/TUN):${RESET}"
-    if [[ -n "$(aurum_dns_client_ip)" ]]; then
-        echo -e "${GREEN}  DNS (Unbound) включён:${RESET} DNS в этом примере идёт через ${CYAN}tcp://$(aurum_dns_client_ip):53${RESET}"
+    if [[ -n "$(yurich_dns_client_ip)" ]]; then
+        echo -e "${GREEN}  DNS (Unbound) включён:${RESET} DNS в этом примере идёт через ${CYAN}tcp://$(yurich_dns_client_ip):53${RESET}"
     else
         echo -e "${YELLOW}  DNS (Unbound) для клиентов выключен:${RESET} меню 17 → 2 включит DNS в этот пример."
     fi
@@ -2543,9 +2640,26 @@ masquerade:
     url: https://${DOMAIN}/
     rewriteHost: true
 EOF
+    if [[ "${WARP_PROXY_ENABLED:-0}" == "1" ]]; then
+        cat >> "$HYSTERIA_CONFIG" <<EOF
+
+# WARP local proxy outbound.
+# Without ACL Hysteria routes all server-side exits through the first outbound.
+outbounds:
+  - name: warp-socks5
+    type: socks5
+    socks5:
+      addr: 127.0.0.1:${WARP_PROXY_PORT:-$WARP_PROXY_PORT_DEFAULT}
+  - name: direct
+    type: direct
+EOF
+    fi
     chmod 600 "$HYSTERIA_CONFIG"
 
     ok "Hysteria 2 конфиг записан: $HYSTERIA_CONFIG"
+    if [[ "${WARP_PROXY_ENABLED:-0}" == "1" ]]; then
+        ok "Hysteria 2 outbound направлен через WARP SOCKS5: 127.0.0.1:${WARP_PROXY_PORT:-$WARP_PROXY_PORT_DEFAULT}"
+    fi
 }
 
 write_hysteria_service() {
@@ -2670,10 +2784,10 @@ print_hysteria_client_config() {
     }
   }
 EOF
-    if [[ -n "$(aurum_dns_client_ip)" ]]; then
+    if [[ -n "$(yurich_dns_client_ip)" ]]; then
         echo
         echo -e "${CYAN}  DNS (Unbound) для full TUN/sing-box:${RESET}"
-        echo -e "  DNS server: ${GREEN}tcp://$(aurum_dns_client_ip):53${RESET}"
+        echo -e "  DNS server: ${GREEN}tcp://$(yurich_dns_client_ip):53${RESET}"
         echo -e "  detour: ${GREEN}hysteria2-out${RESET}"
     fi
     echo
@@ -2814,6 +2928,11 @@ cmd_hysteria_status() {
             ok "Auth: userpass ($(grep -c '^    \".*\":' "$HYSTERIA_CONFIG" 2>/dev/null || echo 0) пользователей)"
         else
             warn "Auth: общий password"
+        fi
+        if grep -q 'name: warp-socks5' "$HYSTERIA_CONFIG"; then
+            ok "Outbound: WARP SOCKS5 127.0.0.1:${WARP_PROXY_PORT:-$WARP_PROXY_PORT_DEFAULT}"
+        else
+            ok "Outbound: direct VPS"
         fi
     fi
     systemctl is-active --quiet hysteria 2>/dev/null && ok "Сервис: работает" || warn "Сервис: не работает"
@@ -3003,37 +3122,74 @@ xray_clients_json_no_flow() {
     done < "$XRAY_USERS_FILE"
 }
 
+xray_reality_key_valid() {
+    [[ "${1:-}" =~ ^[A-Za-z0-9_-]{20,100}$ ]]
+}
+
+xray_extract_reality_key() {
+    local kind="$1" output="$2" value=""
+    case "$kind" in
+        private)
+            value=$(printf '%s\n' "$output" | awk -F':' '
+                {
+                    label=tolower($1);
+                    if (label ~ /private/) {
+                        value=$0;
+                        sub(/^[^:]*:[[:space:]]*/, "", value);
+                        gsub(/^[[:space:]]+|[[:space:]]+$/, "", value);
+                        print value;
+                        exit;
+                    }
+                }
+            ')
+            ;;
+        public)
+            value=$(printf '%s\n' "$output" | awk -F':' '
+                {
+                    label=tolower($1);
+                    if (label ~ /public/ || label ~ /password/) {
+                        value=$0;
+                        sub(/^[^:]*:[[:space:]]*/, "", value);
+                        gsub(/^[[:space:]]+|[[:space:]]+$/, "", value);
+                        print value;
+                        exit;
+                    }
+                }
+            ')
+            ;;
+    esac
+    if xray_reality_key_valid "$value"; then
+        printf '%s\n' "$value"
+        return 0
+    fi
+
+    # Last-resort parser for compact outputs where labels changed.
+    local -a tokens
+    mapfile -t tokens < <(printf '%s\n' "$output" | grep -Eo '[A-Za-z0-9_-]{30,100}' || true)
+    if [[ "$kind" == "private" && "${#tokens[@]}" -ge 1 ]] && xray_reality_key_valid "${tokens[0]}"; then
+        printf '%s\n' "${tokens[0]}"
+        return 0
+    fi
+    if [[ "$kind" == "public" && "${#tokens[@]}" -ge 2 ]] && xray_reality_key_valid "${tokens[1]}"; then
+        printf '%s\n' "${tokens[1]}"
+        return 0
+    fi
+    return 1
+}
+
 ensure_xray_reality_keys() {
     XRAY_REALITY_SHORT_ID="${XRAY_REALITY_SHORT_ID:-$(openssl rand -hex 8)}"
-    if [[ -z "${XRAY_REALITY_PRIVATE_KEY:-}" || -z "${XRAY_REALITY_PUBLIC_KEY:-}" ]]; then
+    if ! xray_reality_key_valid "${XRAY_REALITY_PRIVATE_KEY:-}" || ! xray_reality_key_valid "${XRAY_REALITY_PUBLIC_KEY:-}"; then
         local key_out
         key_out=$("$XRAY_BIN" x25519 2>&1 || true)
-        XRAY_REALITY_PRIVATE_KEY=$(printf '%s\n' "$key_out" | awk -F':' '
-            {
-                label=tolower($1);
-                if (label ~ /private/) {
-                    value=$0;
-                    sub(/^[^:]*:[[:space:]]*/, "", value);
-                    gsub(/[[:space:]]+$/, "", value);
-                    print value;
-                    exit;
-                }
-            }
-        ')
-        XRAY_REALITY_PUBLIC_KEY=$(printf '%s\n' "$key_out" | awk -F':' '
-            {
-                label=tolower($1);
-                if (label ~ /public/ || label ~ /password/) {
-                    value=$0;
-                    sub(/^[^:]*:[[:space:]]*/, "", value);
-                    gsub(/[[:space:]]+$/, "", value);
-                    print value;
-                    exit;
-                }
-            }
-        ')
+        XRAY_REALITY_PRIVATE_KEY=$(xray_extract_reality_key private "$key_out" 2>/dev/null || true)
+        XRAY_REALITY_PUBLIC_KEY=$(xray_extract_reality_key public "$key_out" 2>/dev/null || true)
+        if ! xray_reality_key_valid "${XRAY_REALITY_PRIVATE_KEY:-}" || ! xray_reality_key_valid "${XRAY_REALITY_PUBLIC_KEY:-}"; then
+            warn "xray x25519 вывел неожиданный формат:"
+            printf '%s\n' "$key_out" | sed -n '1,12p'
+        fi
     fi
-    if [[ -z "${XRAY_REALITY_PRIVATE_KEY:-}" || -z "${XRAY_REALITY_PUBLIC_KEY:-}" ]]; then
+    if ! xray_reality_key_valid "${XRAY_REALITY_PRIVATE_KEY:-}" || ! xray_reality_key_valid "${XRAY_REALITY_PUBLIC_KEY:-}"; then
         err "Не смог сгенерировать REALITY ключи: xray x25519"
         warn "Проверь вручную: ${XRAY_BIN} x25519"
         return 1
@@ -3098,6 +3254,20 @@ write_xray_config() {
     "error": "/var/log/xray/error.log",
     "loglevel": "warning"
   },
+EOF
+
+    if [[ "${WARP_PROXY_ENABLED:-0}" == "1" ]]; then
+        cat >> "$XRAY_CONFIG" <<EOF
+  "routing": {
+    "domainStrategy": "AsIs",
+    "rules": [
+      { "type": "field", "network": "tcp,udp", "outboundTag": "warp-proxy" }
+    ]
+  },
+EOF
+    fi
+
+    cat >> "$XRAY_CONFIG" <<EOF
   "inbounds": [
 EOF
 
@@ -3238,7 +3408,7 @@ EOF
     if [[ "${WARP_PROXY_ENABLED:-0}" == "1" ]]; then
         cat >> "$XRAY_CONFIG" <<EOF
     {
-      "protocol": "http",
+      "protocol": "socks",
       "tag": "warp-proxy",
       "settings": {
         "servers": [
@@ -3315,10 +3485,10 @@ print_xray_client_config() {
     echo
     echo -e "${CYAN}  VLESS gRPC TLS:${RESET}"
     echo "  vless://${uuid}@${DOMAIN}:${XRAY_GRPC_PORT:-$XRAY_GRPC_PORT_DEFAULT}?security=tls&type=grpc&serviceName=vless-grpc&sni=${DOMAIN}&fp=chrome#${user}-grpc"
-    if [[ -n "$(aurum_dns_client_ip)" ]]; then
+    if [[ -n "$(yurich_dns_client_ip)" ]]; then
         echo
         echo -e "${CYAN}  DNS (Unbound) для full TUN/sing-box:${RESET}"
-        echo -e "  DNS server: ${GREEN}tcp://$(aurum_dns_client_ip):53${RESET}"
+        echo -e "  DNS server: ${GREEN}tcp://$(yurich_dns_client_ip):53${RESET}"
         echo -e "  detour: ${GREEN}xray-out${RESET} (или тег твоего Xray outbound в клиенте)"
     fi
     hr
@@ -4162,6 +4332,80 @@ warp_prepare_ssh_safety() {
         public_cidr="${public_ip}/32"
         warp_add_excluded_route "$public_cidr" >/dev/null 2>&1 || true
     fi
+    warp_apply_saved_ssh_excludes
+}
+
+normalize_warp_ssh_cidrs() {
+    local raw="$1" item out="" normalized
+    local -a cidrs
+    raw="${raw// /}"
+    IFS=',' read -ra cidrs <<< "$raw"
+    for item in "${cidrs[@]}"; do
+        [[ -z "$item" ]] && continue
+        if [[ "$item" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+            normalized="${item}/32"
+        else
+            normalized="$item"
+        fi
+        if ! is_valid_cidr4 "$normalized"; then
+            err "Некорректный SSH allow CIDR: $item"
+            return 1
+        fi
+        if [[ "${normalized#*/}" == "0" ]]; then
+            err "Нельзя добавлять /0 в WARP SSH allowlist"
+            return 1
+        fi
+        case ",$out," in
+            *,"$normalized",*) ;;
+            *) out="${out:+$out,}${normalized}" ;;
+        esac
+    done
+    printf '%s\n' "$out"
+}
+
+warp_merge_ssh_allow_cidrs() {
+    local old="$1" extra="$2" merged
+    merged=$(normalize_warp_ssh_cidrs "${old:+$old,}${extra}") || return 1
+    printf '%s\n' "$merged"
+}
+
+warp_apply_saved_ssh_excludes() {
+    local cidr
+    local -a _warp_saved_cidrs
+    [[ -z "${WARP_SSH_ALLOW_CIDRS:-}" ]] && return 0
+    IFS=',' read -ra _warp_saved_cidrs <<< "${WARP_SSH_ALLOW_CIDRS}"
+    for cidr in "${_warp_saved_cidrs[@]}"; do
+        [[ -z "$cidr" ]] && continue
+        warp_add_excluded_route "$cidr" >/dev/null 2>&1 || true
+    done
+}
+
+cmd_warp_ssh_allow() {
+    load_config
+    local current_ip current_cidr extra normalized merged
+    current_ip=$(warp_current_ssh_client_ip)
+    [[ -n "$current_ip" ]] && current_cidr=$(warp_route_cidr_for_ip "$current_ip" || true)
+
+    hr
+    echo -e "${BOLD}  WARP full tunnel SSH allowlist${RESET}"
+    hr
+    echo -e "  Сейчас сохранено: ${CYAN}${WARP_SSH_ALLOW_CIDRS:-нет}${RESET}"
+    [[ -n "${current_cidr:-}" ]] && echo -e "  Текущая SSH-сессия: ${CYAN}${current_cidr}${RESET}"
+    echo
+    warn "Добавь IP/CIDR, с которых будешь заходить по SSH: домашний, мобильный, офисный."
+    warn "Если IP динамический и заранее неизвестен, full tunnel всё равно может отрезать SSH."
+    echo -ne "${CYAN}CIDR/IP через запятую [${current_cidr:-пусто}]: ${RESET}"
+    read -r extra
+    extra="${extra:-${current_cidr:-}}"
+    normalized=$(normalize_warp_ssh_cidrs "$extra") || return 1
+    [[ -z "$normalized" ]] && { warn "Ничего не добавлено"; return 0; }
+    merged=$(warp_merge_ssh_allow_cidrs "${WARP_SSH_ALLOW_CIDRS:-}" "$normalized") || return 1
+    WARP_SSH_ALLOW_CIDRS="$merged"
+    save_config
+    if command -v warp-cli >/dev/null 2>&1; then
+        warp_apply_saved_ssh_excludes
+    fi
+    ok "WARP SSH allowlist обновлён: ${WARP_SSH_ALLOW_CIDRS}"
 }
 
 warp_arm_rollback() {
@@ -4260,7 +4504,8 @@ test_warp_proxy() {
     else
         warn "Proxy отвечает, но trace не показал warp=on."
         warn "Без -x/--proxy общий IP VPS не изменится: WARP local proxy работает только для явно направленного трафика."
-        warn "Если нужен выход через WARP для Xray, включи WARP и пересобери Xray config; NaiveProxy/Caddy не умеет chain-upstream через этот local proxy."
+        warn "Если нужен выход через WARP для Naive/Xray/Hysteria, включи WARP proxy и дай скрипту пересобрать Caddy/Xray/Hysteria."
+        warn "Для bridge на второй VPS всё равно нужен Xray/sing-box outbound: Caddy/Naive не заменяет полноценный chain-router."
         return 1
     fi
 }
@@ -4296,6 +4541,34 @@ test_warp_full() {
 
     warn "Full-tunnel включён не полностью: trace не показал warp=on"
     return 1
+}
+
+refresh_services_after_warp_change() {
+    load_config
+    if [[ -f "$CADDYFILE" && -n "${DOMAIN:-}" && -s "$USERS_FILE" ]]; then
+        info "Перегенерирую Caddyfile под текущий WARP mode..."
+        if rewrite_caddyfile_current; then
+            systemctl reload caddy 2>/dev/null || systemctl restart caddy 2>/dev/null || true
+        else
+            warn "Caddyfile не удалось пересобрать после смены WARP"
+        fi
+    fi
+    if [[ "${XRAY_ENABLED:-0}" == "1" && -x "$XRAY_BIN" && -f "$XRAY_CONFIG" ]]; then
+        info "Перегенерирую Xray config под текущий WARP mode..."
+        if write_xray_config && systemctl restart xray; then
+            ok "Xray перезапущен"
+        else
+            warn "Xray не удалось пересобрать автоматически. Запусти: sudo bash yurich-panel.sh xray-install"
+        fi
+    fi
+    if [[ -f "$HYSTERIA_CONFIG" || -x "$HYSTERIA_BIN" ]]; then
+        info "Перегенерирую Hysteria 2 config под текущий WARP mode..."
+        if write_hysteria_config && systemctl restart hysteria; then
+            ok "Hysteria 2 перезапущена"
+        else
+            warn "Hysteria 2 не удалось пересобрать автоматически. Запусти: sudo bash yurich-panel.sh hysteria-install"
+        fi
+    fi
 }
 
 cmd_warp_install() {
@@ -4344,14 +4617,7 @@ cmd_warp_install() {
     fi
     save_config
 
-    if [[ "${XRAY_ENABLED:-0}" == "1" && -x "$XRAY_BIN" && -f "$XRAY_CONFIG" ]]; then
-        info "Обновляю Xray config, чтобы Xray выходил через WARP proxy..."
-        if write_xray_config && systemctl restart xray; then
-            ok "Xray перезапущен с WARP outbound"
-        else
-            warn "WARP работает, но Xray не удалось пересобрать автоматически. Запусти: sudo bash yurich-panel.sh xray-install"
-        fi
-    fi
+    refresh_services_after_warp_change
 
     cmd_warp_status
 }
@@ -4380,6 +4646,19 @@ cmd_warp_full_install() {
         wireguard|wg) proto_ans="WireGuard" ;;
         *) err "Неверный протокол"; return 1 ;;
     esac
+
+    local current_ssh_ip current_ssh_cidr extra_ssh_cidrs normalized_extra
+    current_ssh_ip=$(warp_current_ssh_client_ip)
+    [[ -n "$current_ssh_ip" ]] && current_ssh_cidr=$(warp_route_cidr_for_ip "$current_ssh_ip" || true)
+    echo
+    echo -e "${CYAN}SSH safety:${RESET} текущий IP будет исключён из WARP автоматически: ${current_ssh_cidr:-не определён}"
+    echo -ne "${CYAN}Доп. SSH IP/CIDR через запятую (дом/моб), Enter = пропустить: ${RESET}"
+    read -r extra_ssh_cidrs
+    if [[ -n "$extra_ssh_cidrs" ]]; then
+        normalized_extra=$(normalize_warp_ssh_cidrs "$extra_ssh_cidrs") || return 1
+        WARP_SSH_ALLOW_CIDRS=$(warp_merge_ssh_allow_cidrs "${WARP_SSH_ALLOW_CIDRS:-}" "$normalized_extra") || return 1
+        save_config
+    fi
 
     install_warp_client || return 1
     systemctl enable --now warp-svc >/dev/null 2>&1 || systemctl enable --now cloudflare-warp >/dev/null 2>&1 || true
@@ -4420,18 +4699,11 @@ cmd_warp_full_install() {
         WARP_MODE="off"
         WARP_PROXY_ENABLED="0"
         save_config
+        refresh_services_after_warp_change
         return 1
     fi
     save_config
-
-    if [[ "${XRAY_ENABLED:-0}" == "1" && -x "$XRAY_BIN" && -f "$XRAY_CONFIG" ]]; then
-        info "Пересобираю Xray config: full-tunnel использует системный маршрут WARP, без local proxy outbound..."
-        if write_xray_config && systemctl restart xray; then
-            ok "Xray перезапущен под full-tunnel WARP"
-        else
-            warn "WARP full tunnel работает, но Xray не удалось пересобрать автоматически"
-        fi
-    fi
+    refresh_services_after_warp_change
 }
 
 print_warp_proxy_config() {
@@ -4448,8 +4720,8 @@ print_warp_proxy_config() {
     echo
     echo -e "  ${YELLOW}Важно:${RESET} WARP local proxy подходит для приложений с SOCKS5/HTTP proxy."
     echo -e "          У Cloudflare Local Proxy есть ограничения для долгих запросов."
-    echo -e "          В proxy mode NaiveProxy/Caddy не меняет upstream через WARP автоматически."
-    echo -e "          Xray после пересборки использует WARP outbound, если WARP включён."
+    echo -e "          В proxy mode Caddy/Naive добавляет upstream socks5://127.0.0.1:${port}."
+    echo -e "          Xray и Hysteria после пересборки используют WARP SOCKS5 outbound."
     echo -e "          Full tunnel: весь исходящий трафик VPS через WARP, проверка без -x."
     echo
     echo -e "${CYAN}  Проверка:${RESET}"
@@ -4471,6 +4743,7 @@ cmd_warp_status() {
     hr
     echo -e "  Config mode: ${CYAN}${WARP_MODE:-off}${RESET}"
     echo -e "  Protocol:    ${CYAN}${WARP_PROTOCOL:-auto}${RESET}"
+    echo -e "  SSH allow:   ${CYAN}${WARP_SSH_ALLOW_CIDRS:-нет}${RESET}"
     if command -v warp-cli &>/dev/null; then
         ok "warp-cli: $(warp-cli --version 2>/dev/null | head -1 || echo установлен)"
         warp-cli status 2>/dev/null || true
@@ -4529,9 +4802,7 @@ cmd_warp_disable() {
     WARP_PROXY_ENABLED="0"
     WARP_MODE="off"
     save_config
-    if [[ "${XRAY_ENABLED:-0}" == "1" && -x "$XRAY_BIN" && -f "$XRAY_CONFIG" ]]; then
-        write_xray_config >/dev/null 2>&1 && systemctl restart xray 2>/dev/null || true
-    fi
+    refresh_services_after_warp_change
     ok "WARP отключён. Пакет оставлен установленным."
 }
 
@@ -4549,6 +4820,7 @@ cmd_warp_remove() {
     WARP_MODE="off"
     WARP_PROTOCOL="auto"
     save_config
+    refresh_services_after_warp_change
     ok "cloudflare-warp удалён"
 }
 
@@ -4568,6 +4840,7 @@ cmd_warp_menu() {
         echo -e "  ${BOLD}8)${RESET} Логи"
         echo -e "  ${BOLD}9)${RESET} Отключить WARP"
         echo -e "  ${BOLD}10)${RESET} Удалить WARP"
+        echo -e "  ${BOLD}11)${RESET} SSH allowlist для full tunnel"
         echo -e "  ${BOLD}0)${RESET} Назад"
         echo
         echo -e "  Mode: ${CYAN}${WARP_MODE:-off}${RESET} | Protocol: ${CYAN}${WARP_PROTOCOL:-auto}${RESET} | Proxy: ${CYAN}127.0.0.1:${WARP_PROXY_PORT:-$WARP_PROXY_PORT_DEFAULT}${RESET}"
@@ -4585,6 +4858,7 @@ cmd_warp_menu() {
             8) cmd_warp_logs ;;
             9) cmd_warp_disable ;;
             10) cmd_warp_remove ;;
+            11) cmd_warp_ssh_allow ;;
             0) return ;;
             *) warn "Неверный выбор" ;;
         esac
@@ -5400,6 +5674,13 @@ cmd_install() {
     write_caddyfile
     write_service
     setup_firewall
+    if systemctl is-active --quiet fail2ban 2>/dev/null; then
+        setup_fail2ban "$(current_ssh_port)" || warn "Fail2Ban уже установлен, но автонастройка не прошла"
+    else
+        echo -ne "${YELLOW}Включить Fail2Ban защиту SSH + Caddy auth? [Y/n]: ${RESET}"
+        read -r ans
+        [[ "${ans,,}" != "n" ]] && setup_fail2ban "$(current_ssh_port)"
+    fi
     enable_bbr
 
     echo
@@ -5958,7 +6239,7 @@ cmd_diagnose() {
         else
             _warn "DNS (Unbound) установлен, но сервис не активен"
         fi
-        if [[ -f "${DNS_CONF:-/etc/unbound/unbound.conf.d/aurum-vpn.conf}" ]] && unbound-checkconf "${DNS_CONF:-/etc/unbound/unbound.conf.d/aurum-vpn.conf}" >/dev/null 2>&1; then
+        if [[ -f "${DNS_CONF:-/etc/unbound/unbound.conf.d/yurich-dns.conf}" ]] && unbound-checkconf "${DNS_CONF:-/etc/unbound/unbound.conf.d/yurich-dns.conf}" >/dev/null 2>&1; then
             _ok "Unbound config валиден"
         else
             _warn "Unbound config не найден или содержит ошибку"
@@ -7342,12 +7623,14 @@ tg_send_stats_to() {
 #   YURICH DNS (Unbound recursive resolver for VPN clients)
 # ══════════════════════════════════════════════════════════════
 
-DNS_CONF="/etc/unbound/unbound.conf.d/aurum-vpn.conf"
+DNS_CONF="/etc/unbound/unbound.conf.d/yurich-dns.conf"
+DNS_LEGACY_OLD_DNS_CONF="/etc/unbound/unbound.conf.d/aurum-vpn.conf"
 DNS_LEGACY_CONF="/etc/unbound/unbound.conf.d/naiveproxy-dns.conf"
 DNS_LEGACY_BLOCKLIST="/etc/unbound/blocklist.conf"
 DNS_LEGACY_WHITELIST="/etc/unbound/whitelist.txt"
 DNS_RESOLVED_NO_STUB="/etc/systemd/resolved.conf.d/no-stub.conf"
-DNS_GATEWAY_SERVICE="/etc/systemd/system/aurum-dns-gateway.service"
+DNS_GATEWAY_SERVICE="/etc/systemd/system/yurich-dns-gateway.service"
+DNS_LEGACY_GATEWAY_SERVICE="/etc/systemd/system/aurum-dns-gateway.service"
 DNS_DEFAULT_GATEWAY_IP="10.0.0.1"
 DNS_DEFAULT_VPN_CIDRS="10.0.0.0/24"
 DNS_STATS_FILE="/etc/naiveproxy/dns_stats"
@@ -7398,7 +7681,7 @@ normalize_cidr_list() {
 }
 
 unbound_mode_label() {
-    echo "Aurum recursive DNSSEC"
+    echo "Yurich recursive DNSSEC"
 }
 
 dns_config_backup() {
@@ -7443,9 +7726,9 @@ WantedBy=multi-user.target
 EOF
 
     systemctl daemon-reload
-    systemctl enable --now aurum-dns-gateway.service >/dev/null 2>&1 || {
-        err "Не смог запустить aurum-dns-gateway.service"
-        journalctl -u aurum-dns-gateway -n 20 --no-pager || true
+    systemctl enable --now "$(basename "$DNS_GATEWAY_SERVICE")" >/dev/null 2>&1 || {
+        err "Не смог запустить $(basename "$DNS_GATEWAY_SERVICE")"
+        journalctl -u "$(basename "$DNS_GATEWAY_SERVICE")" -n 20 --no-pager || true
         return 1
     }
     ip addr show dev lo | grep -q "${gateway_ip}/32" || {
@@ -7456,8 +7739,9 @@ EOF
 }
 
 remove_managed_dns_gateway() {
-    systemctl disable --now aurum-dns-gateway.service >/dev/null 2>&1 || true
-    rm -f "$DNS_GATEWAY_SERVICE" 2>/dev/null || true
+    systemctl disable --now "$(basename "$DNS_GATEWAY_SERVICE")" >/dev/null 2>&1 || true
+    systemctl disable --now "$(basename "$DNS_LEGACY_GATEWAY_SERVICE")" >/dev/null 2>&1 || true
+    rm -f "$DNS_GATEWAY_SERVICE" "$DNS_LEGACY_GATEWAY_SERVICE" 2>/dev/null || true
     systemctl daemon-reload 2>/dev/null || true
 }
 
@@ -7515,7 +7799,7 @@ port53_listeners() {
     ss -H -lntup 2>/dev/null | awk '$5 ~ /:53$/ || $5 ~ /:53%/ {print}'
 }
 
-check_port53_for_aurum_dns() {
+check_port53_for_yurich_dns() {
     local conflicts
     conflicts=$(port53_listeners | grep -Ev 'unbound|systemd-resolve|systemd-resolved' || true)
     if [[ -n "$conflicts" ]]; then
@@ -7527,7 +7811,7 @@ check_port53_for_aurum_dns() {
 
 cleanup_legacy_dns_files() {
     local file
-    for file in "$DNS_LEGACY_CONF" "$DNS_LEGACY_BLOCKLIST" "$DNS_LEGACY_WHITELIST"; do
+    for file in "$DNS_LEGACY_OLD_DNS_CONF" "$DNS_LEGACY_CONF" "$DNS_LEGACY_BLOCKLIST" "$DNS_LEGACY_WHITELIST"; do
         if [[ -f "$file" ]]; then
             dns_config_backup "$file"
             rm -f "$file"
@@ -7633,21 +7917,26 @@ restart_unbound_checked() {
     fi
 }
 
-install_aurum_dns_cli_commands() {
+install_yurich_dns_cli_commands() {
     local script_path="${SCRIPT_PATH:-/usr/local/bin/yurich-panel.sh}"
-    cat > /usr/local/bin/aurum-dns-status <<EOF
+    cat > /usr/local/bin/yurich-dns-status <<EOF
 #!/bin/sh
 exec /bin/bash "$script_path" unbound-status
 EOF
-    cat > /usr/local/bin/aurum-dns-test <<EOF
+    cat > /usr/local/bin/yurich-dns-test <<EOF
 #!/bin/sh
 exec /bin/bash "$script_path" unbound-test
 EOF
-    cat > /usr/local/bin/aurum-dns-restart <<EOF
+    cat > /usr/local/bin/yurich-dns-restart <<EOF
 #!/bin/sh
 exec /bin/bash "$script_path" unbound-restart
 EOF
-    chmod +x /usr/local/bin/aurum-dns-status /usr/local/bin/aurum-dns-test /usr/local/bin/aurum-dns-restart
+    chmod +x /usr/local/bin/yurich-dns-status /usr/local/bin/yurich-dns-test /usr/local/bin/yurich-dns-restart
+
+    # Legacy aliases keep already installed servers and old automation working.
+    ln -sf /usr/local/bin/yurich-dns-status /usr/local/bin/aurum-dns-status 2>/dev/null || true
+    ln -sf /usr/local/bin/yurich-dns-test /usr/local/bin/aurum-dns-test 2>/dev/null || true
+    ln -sf /usr/local/bin/yurich-dns-restart /usr/local/bin/aurum-dns-restart 2>/dev/null || true
 }
 
 apply_unbound_ufw_rules() {
@@ -7681,7 +7970,7 @@ remove_unbound_ufw_rules() {
 
 cmd_dns_install() {
     hr
-    echo -e "${BOLD}  🛡️ Установка DNS (Unbound) (Unbound)${RESET}"
+    echo -e "${BOLD}  🛡️ Установка Yurich DNS (Unbound)${RESET}"
     hr
 
     info "Обновляю apt cache и устанавливаю зависимости..."
@@ -7690,7 +7979,7 @@ cmd_dns_install() {
 
     cleanup_legacy_dns_files
     disable_resolved_stub_if_needed
-    check_port53_for_aurum_dns || return 1
+    check_port53_for_yurich_dns || return 1
     mkdir -p /var/lib/unbound "$(dirname "$DNS_CONF")"
     unbound-anchor -a /var/lib/unbound/root.key >/dev/null 2>&1 || true
 
@@ -7735,7 +8024,7 @@ cmd_dns_install() {
     write_unbound_config
     restart_unbound_checked || return 1
     apply_unbound_ufw_rules
-    install_aurum_dns_cli_commands
+    install_yurich_dns_cli_commands
 
     # Статистика
     mkdir -p "$(dirname "${DNS_STATS_FILE}")"
@@ -7743,8 +8032,8 @@ cmd_dns_install() {
     UNBOUND_ENABLED="1"
     save_config
 
-    ok "DNS (Unbound) установлен!"
-    tg_send "🛡️ <b>DNS (Unbound) установлен</b>
+    ok "Yurich DNS (Unbound) установлен!"
+    tg_send "🛡️ <b>Yurich DNS (Unbound) установлен</b>
 🖥 Сервер: <code>$(hostname)</code>
 🔒 Режим: recursive DNSSEC, gateway=${UNBOUND_GATEWAY_IP:-127.0.0.1}, VPN=${UNBOUND_VPN_ENABLED:-0}
 🕐 $(date '+%Y-%m-%d %H:%M:%S')"
@@ -7781,7 +8070,7 @@ cmd_dns_restart() {
 cmd_dns_status() {
     load_config
     hr
-    echo -e "${BOLD}  🛡️ DNS (Unbound) (Unbound)${RESET}"
+    echo -e "${BOLD}  🛡️ Yurich DNS (Unbound)${RESET}"
     hr
 
     if ! command -v unbound &>/dev/null; then
@@ -7943,7 +8232,8 @@ cmd_dns_remove() {
     [[ "${UNBOUND_MANAGED_GATEWAY:-0}" == "1" || -f "$DNS_GATEWAY_SERVICE" ]] && remove_managed_dns_gateway
     cleanup_legacy_dns_files
     dns_config_backup "$DNS_CONF"
-    rm -f "$DNS_CONF"
+    rm -f "$DNS_CONF" "$DNS_LEGACY_OLD_DNS_CONF"
+    rm -f /usr/local/bin/yurich-dns-status /usr/local/bin/yurich-dns-test /usr/local/bin/yurich-dns-restart 2>/dev/null || true
     rm -f /usr/local/bin/aurum-dns-status /usr/local/bin/aurum-dns-test /usr/local/bin/aurum-dns-restart 2>/dev/null || true
     if [[ -f "$DNS_RESOLVED_NO_STUB" ]]; then
         dns_config_backup "$DNS_RESOLVED_NO_STUB"
@@ -7958,7 +8248,7 @@ cmd_dns_remove() {
     save_config
     systemctl daemon-reload 2>/dev/null || true
 
-    ok "DNS (Unbound) удалён. Пакеты unbound/dnsutils не удалял."
+    ok "Yurich DNS (Unbound) удалён. Пакеты unbound/dnsutils не удалял."
 }
 
 # ─── Донат ─────────────────────────────────────────────────────
@@ -8009,7 +8299,7 @@ cmd_dns_menu() {
     while true; do
         load_config
         hr
-        echo -e "${BOLD}  🛡️ DNS (Unbound) (Unbound)${RESET}"
+        echo -e "${BOLD}  🛡️ Yurich DNS (Unbound)${RESET}"
         hr
 
         local dns_status="${RED}не установлен${RESET}"
@@ -8305,7 +8595,7 @@ show_menu() {
     echo -e "   ${BOLD}10)${RESET} $(t "Логи" "Logs")"
     echo -e "   ${BOLD}11)${RESET} $(t "Удалить Yurich Panel" "Remove Yurich Panel")"
     echo -e "   ${BOLD}16)${RESET} 🔍 $(t "Диагностика системы" "System diagnostics")"
-    echo -e "   ${BOLD}17)${RESET} 🛡️ DNS (Unbound) (Unbound)"
+    echo -e "   ${BOLD}17)${RESET} 🛡️ Yurich DNS (Unbound)"
     echo -e "   ${BOLD}18)${RESET} 💛 $(t "Поддержать проект (донат)" "Support project (donation)")"
     echo -e "   ──────────────────────────"
     echo -e "   ${BOLD}12)${RESET} 🔒 SSH Hardening"
@@ -8329,6 +8619,24 @@ show_menu() {
 
 # ─── MAIN ────────────────────────────────────────────────────
 main() {
+    if [[ $# -gt 0 ]]; then
+        case "$1" in
+            version|--version|-v)
+                echo "Yurich Panel v${VERSION}"
+                echo "Telegram: https://t.me/ivan_it_net"
+                echo "Сайт:     https://ivan-it.net"
+                echo "GitHub:   github.com/ivan-yurich/naiveproxy"
+                return 0
+                ;;
+            help|--help|-h)
+                echo "Yurich Panel v${VERSION}"
+                echo "Usage: sudo bash yurich-panel.sh [command]"
+                echo "Commands: install status config [user] reload restart update remove logs monitor users hysteria hy2 hysteria-port warp warp-proxy warp-full warp-protocol warp-ssh-allow xray xray-add-user [user] devices subscription private-page tg-stats bot-menu health safe-apply backup export import bridge fail2ban language ssh-hardening ssh-rescue sysupdate cert domains dns unbound yurich-dns yurich-dns-status yurich-dns-restart self-update version camouflage"
+                return 0
+                ;;
+        esac
+    fi
+
     check_root
     check_os
 
@@ -8360,6 +8668,7 @@ main() {
             warp-test) cmd_warp_test ;;
             warp-full-test) cmd_warp_test_full ;;
             warp-protocol) cmd_warp_protocol ;;
+            warp-ssh-allow|warp-ssh|warp-allow) cmd_warp_ssh_allow ;;
             warp-logs) cmd_warp_logs ;;
             warp-disable) cmd_warp_disable ;;
             warp-remove) cmd_warp_remove ;;
@@ -8388,14 +8697,14 @@ main() {
             qr)          load_config; print_client_config ;;
             ssh-key)     cat "${CONFIG_DIR}/ssh_private_key" 2>/dev/null || err "Ключ не найден: ${CONFIG_DIR}/ssh_private_key" ;;
             diagnose)    cmd_diagnose "${2:-}" ;;
-            dns|unbound|aurum-dns)                         cmd_unbound_plugin ;;
-            dns-install|unbound-install|aurum-dns-install) cmd_dns_install ;;
+            dns|unbound|yurich-dns|aurum-dns)                         cmd_unbound_plugin ;;
+            dns-install|unbound-install|yurich-dns-install|aurum-dns-install) cmd_dns_install ;;
             dns-mode|unbound-mode)                         cmd_dns_set_mode ;;
-            dns-vpn|unbound-vpn|aurum-dns-vpn)             cmd_dns_vpn_access ;;
+            dns-vpn|unbound-vpn|yurich-dns-vpn|aurum-dns-vpn)             cmd_dns_vpn_access ;;
             dns-update|unbound-update)                     cmd_dns_update ;;
-            dns-status|unbound-status|unbound-test|aurum-dns-status|aurum-dns-test) cmd_dns_status ;;
-            dns-restart|unbound-restart|aurum-dns-restart) cmd_dns_restart ;;
-            dns-remove|unbound-remove|aurum-dns-remove)     cmd_dns_remove ;;
+            dns-status|unbound-status|unbound-test|yurich-dns-status|yurich-dns-test|aurum-dns-status|aurum-dns-test) cmd_dns_status ;;
+            dns-restart|unbound-restart|yurich-dns-restart|aurum-dns-restart) cmd_dns_restart ;;
+            dns-remove|unbound-remove|yurich-dns-remove|aurum-dns-remove)     cmd_dns_remove ;;
             bot)         load_config; cmd_bot ;;
             bot-install) load_config; install_bot_service ;;
             bot-menu)    load_config; tg_apply_bot_menu ;;
@@ -8407,6 +8716,7 @@ main() {
             bridge)       cmd_bridge_menu ;;
             bridge-show)  cmd_bridge_show ;;
             bridge-remove) cmd_bridge_remove ;;
+            fail2ban|f2b|security) setup_fail2ban "$(current_ssh_port)" ;;
             language|lang) cmd_language ;;
             self-update)  load_config; cmd_self_update ;;
             camouflage)   install_camouflage_page ;;
@@ -8417,7 +8727,7 @@ main() {
                 echo "GitHub:   github.com/ivan-yurich/naiveproxy"
                 ;;
             *) err "Неизвестная команда: $1"
-               echo "Доступные: install status config [user] reload restart update remove logs monitor users hysteria hy2 hysteria-port warp warp-proxy warp-full warp-protocol xray xray-add-user [user] devices subscription private-page tg-stats bot-menu health safe-apply backup export import bridge language ssh-hardening ssh-rescue sysupdate cert domains dns unbound aurum-dns aurum-dns-status aurum-dns-restart self-update version camouflage"
+               echo "Доступные: install status config [user] reload restart update remove logs monitor users hysteria hy2 hysteria-port warp warp-proxy warp-full warp-protocol warp-ssh-allow xray xray-add-user [user] devices subscription private-page tg-stats bot-menu health safe-apply backup export import bridge fail2ban language ssh-hardening ssh-rescue sysupdate cert domains dns unbound yurich-dns yurich-dns-status yurich-dns-restart self-update version camouflage"
                exit 1 ;;
         esac
         exit 0

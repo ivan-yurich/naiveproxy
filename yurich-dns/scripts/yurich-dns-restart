@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CONF="/etc/unbound/unbound.conf.d/yurich-dns.conf"
+LEGACY_CONF="/etc/unbound/unbound.conf.d/aurum-vpn.conf"
+
+if [[ ! -f "$CONF" && -f "$LEGACY_CONF" ]]; then
+    CONF="$LEGACY_CONF"
+fi
+unbound-checkconf "$CONF"
+systemctl reset-failed unbound 2>/dev/null || true
+systemctl restart unbound
+systemctl status unbound --no-pager

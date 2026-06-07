@@ -26,7 +26,7 @@
 
 ---
 
-[![Version](https://img.shields.io/badge/version-5.6.4-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
+[![Version](https://img.shields.io/badge/version-5.6.7-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
 [![ShellCheck](https://img.shields.io/badge/ShellCheck-passing-3FB950?style=for-the-badge&logo=gnu-bash&logoColor=white)](https://www.shellcheck.net)
 [![Bash](https://img.shields.io/badge/Bash-5.0+-4EAA25?style=for-the-badge&logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-20.04%2B-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://ubuntu.com)
@@ -98,7 +98,7 @@ Yurich Proxy uses a Naive-compatible Chrome-like transport
 
 ---
 
-## 🎉 What's new in v5.6.4
+## 🎉 What's new in v5.6.7
 
 <table>
 <tr>
@@ -106,6 +106,13 @@ Yurich Proxy uses a Naive-compatible Chrome-like transport
 
 ### 🐛 Bug fixes
 
+✅ WARP proxy mode now regenerates Caddy with `forward_proxy upstream socks5://127.0.0.1:40000`
+✅ Hysteria 2 server config now gets a WARP SOCKS5 `outbounds` block
+✅ Xray WARP outbound now uses SOCKS plus explicit routing
+✅ WARP mode changes refresh Caddy, Xray and Hysteria automatically
+✅ New `warp-ssh-allow` command for full-tunnel SSH safety
+✅ Full-tunnel WARP asks for extra SSH IP/CIDR before enabling
+✅ More robust parser for Xray REALITY key output formats
 ✅ Yurich Panel branding refresh
 ✅ Public transport brand added: `Yurich Proxy`
 ✅ Branded `yurich://proxy?...` alias added for future Yurich clients
@@ -127,6 +134,11 @@ Yurich Proxy uses a Naive-compatible Chrome-like transport
 ✅ Subscription pages show expiration, URI labels include expiry tags
 ✅ Production tools menu with backup, export/import and bridge builder
 ✅ Bridge profile builder for mobile → first VPS → second VPS scenarios
+✅ Fail2Ban can now be installed/refreshed without SSH Hardening
+✅ New `yurich-caddy-auth` jail for Caddy `401/407` JSON access log events
+✅ ACME port `80/tcp` now uses a real `ufw limit` rule
+✅ Health-check verifies UFW rules for SSH, 80/443, Hysteria, Xray and DNS
+✅ CLI alias: `fail2ban`, `f2b` or `security`
 
 ✅ User deletion now removes the subscription token and web page
 ✅ Hysteria 2 empty or short `obfs.salamander.password`
@@ -161,7 +173,7 @@ Yurich Proxy uses a Naive-compatible Chrome-like transport
 🔒 **VPN-only DNS access** — port 53 is allowed only from configured VPN CIDRs
 🛠️ **Port 53 fix** — safely disables only the systemd-resolved stub listener when needed
 🌉 **Auto DNS gateway** — can create `10.0.0.1/32` on `lo` for client TUN configs
-🧩 **Standalone project** — `aurum-dns/` with install, uninstall, examples and CLI tools
+🧩 **Standalone project** — `yurich-dns/` with install, uninstall, examples and CLI tools
 ♻️ **Idempotent installer** — backups before changes and safe repeated runs
 📱 **Client configs** — sing-box Android VPN/TUN examples include DNS (Unbound) automatically
 🧭 **Telegram Menu** — Bot API `setMyCommands` + `setChatMenuButton`
@@ -332,7 +344,7 @@ Localhost and configured VPN CIDRs only
 No `0.0.0.0` bind and no public port 53 rule
 
 🧰 **CLI tools**
-`aurum-dns-status`, `aurum-dns-test`, `aurum-dns-restart`
+`yurich-dns-status`, `yurich-dns-test`, `yurich-dns-restart`
 
 ### 🤖 Telegram Bot
 
@@ -383,7 +395,7 @@ No `0.0.0.0` bind and no public port 53 rule
 
 ```
 ──────────────────────────────────────────────────────
-   Yurich Panel v5.6.4  [ENG]
+   Yurich Panel v5.6.7  [ENG]
    Status: ● running  │  Domain: proxy.example.com
    Telegram: connected  │  Users: 3  │  SSH: 52847
 ──────────────────────────────────────────────────────
@@ -458,8 +470,8 @@ sudo bash yurich-panel.sh dns-install    # Install private recursive DNS
 sudo bash yurich-panel.sh dns-vpn        # Configure VPN client access
 sudo bash yurich-panel.sh dns-status     # Status, port 53 and DNSSEC tests
 sudo bash yurich-panel.sh dns-restart    # Restart Unbound
-sudo bash yurich-panel.sh aurum-dns      # Alias for DNS menu
-sudo bash yurich-panel.sh aurum-dns-test # Alias for DNS status/test
+sudo bash yurich-panel.sh yurich-dns      # Alias for DNS menu
+sudo bash yurich-panel.sh yurich-dns-test # Alias for DNS status/test
 
 # === Cloudflare WARP modes ===
 sudo bash yurich-panel.sh warp           # WARP menu
@@ -640,13 +652,13 @@ sudo bash yurich-panel.sh dns-restart    # Restart Unbound
 sudo bash yurich-panel.sh dns-remove     # Remove created DNS config and commands
 ```
 
-The standalone project is also included in [`aurum-dns/`](aurum-dns/):
+The standalone project is also included in [`yurich-dns/`](yurich-dns/):
 
 ```bash
-sudo bash aurum-dns/install-dns.sh
-aurum-dns-status
-aurum-dns-test
-sudo aurum-dns-restart
+sudo bash yurich-dns/install-dns.sh
+yurich-dns-status
+yurich-dns-test
+sudo yurich-dns-restart
 ```
 
 ### 🔒 Open resolver protection:
@@ -693,7 +705,7 @@ sudo bash yurich-panel.sh diagnose
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  🔍 Diagnostics Yurich Panel v5.6.4               │
+│  🔍 Diagnostics Yurich Panel v5.6.7               │
 │  2026-05-23 14:32:18 · proxy.example.com               │
 └─────────────────────────────────────────────────────────┘
 
@@ -733,7 +745,7 @@ sudo bash yurich-panel.sh diagnose
   ✅ journald: no critical errors
 
 [7/7] Version and updates
-  ✅ Script up to date: v5.6.4
+  ✅ Script up to date: v5.6.7
   ✅ SSH Hardening done
 
 ══════════════════════════════════════════════════════════
@@ -943,12 +955,12 @@ For servers
 └── backups/                                   ← Config backups
 
 /etc/unbound/
-└── unbound.conf.d/aurum-vpn.conf              ← DNS (Unbound) config
+└── unbound.conf.d/yurich-dns.conf              ← DNS (Unbound) config
 
 /usr/local/bin/
-├── aurum-dns-status                           ← DNS status and logs
-├── aurum-dns-test                             ← DNSSEC and resolve tests
-└── aurum-dns-restart                          ← Safe Unbound restart
+├── yurich-dns-status                           ← DNS status and logs
+├── yurich-dns-test                             ← DNSSEC and resolve tests
+└── yurich-dns-restart                          ← Safe Unbound restart
 
 /etc/fail2ban/jail.local                       ← Fail2Ban rules
 
@@ -1161,7 +1173,7 @@ sudo bash yurich-panel.sh
 ```bash
 # Check Unbound, port 53 and DNSSEC
 sudo bash yurich-panel.sh dns-status
-aurum-dns-test
+yurich-dns-test
 
 # Reconfigure VPN client access
 sudo bash yurich-panel.sh dns-vpn
@@ -1373,7 +1385,36 @@ for donors
 ## 📜 Changelog
 
 <details>
-<summary><b>v5.6.4</b> — Yurich Proxy alias ← CURRENT</summary>
+<summary><b>v5.6.7</b> — WARP upstreams and Xray stability ← CURRENT</summary>
+
+**🌀 WARP routing:**
+- WARP proxy mode now regenerates Caddy with `forward_proxy upstream socks5://127.0.0.1:40000`
+- Hysteria 2 can now exit through WARP local proxy using server `outbounds`
+- Xray WARP outbound now uses SOCKS instead of HTTP and has an explicit routing rule
+- Caddy, Xray and Hysteria are refreshed automatically after WARP mode changes
+- Added `warp-ssh-allow` to store extra home/mobile SSH CIDR exclusions
+- Full-tunnel WARP asks for extra SSH IP/CIDR before enabling
+- Xray REALITY key parsing is more robust across `xray x25519` output variants
+
+**🛡️ Firewall and bans:**
+- Fail2Ban can now be configured without running SSH Hardening
+- The installer offers SSH + Caddy/Yurich Proxy auth protection during normal setup
+- Added `yurich-caddy-auth` jail for Caddy JSON access logs with `401/407` responses
+- Added `fail2ban` CLI command and a Production tools action to refresh Fail2Ban
+- `80/tcp` now uses a real `ufw limit` rule instead of a duplicate `allow`
+- `health` now checks UFW, SSH/80/443, Hysteria, Xray, DNS 53, and Fail2Ban jails
+
+</details>
+
+<details>
+<summary><b>v5.6.5</b> — Yurich DNS branding and compatibility</summary>
+
+**🛡️ Yurich DNS branding:**
+- Renamed the DNS module to `Yurich DNS`
+- Renamed the standalone project to `yurich-dns/`
+- Primary DNS commands are now `yurich-dns-status`, `yurich-dns-test`, `yurich-dns-restart`
+- Unbound config is now written to `/etc/unbound/unbound.conf.d/yurich-dns.conf`
+- Old DNS command aliases are kept only for compatibility
 
 **🧭 Yurich Proxy branding:**
 - Added public transport brand `Yurich Proxy`
@@ -1458,7 +1499,7 @@ for donors
 <summary><b>v5.5.12</b> — DNS (Unbound) auto gateway for VPN clients</summary>
 
 **🌉 Client DNS gateway:**
-- Added `aurum-dns-gateway.service` for a safe local `10.0.0.1/32` gateway on `lo`
+- Added `yurich-dns-gateway.service` for a safe local `10.0.0.1/32` gateway on `lo`
 - Menu `17 → 2` can now create the gateway automatically when the IP is missing
 - Full sing-box Android VPN/TUN examples include DNS (Unbound) through `tcp://10.0.0.1:53`
 - Personal subscription pages now show the ready sing-box TUN config with DNS (Unbound)
@@ -1470,13 +1511,13 @@ for donors
 
 **🛡️ DNS (Unbound):**
 - Replaced the old DNS adblock module with a safer private Unbound resolver
-- Added standalone `aurum-dns/` project with install, uninstall, examples and CLI tools
+- Added standalone `yurich-dns/` project with install, uninstall, examples and CLI tools
 - Removed blocklist/whitelist generation from the main manager
 - Fixed duplicate DNSSEC trust-anchor startup failures on Ubuntu packages
 - Added safe `systemd-resolved` stub handling through `resolved.conf.d/no-stub.conf`
 - Port 53 is opened only for configured VPN CIDRs, never for the public internet
-- Added `dns-restart`, `aurum-dns`, `aurum-dns-test` aliases
-- Added `aurum-dns-gateway.service` to create a safe local client DNS gateway when needed
+- Added `dns-restart`, `yurich-dns`, `yurich-dns-test` aliases
+- Added `yurich-dns-gateway.service` to create a safe local client DNS gateway when needed
 
 </details>
 

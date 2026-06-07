@@ -2,12 +2,12 @@
   "dns": {
     "servers": [
       {
-        "tag": "aurum-dns",
+        "tag": "yurich-dns",
         "address": "tcp://10.0.0.1:53",
         "detour": "direct"
       }
     ],
-    "final": "aurum-dns",
+    "final": "yurich-dns",
     "strategy": "ipv4_only",
     "disable_cache": false
   },

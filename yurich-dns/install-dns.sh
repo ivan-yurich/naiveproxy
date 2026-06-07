@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CONF="/etc/unbound/unbound.conf.d/aurum-vpn.conf"
-ENV_DIR="/etc/aurum-dns"
-ENV_FILE="${ENV_DIR}/aurum-dns.env"
+CONF="/etc/unbound/unbound.conf.d/yurich-dns.conf"
+LEGACY_CONF="/etc/unbound/unbound.conf.d/aurum-vpn.conf"
+ENV_DIR="/etc/yurich-dns"
+ENV_FILE="${ENV_DIR}/yurich-dns.env"
+LEGACY_ENV_FILE="/etc/aurum-dns/aurum-dns.env"
 NO_STUB="/etc/systemd/resolved.conf.d/no-stub.conf"
-GATEWAY_SERVICE="/etc/systemd/system/aurum-dns-gateway.service"
+GATEWAY_SERVICE="/etc/systemd/system/yurich-dns-gateway.service"
+LEGACY_GATEWAY_SERVICE="/etc/systemd/system/aurum-dns-gateway.service"
 DEFAULT_GATEWAY="10.0.0.1"
 DEFAULT_CIDRS="10.0.0.0/24"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -94,7 +97,9 @@ ExecStop=/bin/sh -c '${ip_bin} addr del ${gateway}/32 dev lo 2>/dev/null || true
 WantedBy=multi-user.target
 EOF
     systemctl daemon-reload
-    systemctl enable --now aurum-dns-gateway.service >/dev/null 2>&1
+    systemctl disable --now "$(basename "$LEGACY_GATEWAY_SERVICE")" >/dev/null 2>&1 || true
+    rm -f "$LEGACY_GATEWAY_SERVICE" 2>/dev/null || true
+    systemctl enable --now "$(basename "$GATEWAY_SERVICE")" >/dev/null 2>&1
 }
 
 prepare_gateway() {
@@ -144,12 +149,44 @@ check_port53() {
     fi
 }
 
+source_legacy_env_if_safe() {
+    [[ -f "$ENV_FILE" || -f "$LEGACY_ENV_FILE" ]] || return 0
+    local env_file="$ENV_FILE"
+    [[ -f "$env_file" ]] || env_file="$LEGACY_ENV_FILE"
+
+    local owner perms
+    owner=$(stat -c '%U' "$env_file" 2>/dev/null || echo "unknown")
+    perms=$(stat -c '%a' "$env_file" 2>/dev/null || echo "000")
+    if [[ "$owner" != "root" ]]; then
+        warn "Skip unsafe env file owner: $env_file belongs to $owner"
+        return 0
+    fi
+    if [[ "$perms" != "600" ]]; then
+        chmod 600 "$env_file" 2>/dev/null || true
+    fi
+
+    # shellcheck disable=SC1090
+    source "$env_file"
+}
+
+cleanup_legacy_files() {
+    if [[ -f "$LEGACY_CONF" ]]; then
+        backup_file "$LEGACY_CONF"
+        rm -f "$LEGACY_CONF"
+    fi
+    if [[ -f "$LEGACY_GATEWAY_SERVICE" ]]; then
+        systemctl disable --now "$(basename "$LEGACY_GATEWAY_SERVICE")" >/dev/null 2>&1 || true
+        rm -f "$LEGACY_GATEWAY_SERVICE"
+        systemctl daemon-reload
+    fi
+}
+
 write_env() {
     local gateway="$1" cidrs="$2"
     mkdir -p "$ENV_DIR"
     cat > "$ENV_FILE" <<EOF
-AURUM_DNS_GATEWAY='${gateway}'
-AURUM_DNS_CIDRS='${cidrs}'
+YURICH_DNS_GATEWAY='${gateway}'
+YURICH_DNS_CIDRS='${cidrs}'
 EOF
     chmod 600 "$ENV_FILE"
 }
@@ -231,9 +268,12 @@ apply_ufw() {
 }
 
 install_commands() {
-    install -m 755 "${SCRIPT_DIR}/scripts/aurum-dns-status" /usr/local/bin/aurum-dns-status
-    install -m 755 "${SCRIPT_DIR}/scripts/aurum-dns-test" /usr/local/bin/aurum-dns-test
-    install -m 755 "${SCRIPT_DIR}/scripts/aurum-dns-restart" /usr/local/bin/aurum-dns-restart
+    install -m 755 "${SCRIPT_DIR}/scripts/yurich-dns-status" /usr/local/bin/yurich-dns-status
+    install -m 755 "${SCRIPT_DIR}/scripts/yurich-dns-test" /usr/local/bin/yurich-dns-test
+    install -m 755 "${SCRIPT_DIR}/scripts/yurich-dns-restart" /usr/local/bin/yurich-dns-restart
+    ln -sf /usr/local/bin/yurich-dns-status /usr/local/bin/aurum-dns-status 2>/dev/null || true
+    ln -sf /usr/local/bin/yurich-dns-test /usr/local/bin/aurum-dns-test 2>/dev/null || true
+    ln -sf /usr/local/bin/yurich-dns-restart /usr/local/bin/aurum-dns-restart 2>/dev/null || true
 }
 
 run_tests() {
@@ -250,10 +290,11 @@ run_tests() {
 
 main() {
     require_root
+    source_legacy_env_if_safe
     apt-get update -qq
     apt-get install -y -q unbound unbound-anchor dnsutils dns-root-data curl ca-certificates
 
-    local gateway="${AURUM_DNS_GATEWAY:-}" cidrs="${AURUM_DNS_CIDRS:-}"
+    local gateway="${YURICH_DNS_GATEWAY:-}" cidrs="${YURICH_DNS_CIDRS:-}"
     local detected
     detected=$(detect_gateway || true)
 
@@ -278,12 +319,13 @@ main() {
 
     disable_resolved_stub_if_needed
     check_port53
+    cleanup_legacy_files
     write_env "$gateway" "$cidrs"
     write_unbound_config "$gateway" "$cidrs"
     apply_ufw "$cidrs"
     install_commands
     run_tests
-    ok "DNS (Unbound) installed. Commands: aurum-dns-status, aurum-dns-test, aurum-dns-restart"
+    ok "DNS (Unbound) installed. Commands: yurich-dns-status, yurich-dns-test, yurich-dns-restart"
 }
 
 main "$@"
