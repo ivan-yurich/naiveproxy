@@ -26,7 +26,7 @@
 
 ---
 
-[![Version](https://img.shields.io/badge/version-5.6.13-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
+[![Version](https://img.shields.io/badge/version-5.6.34-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
 [![ShellCheck](https://img.shields.io/badge/ShellCheck-passing-3FB950?style=for-the-badge&logo=gnu-bash&logoColor=white)](https://www.shellcheck.net)
 [![Bash](https://img.shields.io/badge/Bash-5.0+-4EAA25?style=for-the-badge&logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-20.04%2B-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://ubuntu.com)
@@ -98,7 +98,7 @@ Yurich Proxy uses a Naive-compatible Chrome-like transport
 
 ---
 
-## 🎉 What's new in v5.6.13
+## 🎉 What's new in v5.6.34
 
 <table>
 <tr>
@@ -422,7 +422,7 @@ No `0.0.0.0` bind and no public port 53 rule
 
 ```
 ──────────────────────────────────────────────────────
-   Yurich Panel v5.6.13  [ENG]
+Yurich Panel v5.6.34  [ENG]
    Status: ● running  │  Domain: proxy.example.com
    Telegram: connected  │  Users: 3  │  SSH: 52847
 ──────────────────────────────────────────────────────
@@ -732,7 +732,7 @@ sudo bash yurich-panel.sh diagnose
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  🔍 Diagnostics Yurich Panel v5.6.13              │
+│  🔍 Diagnostics Yurich Panel v5.6.34              │
 │  2026-05-23 14:32:18 · proxy.example.com               │
 └─────────────────────────────────────────────────────────┘
 
@@ -772,7 +772,7 @@ sudo bash yurich-panel.sh diagnose
   ✅ journald: no critical errors
 
 [7/7] Version and updates
-  ✅ Script up to date: v5.6.13
+✅ Script up to date: v5.6.34
   ✅ SSH Hardening done
 
 ══════════════════════════════════════════════════════════
@@ -1412,7 +1412,7 @@ for donors
 ## 📜 Changelog
 
 <details>
-<summary><b>v5.6.13</b> — Multi-server node management ← CURRENT</summary>
+<summary><b>v5.6.34</b> — Multi-server node management ← CURRENT</summary>
 
 **Multi-server nodes:**
 - Added `29) [NODES] Multi-server management`
