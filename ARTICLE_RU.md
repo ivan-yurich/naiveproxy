@@ -18,7 +18,6 @@ Yurich Panel — это Bash-скрипт для быстрого развёрт
 
 - `SECURITY.md` с правилами безопасного disclosure;
 - `.gitignore` и `.gitattributes` для защиты от случайной публикации локальных файлов, backup-архивов, ключей и runtime-состояния;
-- [RELEASE_NOTES_RU.md](RELEASE_NOTES_RU.md) с полным описанием изменений;
 - расширенный [MULTISERVER_GUIDE_RU.md](MULTISERVER_GUIDE_RU.md) по node-серверам, rollout без простоя, HAProxy/SNI mux, WARP, проверке профилей и удалению node из подписок;
 - описание `protocol-validate`, `protocol-benchmark` и `protocol-benchmark-monitor` для проверки клиентских ссылок, а не только systemd-сервисов.
 

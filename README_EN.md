@@ -1,6 +1,6 @@
 <div align="center">
 
-🌐 **Language / Язык:** [🇷🇺 Русский](README.md) · [🇬🇧 English](README_EN.md) · [Release notes](RELEASE_NOTES_RU.md)
+🌐 **Language / Язык:** [🇷🇺 Русский](README.md) · [🇬🇧 English](README_EN.md)
 
 </div>
 
@@ -61,7 +61,6 @@
 [**🛡️ DNS (Unbound)**](#-dns-unbound) ·
 [**🌀 WARP**](#-cloudflare-warp-modes) ·
 [**🔍 Diagnostics**](#-diagnostics) ·
-[**📌 Release Notes**](RELEASE_NOTES_RU.md) ·
 [**🧩 Multi-server**](MULTISERVER_GUIDE_RU.md) ·
 [**❓ FAQ**](#-faq) ·
 [**💛 Donate**](#-support-the-project)
@@ -1420,7 +1419,7 @@ for donors
 
 **Repository preparation:**
 - Removed or replaced personal domains, IP addresses, Telegram IDs, tokens, private links, local paths and private support/payment data
-- Added `SECURITY.md`, `.gitignore`, `.gitattributes` and detailed release notes
+- Added `SECURITY.md`, `.gitignore`, `.gitattributes` and public repository safety rules
 - Expanded `MULTISERVER_GUIDE_RU.md` with production rollout, HAProxy/SNI mux, WARP, node updates, profile checks and node removal notes
 - Documented `protocol-validate`, `protocol-benchmark` and `protocol-benchmark-monitor`
 - Clarified slow benchmark detection: median/p95/slow_count instead of a single noisy measurement
