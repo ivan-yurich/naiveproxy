@@ -139,18 +139,7 @@ YURICH_SALES_BOT_CHANNEL_URL=https://t.me/your_channel
 
 ### Подготовка к GitHub
 
-Из публичной подготовки убраны:
-
-- реальные домены инфраструктуры;
-- реальные IP серверов;
-- личные Telegram/VK/Donation-ссылки;
-- реальные email/контакты;
-- локальные Windows-пути;
-- backup-файлы;
-- временные файлы;
-- потенциальные server-state файлы.
-
-Добавлено:
+Для публичного репозитория добавлены:
 
 - `.gitignore` для секретов, ключей, токенов, state-файлов и generated output;
 - `.gitattributes` для LF-переносов в shell-файлах;
@@ -167,16 +156,6 @@ YURICH_SALES_BOT_CHANNEL_URL=https://t.me/your_channel
 - unattended security updates;
 - backup перед изменениями;
 - проверка `health`, `security-audit`, `nodes-test`.
-
-## Что удалено из публичной подготовки
-
-Не включаются в GitHub-ready набор:
-
-- локальные скрипты переноса на диск;
-- старые audit HTML/MD отчеты;
-- backup-копии скрипта;
-- `.agents`, `.codex`, локальная `.git`;
-- любые приватные конфиги и state-файлы.
 
 ## Что добавлено в документацию
 
