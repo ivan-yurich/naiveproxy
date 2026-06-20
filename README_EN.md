@@ -1,6 +1,6 @@
 <div align="center">
 
-🌐 **Language / Язык:** [🇷🇺 Русский](README.md) · [🇬🇧 English](README_EN.md)
+🌐 **Language / Язык:** [🇷🇺 Русский](README.md) · [🇬🇧 English](README_EN.md) · [Release notes](RELEASE_NOTES_RU.md)
 
 </div>
 
@@ -26,8 +26,8 @@
 
 ---
 
-[![Version](https://img.shields.io/badge/version-5.6.34-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
-[![ShellCheck](https://img.shields.io/badge/ShellCheck-passing-3FB950?style=for-the-badge&logo=gnu-bash&logoColor=white)](https://www.shellcheck.net)
+[![Version](https://img.shields.io/badge/version-5.6.49-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
+[![ShellCheck](https://img.shields.io/badge/bash--n-passing-3FB950?style=for-the-badge&logo=gnu-bash&logoColor=white)](https://www.gnu.org/software/bash/)
 [![Bash](https://img.shields.io/badge/Bash-5.0+-4EAA25?style=for-the-badge&logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-20.04%2B-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://ubuntu.com)
 [![License](https://img.shields.io/badge/License-PolyForm%20Noncommercial%20%2B%20Commercial-58A6FF?style=for-the-badge)](LICENSE)
@@ -41,9 +41,9 @@
 
 ### 💛 Support development
 
-[![Donate](https://img.shields.io/badge/💛_Support_project-DonationAlerts-FF5E3A?style=for-the-badge)](https://www.donationalerts.com/r/ivan_yurievich)
-[![Telegram](https://img.shields.io/badge/📱_Telegram_channel-@ivan__it__net-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/ivan_it_net)
-[![Website](https://img.shields.io/badge/🌐_Website-ivan--it.net-D4A017?style=for-the-badge&logo=googlechrome&logoColor=white)](https://ivan-it.net)
+[![Donate](https://img.shields.io/badge/💛_Support_project-Donation page-FF5E3A?style=for-the-badge)](https://example.com/donate)
+[![Telegram](https://img.shields.io/badge/📱_Telegram_channel-@your__channel-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/your_channel)
+[![Website](https://img.shields.io/badge/🌐_Website-example.com-D4A017?style=for-the-badge&logo=googlechrome&logoColor=white)](https://example.com)
 
 **🔔 Updates released once a month**
 
@@ -61,6 +61,8 @@
 [**🛡️ DNS (Unbound)**](#-dns-unbound) ·
 [**🌀 WARP**](#-cloudflare-warp-modes) ·
 [**🔍 Diagnostics**](#-diagnostics) ·
+[**📌 Release Notes**](RELEASE_NOTES_RU.md) ·
+[**🧩 Multi-server**](MULTISERVER_GUIDE_RU.md) ·
 [**❓ FAQ**](#-faq) ·
 [**💛 Donate**](#-support-the-project)
 
@@ -98,7 +100,9 @@ Yurich Proxy uses a Naive-compatible Chrome-like transport
 
 ---
 
-## 🎉 What's new in v5.6.34
+## 🎉 What's new in the current 5.6.x branch
+
+> v5.6.49 is the GitHub-ready public release: personal domains, IP addresses, Telegram IDs, tokens, local paths and private payment/support data were removed or replaced with placeholders. The release also adds `SECURITY.md`, repository hygiene files, expanded multi-server documentation and clearer protocol validation/benchmark notes.
 
 <table>
 <tr>
@@ -243,7 +247,7 @@ Yurich Proxy uses a Naive-compatible Chrome-like transport
 🛡️ **Fail2Ban** 3 levels (iptables-multiport)
 ♻️ **Auto-recovery** — `Restart=on-failure`
 🎨 **ASCII banner** + branding
-💛 **Donate** via DonationAlerts
+💛 **Donate** via Donation page
 🌐 **Private DNS** — no Google/Cloudflare upstream dependency
 📦 **Auto-install** dependencies
 
@@ -422,7 +426,7 @@ No `0.0.0.0` bind and no public port 53 rule
 
 ```
 ──────────────────────────────────────────────────────
-Yurich Panel v5.6.34  [ENG]
+Yurich Panel v5.6.49  [ENG]
    Status: ● running  │  Domain: proxy.example.com
    Telegram: connected  │  Users: 3  │  SSH: 52847
 ──────────────────────────────────────────────────────
@@ -732,7 +736,7 @@ sudo bash yurich-panel.sh diagnose
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  🔍 Diagnostics Yurich Panel v5.6.34              │
+│  🔍 Diagnostics Yurich Panel v5.6.49              │
 │  2026-05-23 14:32:18 · proxy.example.com               │
 └─────────────────────────────────────────────────────────┘
 
@@ -772,7 +776,7 @@ sudo bash yurich-panel.sh diagnose
   ✅ journald: no critical errors
 
 [7/7] Version and updates
-✅ Script up to date: v5.6.34
+✅ Script up to date: v5.6.49
   ✅ SSH Hardening done
 
 ══════════════════════════════════════════════════════════
@@ -1345,9 +1349,9 @@ rm -rf /etc/caddy /etc/naiveproxy /etc/unbound
 
 ### If this script helped you — support development! 🙏
 
-[![Donate](https://img.shields.io/badge/💛_DonationAlerts-Any_amount-FF5E3A?style=for-the-badge&logoColor=white)](https://www.donationalerts.com/r/ivan_yurievich)
+[![Donate](https://img.shields.io/badge/💛_Donation page-Any_amount-FF5E3A?style=for-the-badge&logoColor=white)](https://example.com/donate)
 
-**👉 https://www.donationalerts.com/r/ivan_yurievich**
+**👉 https://example.com/donate**
 
 </div>
 
@@ -1397,13 +1401,13 @@ for donors
 
 | Way | Link | What it gives |
 |-----|------|---------------|
-| 💛 **Donate** | [DonationAlerts](https://www.donationalerts.com/r/ivan_yurievich) | Financial support |
+| 💛 **Donate** | [Donation page](https://example.com/donate) | Financial support |
 | ⭐ **GitHub Star** | [Give a star](https://github.com/ivan-yurich/naiveproxy) | Project visibility |
-| 📱 **Telegram channel** | [@ivan_it_net](https://t.me/ivan_it_net) | Subscribe for updates |
-| 🌐 **Website** | [ivan-it.net](https://ivan-it.net) | Visit |
+| 📱 **Telegram channel** | [@your_channel](https://t.me/your_channel) | Subscribe for updates |
+| 🌐 **Website** | [example.com](https://example.com) | Visit |
 | 📢 **Share** | — | Tell your friends |
 | 🐛 **Report bug** | [Issues](https://github.com/ivan-yurich/naiveproxy/issues) | Help improve |
-| 💡 **Suggest idea** | [Telegram](https://t.me/ivan_it_net) | Grow the project |
+| 💡 **Suggest idea** | [Telegram](https://t.me/your_channel) | Grow the project |
 
 **Thanks for your support! Every donation motivates me to make the project even better 💛**
 
@@ -1411,8 +1415,21 @@ for donors
 
 ## 📜 Changelog
 
+<details open>
+<summary><b>v5.6.49</b> — GitHub-ready public release ← CURRENT</summary>
+
+**Repository preparation:**
+- Removed or replaced personal domains, IP addresses, Telegram IDs, tokens, private links, local paths and private support/payment data
+- Added `SECURITY.md`, `.gitignore`, `.gitattributes` and detailed release notes
+- Expanded `MULTISERVER_GUIDE_RU.md` with production rollout, HAProxy/SNI mux, WARP, node updates, profile checks and node removal notes
+- Documented `protocol-validate`, `protocol-benchmark` and `protocol-benchmark-monitor`
+- Clarified slow benchmark detection: median/p95/slow_count instead of a single noisy measurement
+- Kept compatibility: `yurich-panel.sh` is the main script and `naiveproxy.sh` remains a compatible alias
+
+</details>
+
 <details>
-<summary><b>v5.6.34</b> — Multi-server node management ← CURRENT</summary>
+<summary><b>v5.6.34</b> — Multi-server node management</summary>
 
 **Multi-server nodes:**
 - Added `29) [NODES] Multi-server management`
@@ -1945,13 +1962,13 @@ for donors
 
 ## 📄 License
 
-**PolyForm Noncommercial 1.0.0 + Commercial License** © **Ivan Yurievich (Иван Юрьевич)**
+**PolyForm Noncommercial 1.0.0 + Commercial License** © **Yurich Panel contributors**
 
 Personal, educational, research and other noncommercial use is allowed under the PolyForm Noncommercial License.
 
 Commercial use, resale, paid panels, SaaS, hosting, VPN/proxy services, managed services and corporate products require a separate written commercial license from the author.
 
-📞 Licensing contact: [Telegram](https://t.me/ivan_it_net) · [Website](https://ivan-it.net)
+📞 Licensing contact: use the repository contact channel or configured project support contact
 
 Full license text: [LICENSE](LICENSE)
 
@@ -1961,15 +1978,15 @@ Full license text: [LICENSE](LICENSE)
 
 ### 💛 Liked it? Support the project!
 
-[![Donate](https://img.shields.io/badge/💛_Support-DonationAlerts-FF5E3A?style=for-the-badge)](https://www.donationalerts.com/r/ivan_yurievich)
+[![Donate](https://img.shields.io/badge/💛_Support-Donation page-FF5E3A?style=for-the-badge)](https://example.com/donate)
 [![Star](https://img.shields.io/github/stars/ivan-yurich/naiveproxy?style=for-the-badge&color=D4A017)](https://github.com/ivan-yurich/naiveproxy/stargazers)
 [![Fork](https://img.shields.io/github/forks/ivan-yurich/naiveproxy?style=for-the-badge&color=58A6FF)](https://github.com/ivan-yurich/naiveproxy/network)
 
 ---
 
-📱 [**Telegram**](https://t.me/ivan_it_net) · 🌐 [**Website**](https://ivan-it.net) · 💻 [**GitHub**](https://github.com/ivan-yurich/naiveproxy) · 💛 [**Donate**](https://www.donationalerts.com/r/ivan_yurievich)
+📱 [**Telegram**](https://t.me/your_channel) · 🌐 [**Website**](https://example.com) · 💻 [**GitHub**](https://github.com/ivan-yurich/naiveproxy) · 💛 [**Donate**](https://example.com/donate)
 
-**Yurich Panel · by Ivan Yurievich**
+**Yurich Panel · by Yurich Panel contributors**
 
 *Professional secure proxy server manager*
 *Updates released once a month · Made with 💛 in Russia*

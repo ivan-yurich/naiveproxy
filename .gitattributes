@@ -1,0 +1,6 @@
+* text=auto eol=lf
+*.sh text eol=lf
+*.bash text eol=lf
+*.md text eol=lf
+LICENSE text eol=lf
+yurich-dns/scripts/* text eol=lf

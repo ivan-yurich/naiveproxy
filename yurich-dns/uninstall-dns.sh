@@ -3,6 +3,9 @@ set -euo pipefail
 
 CONF="/etc/unbound/unbound.conf.d/yurich-dns.conf"
 LEGACY_CONF="/etc/unbound/unbound.conf.d/aurum-vpn.conf"
+LEGACY_NAIVE_CONF="/etc/unbound/unbound.conf.d/naiveproxy-dns.conf"
+LEGACY_BLOCKLIST="/etc/unbound/blocklist.conf"
+LEGACY_WHITELIST="/etc/unbound/whitelist.txt"
 ENV_FILE="/etc/yurich-dns/yurich-dns.env"
 LEGACY_ENV_FILE="/etc/aurum-dns/aurum-dns.env"
 NO_STUB="/etc/systemd/resolved.conf.d/no-stub.conf"
@@ -70,7 +73,10 @@ main() {
 
     backup_file "$CONF"
     backup_file "$LEGACY_CONF"
-    rm -f "$CONF" "$LEGACY_CONF"
+    backup_file "$LEGACY_NAIVE_CONF"
+    backup_file "$LEGACY_BLOCKLIST"
+    backup_file "$LEGACY_WHITELIST"
+    rm -f "$CONF" "$LEGACY_CONF" "$LEGACY_NAIVE_CONF" "$LEGACY_BLOCKLIST" "$LEGACY_WHITELIST"
     rm -f /usr/local/bin/yurich-dns-status /usr/local/bin/yurich-dns-test /usr/local/bin/yurich-dns-restart
     rm -f /usr/local/bin/aurum-dns-status /usr/local/bin/aurum-dns-test /usr/local/bin/aurum-dns-restart
 

@@ -1,0 +1,52 @@
+# Local editor/runtime state
+.agents/
+.codex/
+.idea/
+.vscode/
+
+# Backups and temporary files
+*.bak
+*.backup
+*.old
+*.tmp
+tmp_*
+*.log
+*.pid
+*.swp
+*.swo
+
+# Generated archives and downloaded packages
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.deb
+*.rpm
+
+# Secrets, keys and production state
+.env
+*.env
+*.token
+*.pem
+*.ppk
+*.key
+id_rsa*
+id_ed25519*
+naive.conf
+users.conf
+users.disabled
+nodes.conf
+bridge.conf
+xray-users.conf
+xray-compat-users.conf
+xray-users.disabled
+subscription-aliases.conf
+users.d/
+subscriptions/
+
+# Generated web/subscription output
+html/
+www/
+var/
+dist/
+build/

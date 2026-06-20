@@ -95,6 +95,19 @@ sudo bash yurich-panel.sh nodes-subscriptions
 sudo bash yurich-panel.sh nodes-remove fi-1
 ```
 
+Дополнительные команды, которые полезно запускать рядом с `nodes`:
+
+```bash
+sudo bash yurich-panel.sh health
+sudo bash yurich-panel.sh security-audit
+sudo bash yurich-panel.sh protocol-validate
+sudo bash yurich-panel.sh protocol-benchmark USER 3
+sudo bash yurich-panel.sh protocol-benchmark-monitor USER 3
+```
+
+`nodes-*` отвечает за серверы и синхронизацию, а `protocol-*` проверяет уже
+готовую клиентскую выдачу. В production лучше использовать оба уровня проверки.
+
 ## Требования
 
 На master:
@@ -120,6 +133,58 @@ panel.example.com  A  203.0.113.10
 fi-1.example.com   A  203.0.113.20
 de-1.example.com   A  203.0.113.30
 ```
+
+## Production rollout без простоя
+
+Безопасный порядок добавления новой локации:
+
+1. Подготовить DNS для новой node.
+2. Настроить SSH key-only доступ с master.
+3. Установить Yurich Panel на node или отправить текущий скрипт через
+   `nodes-deploy`.
+4. Проверить локально на node:
+
+```bash
+sudo bash yurich-panel.sh health
+sudo bash yurich-panel.sh security-audit
+sudo bash yurich-panel.sh cert
+```
+
+5. Добавить node на master:
+
+```bash
+sudo bash yurich-panel.sh nodes-add
+```
+
+6. Проверить node с master:
+
+```bash
+sudo bash yurich-panel.sh nodes-test NODE
+```
+
+7. Синхронизировать пользователей только на эту node:
+
+```bash
+sudo bash yurich-panel.sh nodes-sync NODE
+```
+
+8. Пересобрать подписки:
+
+```bash
+sudo bash yurich-panel.sh nodes-subscriptions
+sudo bash yurich-panel.sh protocol-validate
+```
+
+9. Проверить одного тестового пользователя:
+
+```bash
+sudo bash yurich-panel.sh protocol-benchmark USER 3
+```
+
+10. Только после этого сообщать пользователям обновить подписку в приложении.
+
+Такой порядок снижает риск: старая выдача продолжает работать, пока новая node
+не пройдет SSH, service, subscription и real-profile проверки.
 
 ## Нужно ли ставить панель на node вручную
 
@@ -310,6 +375,25 @@ ssh root@203.0.113.20 'hostname && uptime'
 
 Если ручной SSH тоже не работает, сначала исправляй SSH, а потом возвращайся к панели.
 
+`nodes-test` проверяет инфраструктуру, но не заменяет проверку пользовательских
+профилей. Он отвечает на вопросы:
+
+- есть ли SSH-доступ;
+- активны ли Caddy/Xray/Hysteria/Unbound;
+- слушаются ли ожидаемые порты;
+- отвечает ли node на базовые status-команды.
+
+После `nodes-test` запускай проверку подписок:
+
+```bash
+sudo bash yurich-panel.sh protocol-validate
+sudo bash yurich-panel.sh protocol-benchmark USER 3
+```
+
+Если `nodes-test` зелёный, но `protocol-benchmark` показывает `WARN` или `FAIL`,
+проблема обычно уже не в SSH, а в конкретном протоколе, DNS, TLS/SNI, firewall
+или клиентском формате ссылки.
+
 ## Установка или обновление скрипта на node
 
 Через меню:
@@ -420,6 +504,31 @@ vless://...
 
 Если на node включены Hysteria или Xray, master также пытается подтянуть с node дополнительные `hy2://`, `vless://`, `trojan://` ссылки из node-подписки пользователя.
 
+### Что происходит в приложениях после удаления node
+
+Если node удалена из реестра, она исчезает из новых файлов подписки только после:
+
+```bash
+sudo bash yurich-panel.sh nodes-subscriptions
+```
+
+Дальше пользователь должен обновить подписку в клиентском приложении. Поведение
+зависит от клиента:
+
+- нормальный клиент удалит профили, которых больше нет в подписке;
+- некоторые клиенты оставляют старые профили локально, пока пользователь не
+  удалит подписку и не импортирует её заново;
+- если клиент кеширует raw-файл, нужно нажать обновление подписки вручную.
+
+Практическая рекомендация для поддержки:
+
+1. Сначала пересобрать подписки на master.
+2. Проверить `protocol-validate`.
+3. Открыть страницу тестового пользователя.
+4. Обновить подписку в Yurich Connect/Hiddify/NekoBox/Streisand.
+5. Если старая node осталась в клиенте — удалить подписку в приложении и
+   импортировать URL заново.
+
 ## Как выглядит пользовательская схема
 
 Для пользователя это выглядит просто:
@@ -528,6 +637,16 @@ sudo bash yurich-panel.sh nodes-subscriptions
 ```
 
 Это удаляет node только из master-реестра. Сам сервер не удаляется и сервисы на нём не останавливаются.
+
+Потом проверь, что node больше не попадает в выдачу:
+
+```bash
+sudo bash yurich-panel.sh protocol-validate
+sudo grep -R "old-node.example.com" /var/www/html/s || true
+sudo grep -R "203.0.113.20" /etc/naiveproxy /var/www/html/s || true
+```
+
+Если grep ничего не вернул, master больше не выдаёт удалённую node.
 
 ## Порядок добавления нового сервера
 
@@ -708,6 +827,143 @@ sudo bash yurich-panel.sh nodes-test all
 
 То есть `nodes` — это управление несколькими самостоятельными серверами и подписками, а `bridge` — заготовка для цепочки. Это разные задачи.
 
+## HAProxy/SNI mux и VLESS Reality на 443
+
+В production часто нужно держать несколько сервисов на одном TCP/443:
+
+- Caddy/Yurich Proxy должен отвечать как обычный HTTPS-сайт;
+- VLESS Reality должен работать на TCP/443;
+- Hysteria 2 может работать на UDP/443.
+
+Для этого используется HAProxy SNI mux:
+
+```bash
+sudo bash yurich-panel.sh haproxy-apply
+sudo bash yurich-panel.sh haproxy-status
+```
+
+Типовая схема:
+
+```text
+client TCP/443 -> HAProxy
+  known public SNI -> Caddy internal TLS
+  Reality SNI/default -> Xray Reality internal port
+
+client UDP/443 -> Hysteria 2
+```
+
+Проверка:
+
+```bash
+sudo bash yurich-panel.sh health
+sudo bash yurich-panel.sh haproxy-status
+sudo bash yurich-panel.sh protocol-benchmark USER 3
+```
+
+Если HTTPS работает, а Reality не работает:
+
+- проверь, что public domain идёт в Caddy backend;
+- проверь, что Reality inbound слушает internal порт;
+- проверь, что клиент не переписывает Reality SNI на домен сервера;
+- проверь firewall: наружу открыт `443/tcp`, internal ports наружу не нужны.
+
+## WARP на node
+
+WARP может быть полезен для исходящего трафика, но это не обязательная часть
+мультисерверной схемы.
+
+Рекомендации:
+
+- сначала подними node без WARP;
+- проверь HTTPS/Turbo/Reality напрямую;
+- только потом включай WARP proxy mode;
+- не включай full tunnel без rollback и SSH allowlist.
+
+Команды:
+
+```bash
+sudo bash yurich-panel.sh warp-status
+sudo bash yurich-panel.sh warp-proxy
+sudo bash yurich-panel.sh warp-health
+sudo bash yurich-panel.sh warp-ssh-allow
+```
+
+Если WARP-пакеты не скачиваются у провайдера, не блокируй rollout node. Оставь
+профили direct, зафиксируй предупреждение и вернись к WARP позже.
+
+## Обновление скрипта на node
+
+Когда master получил новую версию скрипта, node можно обновлять постепенно:
+
+```bash
+sudo bash yurich-panel.sh nodes-list
+sudo bash yurich-panel.sh nodes-deploy fi-1
+sudo bash yurich-panel.sh nodes-test fi-1
+sudo bash yurich-panel.sh nodes-deploy de-1
+sudo bash yurich-panel.sh nodes-test de-1
+```
+
+Не обновляй все node без проверки, если релиз меняет:
+
+- Caddyfile;
+- HAProxy;
+- Xray config;
+- Hysteria config;
+- формат подписок.
+
+Для массового обновления после теста:
+
+```bash
+sudo bash yurich-panel.sh nodes-sync all
+sudo bash yurich-panel.sh nodes-subscriptions
+sudo bash yurich-panel.sh protocol-validate
+```
+
+## Проверка реальных профилей после изменений
+
+Минимум:
+
+```bash
+sudo bash yurich-panel.sh protocol-validate
+sudo bash yurich-panel.sh protocol-benchmark USER 3
+```
+
+Как читать benchmark:
+
+- `OK 3/3` — профиль прошёл все попытки;
+- `WARN 1/3` или `WARN 2/3` — профиль частично нестабилен;
+- `FAIL 0/3` — профиль не работает;
+- `slow=1/3` — одиночный скачок, обычно не авария;
+- `slow=2/3` или `slow=3/3` — стабильная задержка выше порога.
+
+TCP-профили (`HTTPS`, `Reality`) и UDP/QUIC (`Turbo`) нужно сравнивать отдельно:
+один и тот же сервер может быть быстрым на UDP и временно медленным на TCP из-за
+маршрута, NAT, фильтрации или TLS-handshake.
+
+## GitHub-safe правила для мультисервера
+
+Никогда не публикуй:
+
+- `/etc/naiveproxy/nodes.conf`;
+- реальные IP node-серверов;
+- реальные домены подписок;
+- `/etc/naiveproxy/subscriptions/*.token`;
+- `users.conf`, `users.d/*`, `xray-users.conf`;
+- SSH private keys;
+- Telegram bot tokens.
+
+В документации используй только reserved IP ranges:
+
+- `192.0.2.0/24`;
+- `198.51.100.0/24`;
+- `203.0.113.0/24`.
+
+И тестовые домены:
+
+- `panel.example.com`;
+- `fi-1.example.com`;
+- `de-1.example.com`.
+
 ## Минимальный чеклист
 
 ```bash
@@ -725,4 +981,3 @@ sudo bash yurich-panel.sh health
 ```
 
 Если все пункты зелёные, мультисерверная выдача работает.
-

@@ -3,6 +3,9 @@ set -euo pipefail
 
 CONF="/etc/unbound/unbound.conf.d/yurich-dns.conf"
 LEGACY_CONF="/etc/unbound/unbound.conf.d/aurum-vpn.conf"
+LEGACY_NAIVE_CONF="/etc/unbound/unbound.conf.d/naiveproxy-dns.conf"
+LEGACY_BLOCKLIST="/etc/unbound/blocklist.conf"
+LEGACY_WHITELIST="/etc/unbound/whitelist.txt"
 ENV_DIR="/etc/yurich-dns"
 ENV_FILE="${ENV_DIR}/yurich-dns.env"
 LEGACY_ENV_FILE="/etc/aurum-dns/aurum-dns.env"
@@ -170,10 +173,13 @@ source_legacy_env_if_safe() {
 }
 
 cleanup_legacy_files() {
-    if [[ -f "$LEGACY_CONF" ]]; then
-        backup_file "$LEGACY_CONF"
-        rm -f "$LEGACY_CONF"
-    fi
+    local legacy_path
+    for legacy_path in "$LEGACY_CONF" "$LEGACY_NAIVE_CONF" "$LEGACY_BLOCKLIST" "$LEGACY_WHITELIST"; do
+        if [[ -f "$legacy_path" ]]; then
+            backup_file "$legacy_path"
+            rm -f "$legacy_path"
+        fi
+    done
     if [[ -f "$LEGACY_GATEWAY_SERVICE" ]]; then
         systemctl disable --now "$(basename "$LEGACY_GATEWAY_SERVICE")" >/dev/null 2>&1 || true
         rm -f "$LEGACY_GATEWAY_SERVICE"
