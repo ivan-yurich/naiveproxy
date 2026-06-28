@@ -26,7 +26,7 @@
 
 ---
 
-[![Version](https://img.shields.io/badge/version-5.6.49-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
+[![Version](https://img.shields.io/badge/version-5.6.52-D4A017?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ivan-yurich/naiveproxy/releases)
 [![ShellCheck](https://img.shields.io/badge/bash--n-passing-3FB950?style=for-the-badge&logo=gnu-bash&logoColor=white)](https://www.gnu.org/software/bash/)
 [![Bash](https://img.shields.io/badge/Bash-5.0+-4EAA25?style=for-the-badge&logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-20.04%2B-E95420?style=for-the-badge&logo=ubuntu&logoColor=white)](https://ubuntu.com)
@@ -101,7 +101,7 @@ Yurich Proxy uses a Naive-compatible Chrome-like transport
 
 ## 🎉 What's new in the current 5.6.x branch
 
-> v5.6.49 is the GitHub-ready public release: personal domains, IP addresses, Telegram IDs, tokens, local paths and private payment/support data were removed or replaced with placeholders. The release also adds `SECURITY.md`, repository hygiene files, expanded multi-server documentation and clearer protocol validation/benchmark notes.
+> v5.6.52 is the current audited release: the main and legacy scripts are synchronized, SHA256 sidecars are refreshed, PingTunnel is pinned with checksum verification, and temporary SSH rescue mode now auto-disables.
 
 <table>
 <tr>
@@ -1415,7 +1415,22 @@ for donors
 ## 📜 Changelog
 
 <details open>
-<summary><b>v5.6.49</b> — GitHub-ready public release ← CURRENT</summary>
+<summary><b>v5.6.52</b> — Security hardening and release cleanup ← CURRENT</summary>
+
+**Security and release hygiene:**
+- Synced `yurich-panel.sh` and `naiveproxy.sh` before publishing
+- Updated `yurich-panel.sh.sha256` and `naiveproxy.sh.sha256`
+- Refreshed README version and release notes
+- Pinned PingTunnel to a fixed release instead of `latest`
+- Added SHA256 verification for Linux amd64/arm64 PingTunnel archives
+- Masked PingTunnel secrets in `pingtunnel-config` by default
+- Added TTL-based auto-disable for temporary `ssh-rescue`
+- Verified Bash syntax for the main scripts and DNS helper scripts
+
+</details>
+
+<details>
+<summary><b>v5.6.49</b> — GitHub-ready public release</summary>
 
 **Repository preparation:**
 - Removed or replaced personal domains, IP addresses, Telegram IDs, tokens, private links, local paths and private support/payment data

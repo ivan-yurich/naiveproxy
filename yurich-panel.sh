@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-#   Yurich Panel v5.6.49
+#   Yurich Panel v5.6.52
 #   Стек: Caddy 2 + klzgrad/forwardproxy@naive + Hysteria 2 + WARP + Xray Modern
 #   ОС: Ubuntu 20.04 / 22.04 / 24.04
 #
@@ -13,7 +13,7 @@
 
 set -euo pipefail
 
-VERSION="5.6.49"
+VERSION="5.6.52"
 LANG_UI="${NAIVEPROXY_LANG:-ru}"  # ru или en — export NAIVEPROXY_LANG=en
 GITHUB_RAW="https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/yurich-panel.sh"
 GITHUB_SHA256_RAW="https://raw.githubusercontent.com/ivan-yurich/naiveproxy/main/yurich-panel.sh.sha256"
@@ -21,10 +21,11 @@ GITHUB_API="https://api.github.com/repos/ivan-yurich/naiveproxy/releases/latest"
 PROJECT_GITHUB_URL="https://github.com/ivan-yurich/naiveproxy"
 PROJECT_GITHUB_SHORT="github.com/ivan-yurich/naiveproxy"
 PROJECT_WEBSITE_URL="${YURICH_PROJECT_WEBSITE_URL:-$PROJECT_GITHUB_URL}"
-PROJECT_DONATION_URL="${YURICH_DONATION_URL:-}"
+PROJECT_DONATION_URL="${YURICH_DONATION_URL:-https://dzen.ru/ivanyurievich?donate=true}"
 ANDROID_APP_RELEASES_URL="https://github.com/ivan-yurich/Yurich-Connect-Android/releases"
 WINDOWS_APP_RELEASES_URL="https://github.com/ivan-yurich/yurich-connect-windows/releases"
 STREISAND_APP_URL="https://apps.apple.com/us/app/streisand/id6450534064"
+KARING_APP_URL="https://apps.apple.com/us/app/karing/id6472431552?l=ru"
 TELEGRAM_COMMUNITY_URL="${YURICH_TELEGRAM_COMMUNITY_URL:-https://t.me/your_channel}"
 TELEGRAM_BOT_URL="${YURICH_TELEGRAM_BOT_URL:-https://t.me/your_notification_bot}"
 TELEGRAM_ID_BOT_URL="${YURICH_TELEGRAM_ID_BOT_URL:-https://t.me/getmyid_bot}"
@@ -35,6 +36,8 @@ SALES_BOT_PLANS_DEFAULT="1d:50,1m:250,3m:700,6m:1300,12m:2400"
 SALES_BOT_CURRENCY_DEFAULT="RUB"
 SALES_BOT_PAYMENT_TEXT_DEFAULT="Тарифы Yurich Connect: 1 день - 50 руб, 1 месяц - 250 руб, 3 месяца - 700 руб, 6 месяцев - 1300 руб, 12 месяцев - 2400 руб. После оплаты отправь скрин платежа сюда в бот. Администратор проверит оплату и включит подписку."
 SALES_BOT_PAYMENT_QR_PATH_DEFAULT="/etc/naiveproxy/sales-bot/payment-qr.jpg"
+SALES_BOT_WELCOME_ANIMATION_PATH_DEFAULT="/etc/naiveproxy/sales-bot/welcome.gif"
+SALES_BOT_WELCOME_IMAGE_PATH_DEFAULT="/etc/naiveproxy/sales-bot/welcome.jpg"
 SALES_BOT_CAPTCHA_TTL_SECONDS_DEFAULT="86400"
 EXPIRED_DELETE_GRACE_DAYS_DEFAULT="5"
 SCRIPT_PATH="/usr/local/bin/yurich-panel.sh"
@@ -43,6 +46,10 @@ XCADDY_VERSION_PIN="${NAIVEPROXY_XCADDY_VERSION:-v0.4.6}"
 FORWARDPROXY_REF_PIN="${NAIVEPROXY_FORWARDPROXY_REF:-d62c80d3dd2c706b6b87579844d2397bddd18317}"
 XRAY_VERSION_PIN="${NAIVEPROXY_XRAY_VERSION:-v26.3.27}"
 HYSTERIA_VERSION_PIN="${NAIVEPROXY_HYSTERIA_VERSION:-app/v2.9.2}"
+PINGTUNNEL_DEFAULT_VERSION="master-2c83808a81b56784d639c952b70baada6601e2d7"
+PINGTUNNEL_VERSION_PIN="${NAIVEPROXY_PINGTUNNEL_VERSION:-$PINGTUNNEL_DEFAULT_VERSION}"
+PINGTUNNEL_SHA256_AMD64="5d5847a17099b9359c55a959f85a1994232cf8a089642bd632bfa64e5bdfe8af"
+PINGTUNNEL_SHA256_ARM64="ccf5ccb1a2b32cbfa6d85207d0d853b799e9df434ba975e67f93e2fbdf6e51d0"
 
 # ─── Цвета ───────────────────────────────────────────────────
 RED='\033[0;31m'
@@ -126,6 +133,9 @@ XRAY_DISABLED_USERS_FILE="/etc/naiveproxy/xray-users.disabled"
 XRAY_COMPAT_USERS_FILE="/etc/naiveproxy/xray-compat-users.conf"
 SUBS_DIR="/etc/naiveproxy/subscriptions"
 SUBS_WEB_DIR="${WEBROOT}/s"
+SUBSCRIPTION_ASSETS_DIR="/etc/naiveproxy/assets"
+SUBSCRIPTION_LOGO_PATH_DEFAULT="${SUBSCRIPTION_ASSETS_DIR}/yurich-connect-logo.png"
+SUBSCRIPTION_PROJECT_HELP_QR_PATH_DEFAULT="${SUBSCRIPTION_ASSETS_DIR}/project-help-qr.jpg"
 SUBS_ALIASES_FILE="/etc/naiveproxy/subscription-aliases.conf"
 USER_META_DIR="/etc/naiveproxy/users.d"
 PRIVATE_PAGE_TOKEN_FILE="/etc/naiveproxy/private_page.token"
@@ -154,6 +164,9 @@ XRAY_REALITY_PORT_DEFAULT="8444"
 XRAY_MOBILE_ALT_PORT_DEFAULT="8445"
 XRAY_MOBILE_ALT_TARGET_DEFAULT="www.cloudflare.com:443"
 XRAY_MOBILE_ALT_SERVER_NAME_DEFAULT="www.cloudflare.com"
+XRAY_GITHUB_TEST_PORT_DEFAULT="8446"
+XRAY_GITHUB_TEST_TARGET_DEFAULT="github.com:443"
+XRAY_GITHUB_TEST_SERVER_NAME_DEFAULT="github.com"
 XRAY_MKCP_PORT_DEFAULT="8446"
 XRAY_VISION_PORT_DEFAULT="8447"
 XRAY_XHTTP_PORT_DEFAULT="8448"
@@ -167,6 +180,14 @@ HAPROXY_LOG_FILE="/var/log/haproxy.log"
 HAPROXY_RSYSLOG_CONF="/etc/rsyslog.d/49-yurich-haproxy.conf"
 HAPROXY_LOGROTATE_CONF="/etc/logrotate.d/yurich-haproxy"
 HAPROXY_SYSCTL_CONF="/etc/sysctl.d/99-yurich-haproxy.conf"
+XRAY_SYSCTL_CONF="/etc/sysctl.d/99-z-yurich-vless-reality.conf"
+EGRESS_GAI_CONF="/etc/gai.conf"
+EGRESS_SYSCTL_CONF="/etc/sysctl.d/99-yurich-egress-ipv4.conf"
+PINGTUNNEL_DIR="/opt/yurich-pingtunnel"
+PINGTUNNEL_BIN="${PINGTUNNEL_DIR}/pingtunnel"
+PINGTUNNEL_ENV="/etc/naiveproxy/pingtunnel.env"
+PINGTUNNEL_SERVICE="/etc/systemd/system/yurich-pingtunnel.service"
+PINGTUNNEL_SYSCTL_CONF="/etc/sysctl.d/99-yurich-pingtunnel.conf"
 
 
 # ══════════════════════════════════════════════════════════════
@@ -589,6 +610,23 @@ EOF
     ufw allow 443/udp comment "Yurich Panel HTTP3" >/dev/null 2>&1 || true
     systemctl stop fail2ban >/dev/null 2>&1 || true
 
+    local rescue_ttl="${NAIVEPROXY_SSH_RESCUE_TTL_SECONDS:-1800}"
+    cat > /usr/local/sbin/yurich-disable-ssh-rescue.sh <<'EOF'
+#!/bin/bash
+set -euo pipefail
+rm -f /etc/ssh/sshd_config.d/99-naiveproxy-rescue.conf
+# Do not delete the UFW 22/tcp rule automatically: on some servers it can be a legitimate admin rule.
+systemctl start fail2ban >/dev/null 2>&1 || true
+if sshd -t; then
+    systemctl reload ssh >/dev/null 2>&1 || systemctl reload sshd >/dev/null 2>&1 || systemctl restart ssh >/dev/null 2>&1 || systemctl restart sshd >/dev/null 2>&1 || true
+fi
+EOF
+    chmod 700 /usr/local/sbin/yurich-disable-ssh-rescue.sh
+    if command -v systemd-run >/dev/null 2>&1; then
+        systemd-run --unit=yurich-ssh-rescue-autodisable --on-active="${rescue_ttl}s" /usr/local/sbin/yurich-disable-ssh-rescue.sh >/dev/null 2>&1 \
+            && warn "SSH rescue автоматически отключится через ${rescue_ttl} сек."
+    fi
+
     if sshd -t; then
         restart_ssh_service
         ok "SSH rescue включён: порт 22, root/password временно разрешены"
@@ -644,6 +682,16 @@ check_installed() {
 
 is_valid_domain() {
     [[ "${1:-}" =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$ ]]
+}
+
+is_valid_host_port() {
+    local value="${1:-}" host port
+    [[ "$value" == *:* ]] || return 1
+    host="${value%:*}"
+    port="${value##*:}"
+    is_valid_domain "$host" || return 1
+    [[ "$port" =~ ^[0-9]{1,5}$ ]] || return 1
+    (( port >= 1 && port <= 65535 ))
 }
 
 public_dns_ipv4() {
@@ -815,6 +863,81 @@ ensure_hysteria_secrets() {
     fi
 }
 
+# ─── Режим входящего 443 ─────────────────────────────────────
+normalize_edge_routing_mode() {
+    case "${EDGE_ROUTING_MODE:-}" in
+        haproxy|sni|sni-mux|sni_mux)
+            EDGE_ROUTING_MODE="haproxy"
+            ;;
+        caddy|caddy-only|caddy_only|"")
+            if [[ "${XRAY_REALITY_SNI_MUX_ENABLED:-0}" == "1" ]]; then
+                EDGE_ROUTING_MODE="haproxy"
+            else
+                EDGE_ROUTING_MODE="caddy"
+            fi
+            ;;
+        *)
+            warn "Неизвестный EDGE_ROUTING_MODE=${EDGE_ROUTING_MODE}; использую caddy"
+            EDGE_ROUTING_MODE="caddy"
+            ;;
+    esac
+}
+
+edge_routing_mode_is_haproxy() {
+    [[ "${EDGE_ROUTING_MODE:-}" == "haproxy" || "${XRAY_REALITY_SNI_MUX_ENABLED:-0}" == "1" ]]
+}
+
+edge_routing_mode_label() {
+    if edge_routing_mode_is_haproxy; then
+        printf 'HAProxy SNI mux'
+    else
+        printf 'Caddy-only'
+    fi
+}
+
+set_edge_routing_mode() {
+    local mode="${1:-caddy}"
+    case "$mode" in
+        haproxy|sni|sni-mux|sni_mux)
+            EDGE_ROUTING_MODE="haproxy"
+            XRAY_REALITY_SNI_MUX_ENABLED="1"
+            XRAY_FALLBACK_ENABLED="0"
+            XRAY_REALITY_PUBLIC_PORT="443"
+            XRAY_CADDY_FALLBACK_PORT="${XRAY_CADDY_FALLBACK_PORT:-$XRAY_CADDY_FALLBACK_PORT_DEFAULT}"
+            ;;
+        caddy|caddy-only|caddy_only)
+            EDGE_ROUTING_MODE="caddy"
+            XRAY_REALITY_SNI_MUX_ENABLED="0"
+            XRAY_FALLBACK_ENABLED="0"
+            XRAY_REALITY_PUBLIC_PORT=""
+            ;;
+        *)
+            err "Неверный режим 443: $mode"
+            return 1
+            ;;
+    esac
+}
+
+prompt_edge_routing_mode() {
+    local ans current mode
+    normalize_edge_routing_mode
+    current="${EDGE_ROUTING_MODE:-caddy}"
+    echo
+    echo -e "${BOLD}Режим входящего 443:${RESET}"
+    echo -e "  ${BOLD}1)${RESET} Caddy-only — Caddy держит 443, VLESS Reality на отдельном TCP-порту"
+    echo -e "  ${BOLD}2)${RESET} HAProxy SNI mux — Naive/Caddy и VLESS Reality вместе на 443"
+    echo -ne "${YELLOW}Выбор [${current}]: ${RESET}"
+    read -r ans
+    case "${ans,,}" in
+        "" ) mode="$current" ;;
+        1|c|caddy|caddy-only|caddy_only) mode="caddy" ;;
+        2|h|haproxy|sni|sni-mux|sni_mux) mode="haproxy" ;;
+        *) err "Неверный выбор режима 443"; return 1 ;;
+    esac
+    set_edge_routing_mode "$mode"
+    ok "Режим 443 выбран: $(edge_routing_mode_label)"
+}
+
 # ─── Конфиг ──────────────────────────────────────────────────
 load_config() {
     if [[ -f "$CONFIG_FILE" ]]; then
@@ -835,11 +958,13 @@ load_config() {
             # shellcheck source=/dev/null
             source "$CONFIG_FILE"
             normalize_lang_ui
+            normalize_edge_routing_mode
         else
             warn "CONFIG_FILE принадлежит не root — пропускаю source"
         fi
     fi
     normalize_lang_ui
+    normalize_edge_routing_mode
 }
 
 save_config() {
@@ -852,6 +977,7 @@ save_config() {
         return 1
     }
     chmod 600 "$tmp_config"
+    normalize_edge_routing_mode
 
     if ! {
         printf 'LANG_UI=%q\n' "${LANG_UI:-ru}"
@@ -864,11 +990,26 @@ save_config() {
         printf 'SUBSCRIPTION_LOCAL_ENABLED=%q\n' "${SUBSCRIPTION_LOCAL_ENABLED:-1}"
         printf '# Подписки: first или last, если локальный сервер включён\n'
         printf 'SUBSCRIPTION_LOCAL_POSITION=%q\n' "${SUBSCRIPTION_LOCAL_POSITION:-first}"
+        printf '# Новый дизайн страниц подписок: all, * или список пользователей через пробел\n'
+        printf 'SUBSCRIPTION_REMWAVE_USERS=%q\n' "${SUBSCRIPTION_REMWAVE_USERS:-all}"
+        printf 'SUBSCRIPTION_REMWAVE_PREVIEW_USERS=%q\n' "${SUBSCRIPTION_REMWAVE_PREVIEW_USERS:-all}"
+        printf '# Режим входящего 443: caddy = Caddy держит 443; haproxy = HAProxy SNI mux держит 443\n'
+        printf 'EDGE_ROUTING_MODE=%q\n' "${EDGE_ROUTING_MODE:-caddy}"
         printf '# Автомониторинг протоколов: тестовый пользователь, повторы, порог средней задержки в мс\n'
         printf 'PROTOCOL_BENCHMARK_USER=%q\n' "${PROTOCOL_BENCHMARK_USER:-}"
-        printf 'PROTOCOL_BENCHMARK_ROUNDS=%q\n' "${PROTOCOL_BENCHMARK_ROUNDS:-1}"
-        printf 'PROTOCOL_BENCHMARK_MAX_AVG_MS=%q\n' "${PROTOCOL_BENCHMARK_MAX_AVG_MS:-1500}"
+        printf 'PROTOCOL_BENCHMARK_ROUNDS=%q\n' "${PROTOCOL_BENCHMARK_ROUNDS:-3}"
+        printf 'PROTOCOL_BENCHMARK_MAX_AVG_MS=%q\n' "${PROTOCOL_BENCHMARK_MAX_AVG_MS:-2500}"
         printf 'PROTOCOL_BENCHMARK_LOG=%q\n' "${PROTOCOL_BENCHMARK_LOG:-$PROTOCOL_BENCHMARK_LOG_DEFAULT}"
+        printf 'PROTOCOL_BENCHMARK_MONITOR_MIN_ROUNDS=%q\n' "${PROTOCOL_BENCHMARK_MONITOR_MIN_ROUNDS:-3}"
+        printf 'PROTOCOL_BENCHMARK_SLOW_MIN_HITS=%q\n' "${PROTOCOL_BENCHMARK_SLOW_MIN_HITS:-2}"
+        printf 'PROTOCOL_BENCHMARK_WARN_MIN_OK_HITS=%q\n' "${PROTOCOL_BENCHMARK_WARN_MIN_OK_HITS:-2}"
+        printf 'PROTOCOL_BENCHMARK_ALERT_REPEAT=%q\n' "${PROTOCOL_BENCHMARK_ALERT_REPEAT:-2}"
+        printf 'PROTOCOL_BENCHMARK_ALERT_COOLDOWN_MINUTES=%q\n' "${PROTOCOL_BENCHMARK_ALERT_COOLDOWN_MINUTES:-60}"
+        printf 'PROTOCOL_BENCHMARK_ALERT_STATE=%q\n' "${PROTOCOL_BENCHMARK_ALERT_STATE:-$CONFIG_DIR/protocol-benchmark-alert.state}"
+        printf 'PROTOCOL_BENCHMARK_RECOVERY_ALERT=%q\n' "${PROTOCOL_BENCHMARK_RECOVERY_ALERT:-1}"
+        printf 'PROTOCOL_MONITOR_ALERT_COOLDOWN_MINUTES=%q\n' "${PROTOCOL_MONITOR_ALERT_COOLDOWN_MINUTES:-60}"
+        printf 'PROTOCOL_MONITOR_ALERT_STATE=%q\n' "${PROTOCOL_MONITOR_ALERT_STATE:-$CONFIG_DIR/protocol-health-alert.state}"
+        printf 'PROTOCOL_MONITOR_RECOVERY_ALERT=%q\n' "${PROTOCOL_MONITOR_RECOVERY_ALERT:-1}"
         printf 'TG_TOKEN=%q\n' "${TG_TOKEN:-}"
         printf 'TG_CHAT_ID=%q\n' "${TG_CHAT_ID:-}"
         printf '# Доп. администраторы через запятую: id1,id2,id3\n'
@@ -882,6 +1023,8 @@ save_config() {
         printf 'SALES_BOT_CHANNEL_URL=%q\n' "${SALES_BOT_CHANNEL_URL:-$SALES_BOT_CHANNEL_URL_DEFAULT}"
         printf 'SALES_BOT_PAYMENT_TEXT=%q\n' "${SALES_BOT_PAYMENT_TEXT:-$SALES_BOT_PAYMENT_TEXT_DEFAULT}"
         printf 'SALES_BOT_PAYMENT_QR_PATH=%q\n' "${SALES_BOT_PAYMENT_QR_PATH:-$SALES_BOT_PAYMENT_QR_PATH_DEFAULT}"
+        printf 'SALES_BOT_WELCOME_ANIMATION_PATH=%q\n' "${SALES_BOT_WELCOME_ANIMATION_PATH:-$SALES_BOT_WELCOME_ANIMATION_PATH_DEFAULT}"
+        printf 'SALES_BOT_WELCOME_IMAGE_PATH=%q\n' "${SALES_BOT_WELCOME_IMAGE_PATH:-$SALES_BOT_WELCOME_IMAGE_PATH_DEFAULT}"
         printf 'SALES_BOT_CAPTCHA_TTL_SECONDS=%q\n' "${SALES_BOT_CAPTCHA_TTL_SECONDS:-$SALES_BOT_CAPTCHA_TTL_SECONDS_DEFAULT}"
         printf 'HYSTERIA_PORT=%q\n' "${HYSTERIA_PORT:-8443}"
         printf 'HYSTERIA_PASSWORD=%q\n' "${HYSTERIA_PASSWORD:-}"
@@ -898,11 +1041,15 @@ save_config() {
         printf 'UNBOUND_MANAGED_GATEWAY=%q\n' "${UNBOUND_MANAGED_GATEWAY:-0}"
         printf 'UNBOUND_VPN_ENABLED=%q\n' "${UNBOUND_VPN_ENABLED:-0}"
         printf 'UNBOUND_VPN_CIDRS=%q\n' "${UNBOUND_VPN_CIDRS:-10.0.0.0/24}"
+        printf 'UNBOUND_FILTER_ENABLED=%q\n' "${UNBOUND_FILTER_ENABLED:-1}"
+        printf 'UNBOUND_FILTER_URLS=%q\n' "${UNBOUND_FILTER_URLS:-$DNS_FILTER_URLS_DEFAULT}"
+        printf 'UNBOUND_FILTER_MAX_DOMAINS=%q\n' "${UNBOUND_FILTER_MAX_DOMAINS:-$DNS_FILTER_MAX_DOMAINS_DEFAULT}"
         printf 'WARP_PROXY_PORT=%q\n' "${WARP_PROXY_PORT:-$WARP_PROXY_PORT_DEFAULT}"
         printf 'WARP_PROXY_ENABLED=%q\n' "${WARP_PROXY_ENABLED:-0}"
         printf 'WARP_MODE=%q\n' "${WARP_MODE:-off}"
         printf 'WARP_PROTOCOL=%q\n' "${WARP_PROTOCOL:-auto}"
         printf 'WARP_SSH_ALLOW_CIDRS=%q\n' "${WARP_SSH_ALLOW_CIDRS:-}"
+        printf 'XRAY_WARP_ENABLED=%q\n' "${XRAY_WARP_ENABLED:-${WARP_PROXY_ENABLED:-0}}"
         printf 'DEVICE_LIMIT_ENABLED=%q\n' "${DEVICE_LIMIT_ENABLED:-0}"
         printf 'DEVICE_LIMIT=%q\n' "${DEVICE_LIMIT:-$DEVICE_LIMIT_DEFAULT}"
         printf 'DEVICE_WINDOW_HOURS=%q\n' "${DEVICE_WINDOW_HOURS:-$DEVICE_WINDOW_HOURS_DEFAULT}"
@@ -921,6 +1068,12 @@ save_config() {
         printf 'XRAY_CADDY_FALLBACK_PORT=%q\n' "${XRAY_CADDY_FALLBACK_PORT:-$XRAY_CADDY_FALLBACK_PORT_DEFAULT}"
         printf 'XRAY_REALITY_TARGET=%q\n' "${XRAY_REALITY_TARGET:-www.microsoft.com:443}"
         printf 'XRAY_REALITY_SERVER_NAME=%q\n' "${XRAY_REALITY_SERVER_NAME:-www.microsoft.com}"
+        printf '# Optional temporary Reality test profile with a separate SNI/target\n'
+        printf 'XRAY_GITHUB_TEST_ENABLED=%q\n' "${XRAY_GITHUB_TEST_ENABLED:-0}"
+        printf 'XRAY_GITHUB_TEST_USERS=%q\n' "${XRAY_GITHUB_TEST_USERS:-}"
+        printf 'XRAY_GITHUB_TEST_PORT=%q\n' "${XRAY_GITHUB_TEST_PORT:-$XRAY_GITHUB_TEST_PORT_DEFAULT}"
+        printf 'XRAY_GITHUB_TEST_TARGET=%q\n' "${XRAY_GITHUB_TEST_TARGET:-$XRAY_GITHUB_TEST_TARGET_DEFAULT}"
+        printf 'XRAY_GITHUB_TEST_SERVER_NAME=%q\n' "${XRAY_GITHUB_TEST_SERVER_NAME:-$XRAY_GITHUB_TEST_SERVER_NAME_DEFAULT}"
         printf 'XRAY_REALITY_PRIVATE_KEY=%q\n' "${XRAY_REALITY_PRIVATE_KEY:-}"
         printf 'XRAY_REALITY_PUBLIC_KEY=%q\n' "${XRAY_REALITY_PUBLIC_KEY:-}"
         printf 'XRAY_REALITY_SHORT_ID=%q\n' "${XRAY_REALITY_SHORT_ID:-}"
@@ -1347,6 +1500,40 @@ tg_send_to_chat() {
     echo "$resp" | grep -q '"ok":true'
 }
 
+sales_bot_renew_url() {
+    local username resp
+    if [[ -n "${SALES_BOT_PUBLIC_URL:-}" ]]; then
+        printf '%s\n' "$SALES_BOT_PUBLIC_URL"
+        return 0
+    fi
+    if [[ -n "${SALES_BOT_USERNAME:-}" ]]; then
+        printf 'https://t.me/%s?start=renew\n' "${SALES_BOT_USERNAME#@}"
+        return 0
+    fi
+    [[ -n "${SALES_BOT_TOKEN:-}" ]] || return 1
+    resp=$(tg_api_with_token "$SALES_BOT_TOKEN" "getMe" -s --max-time 12 2>/dev/null || true)
+    username=$(printf '%s\n' "$resp" | grep -o '"username":"[^"]*"' | head -1 | cut -d'"' -f4)
+    [[ -n "$username" ]] || return 1
+    printf 'https://t.me/%s?start=renew\n' "$username"
+}
+
+tg_send_to_chat_with_renew_button() {
+    local chat_id="$1" message="$2" renew_url="$3" resp reply_markup
+    [[ -z "${TG_TOKEN:-}" ]] && return 1
+    is_valid_tg_chat_id "$chat_id" || return 1
+    [[ -n "$renew_url" ]] || return 1
+    reply_markup=$(printf '{"inline_keyboard":[[{"text":"Продлить подписку","url":"%s"}]]}' "$renew_url")
+    resp=$(tg_api "sendMessage" -s --max-time 12 --retry 2 --retry-delay 2 \
+        -X POST \
+        --data-urlencode "chat_id=${chat_id}" \
+        --data-urlencode "parse_mode=HTML" \
+        --data-urlencode "disable_web_page_preview=true" \
+        --data-urlencode "text=${message}" \
+        --data-urlencode "reply_markup=${reply_markup}" \
+        2>/dev/null || true)
+    echo "$resp" | grep -q '"ok":true'
+}
+
 telegram_expiry_message() {
     local user="$1" expires="$2" days="$3" pretty safe_user safe_domain days_text
     pretty=$(profile_expiry_date_dmy "$expires")
@@ -1363,7 +1550,7 @@ telegram_expiry_message() {
 📅 Активна до: <b>${pretty}</b>
 ⏳ <b>${days_text}</b>
 
-Чтобы подключение не прерывалось, напиши Ивану Юрьевичу заранее.
+Чтобы подключение не прерывалось, продли подписку заранее.
 EOF
 }
 
@@ -1386,7 +1573,7 @@ EOF
 }
 
 notify_user_expiry() {
-    local user="$1" force="${2:-0}" expires days chat_id last_key notify_key message now_at
+    local user="$1" force="${2:-0}" expires days chat_id last_key notify_key message now_at renew_url
     if ! is_valid_proxy_user "$user"; then
         printf 'invalid_user\n'
         return 1
@@ -1421,7 +1608,8 @@ notify_user_expiry() {
         return 0
     fi
     message=$(telegram_expiry_message "$user" "$expires" "$days")
-    if tg_send_to_chat "$chat_id" "$message"; then
+    renew_url=$(sales_bot_renew_url 2>/dev/null || true)
+    if { [[ -n "$renew_url" ]] && tg_send_to_chat_with_renew_button "$chat_id" "$message" "$renew_url"; } || tg_send_to_chat "$chat_id" "$message"; then
         if [[ "$force" != "1" ]]; then
             now_at=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
             user_meta_set "$user" LAST_EXPIRY_NOTIFY_KEY "$notify_key" >/dev/null 2>&1 || true
@@ -2144,6 +2332,9 @@ ${auth_blocks}${caddy_upstream}    hide_ip
   header /s/* {
     X-Robots-Tag "noindex, nofollow, noarchive"
     Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+    Profile-Title "Yurich Connect"
+    profile-update-interval "12"
+    support-url "${TELEGRAM_COMMUNITY_URL}"
     Referrer-Policy "no-referrer"
     X-Content-Type-Options "nosniff"
     X-Frame-Options "DENY"
@@ -2490,6 +2681,9 @@ ${auth_blocks}${caddy_upstream}        hide_ip
     header /s/* {
         X-Robots-Tag "noindex, nofollow, noarchive"
         Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+        Profile-Title "Yurich Connect"
+        profile-update-interval "12"
+        support-url "${TELEGRAM_COMMUNITY_URL}"
         Referrer-Policy "no-referrer"
         X-Content-Type-Options "nosniff"
         X-Frame-Options "DENY"
@@ -2854,7 +3048,7 @@ cmd_health_check() {
     systemctl is-active --quiet caddy 2>/dev/null && health_line "Caddy service" ok "active" || health_line "Caddy service" warn "не active"
     [[ -f "$CADDYFILE" ]] && "$CADDY_BIN" validate --config "$CADDYFILE" >/dev/null 2>&1 && health_line "Caddyfile" ok "valid" || health_line "Caddyfile" warn "нет validate"
     ss -tulpn 2>/dev/null | grep -E ':443([[:space:]]|$)' >/dev/null && health_line "Port 443" ok "listening" || health_line "Port 443" warn "не слушается"
-    if [[ "${XRAY_REALITY_SNI_MUX_ENABLED:-0}" == "1" ]] || command -v haproxy >/dev/null 2>&1; then
+    if edge_routing_mode_is_haproxy; then
         systemctl is-active --quiet haproxy 2>/dev/null && health_line "HAProxy service" ok "active" || health_line "HAProxy service" warn "не active"
         [[ -S "$HAPROXY_STATS_SOCKET" ]] && health_line "HAProxy stats socket" ok "$HAPROXY_STATS_SOCKET" || health_line "HAProxy stats socket" warn "не найден"
         [[ -f "$HAPROXY_CFG" ]] && haproxy -c -f "$HAPROXY_CFG" >/dev/null 2>&1 && health_line "HAProxy config" ok "valid" || health_line "HAProxy config" warn "нет validate"
@@ -2989,12 +3183,393 @@ net.ipv4.tcp_wmem = 4096 65536 16777216
 net.ipv4.udp_rmem_min = 8192
 net.ipv4.udp_wmem_min = 8192
 net.ipv4.tcp_mtu_probing = 1
-net.ipv4.tcp_keepalive_time = 600
-net.ipv4.tcp_keepalive_intvl = 30
-net.ipv4.tcp_keepalive_probes = 5
+net.ipv4.tcp_keepalive_time = 60
+net.ipv4.tcp_keepalive_intvl = 15
+net.ipv4.tcp_keepalive_probes = 4
 EOF
     chmod 644 "$HAPROXY_SYSCTL_CONF"
     sysctl --system >/dev/null 2>&1 || sysctl -p "$HAPROXY_SYSCTL_CONF" >/dev/null 2>&1 || true
+}
+
+apply_vless_tcp_tuning() {
+    cat > "$XRAY_SYSCTL_CONF" <<'EOF'
+# Yurich Panel VLESS Reality TCP stability tuning.
+# Conservative values for mobile networks, CGNAT and long-lived TCP tunnels.
+net.core.default_qdisc = fq
+net.core.somaxconn = 8192
+net.ipv4.tcp_congestion_control = bbr
+net.ipv4.tcp_max_syn_backlog = 8192
+net.ipv4.ip_local_port_range = 1024 65535
+net.ipv4.tcp_slow_start_after_idle = 0
+net.ipv4.tcp_mtu_probing = 1
+net.ipv4.tcp_keepalive_time = 60
+net.ipv4.tcp_keepalive_intvl = 15
+net.ipv4.tcp_keepalive_probes = 4
+EOF
+    chmod 644 "$XRAY_SYSCTL_CONF"
+    sysctl --system >/dev/null 2>&1 || sysctl -p "$XRAY_SYSCTL_CONF" >/dev/null 2>&1 || true
+    ok "VLESS TCP tuning применён: $XRAY_SYSCTL_CONF"
+}
+
+cmd_egress_prefer_ipv4() {
+    load_config 2>/dev/null || true
+    hr
+    echo -e "${BOLD}  Force IPv4 egress${RESET}"
+    hr
+
+    local backup_dir="${BACKUP_DIR}/egress-ipv4-before-$(date '+%Y%m%d_%H%M%S')" svc failed=0
+    install -d -m 700 "$backup_dir"
+    [[ -f "$EGRESS_GAI_CONF" ]] && cp -a "$EGRESS_GAI_CONF" "$backup_dir/" 2>/dev/null || true
+    [[ -f "$EGRESS_SYSCTL_CONF" ]] && cp -a "$EGRESS_SYSCTL_CONF" "$backup_dir/" 2>/dev/null || true
+    info "Backup: $backup_dir"
+
+    touch "$EGRESS_GAI_CONF"
+    sed -i '/^[#[:space:]]*precedence[[:space:]][[:space:]]*::ffff:0:0\/96[[:space:]][[:space:]]*100[[:space:]]*$/d' "$EGRESS_GAI_CONF"
+    cat >> "$EGRESS_GAI_CONF" <<'EOF'
+
+# Yurich Panel: prefer IPv4 for outbound proxy egress.
+# Keeps geo/IP checks consistent when provider IPv6 geolocation differs.
+precedence ::ffff:0:0/96  100
+EOF
+    chmod 644 "$EGRESS_GAI_CONF"
+    ok "IPv4 preference записан в $EGRESS_GAI_CONF"
+
+    cat > "$EGRESS_SYSCTL_CONF" <<'EOF'
+# Yurich Panel: force IPv4 egress for proxy services.
+# Use `yurich-panel.sh egress-dualstack` to revert.
+net.ipv6.conf.all.disable_ipv6 = 1
+net.ipv6.conf.default.disable_ipv6 = 1
+EOF
+    chmod 644 "$EGRESS_SYSCTL_CONF"
+    sysctl -p "$EGRESS_SYSCTL_CONF" >/dev/null 2>&1 || true
+    for path in /proc/sys/net/ipv6/conf/*/disable_ipv6; do
+        [[ -w "$path" ]] && printf '1' > "$path" 2>/dev/null || true
+    done
+    ok "IPv6 отключён для egress-теста: $EGRESS_SYSCTL_CONF"
+
+    for svc in caddy xray hysteria; do
+        if systemctl is-active --quiet "$svc" 2>/dev/null; then
+            info "Перезапускаю $svc для применения resolver policy..."
+            if systemctl restart "$svc"; then
+                ok "$svc restarted"
+            else
+                err "$svc restart failed"
+                journalctl -u "$svc" -n 50 --no-pager 2>/dev/null || true
+                failed=1
+            fi
+        fi
+    done
+
+    if command -v getent >/dev/null 2>&1; then
+        info "Проверка порядка адресов для ifconfig.co:"
+        getent ahosts ifconfig.co 2>/dev/null | sed -n '1,6p' || true
+    fi
+    [[ "$failed" -eq 0 ]]
+}
+
+cmd_egress_dualstack() {
+    load_config 2>/dev/null || true
+    hr
+    echo -e "${BOLD}  Restore dual-stack egress${RESET}"
+    hr
+
+    local backup_dir="${BACKUP_DIR}/egress-dualstack-before-$(date '+%Y%m%d_%H%M%S')" svc failed=0
+    install -d -m 700 "$backup_dir"
+    [[ -f "$EGRESS_GAI_CONF" ]] && cp -a "$EGRESS_GAI_CONF" "$backup_dir/" 2>/dev/null || true
+    [[ -f "$EGRESS_SYSCTL_CONF" ]] && cp -a "$EGRESS_SYSCTL_CONF" "$backup_dir/" 2>/dev/null || true
+    info "Backup: $backup_dir"
+
+    rm -f "$EGRESS_SYSCTL_CONF"
+    sysctl -w net.ipv6.conf.all.disable_ipv6=0 >/dev/null 2>&1 || true
+    sysctl -w net.ipv6.conf.default.disable_ipv6=0 >/dev/null 2>&1 || true
+    for path in /proc/sys/net/ipv6/conf/*/disable_ipv6; do
+        [[ -w "$path" ]] && printf '0' > "$path" 2>/dev/null || true
+    done
+
+    if [[ -f "$EGRESS_GAI_CONF" ]]; then
+        sed -i '/^# Yurich Panel: prefer IPv4 for outbound proxy egress\.$/,+2d' "$EGRESS_GAI_CONF"
+    fi
+    ok "Dual-stack egress восстановлен"
+
+    for svc in caddy xray hysteria; do
+        if systemctl is-active --quiet "$svc" 2>/dev/null; then
+            info "Перезапускаю $svc..."
+            if systemctl restart "$svc"; then
+                ok "$svc restarted"
+            else
+                err "$svc restart failed"
+                failed=1
+            fi
+        fi
+    done
+    [[ "$failed" -eq 0 ]]
+}
+
+detect_pingtunnel_arch() {
+    local arch
+    arch=$(uname -m)
+    case "$arch" in
+        x86_64|amd64) printf 'amd64\n' ;;
+        i386|i686) printf '386\n' ;;
+        aarch64|arm64) printf 'arm64\n' ;;
+        armv7l|armv6l|armv7*) printf 'arm\n' ;;
+        riscv64) printf 'riscv64\n' ;;
+        ppc64) printf 'ppc64\n' ;;
+        ppc64le) printf 'ppc64le\n' ;;
+        *) err "Архитектура $arch не поддерживается PingTunnel автоустановкой"; return 1 ;;
+    esac
+}
+
+random_pingtunnel_key() {
+    local raw
+    raw=$(od -An -N4 -tu4 /dev/urandom 2>/dev/null | tr -d '[:space:]')
+    [[ "$raw" =~ ^[0-9]+$ ]] || raw=$((RANDOM * RANDOM + 1))
+    printf '%s\n' "$((raw % 2147483646 + 1))"
+}
+
+write_pingtunnel_env() {
+    local force="${1:-0}" key secret encrypt
+    install -d -m 700 "$CONFIG_DIR"
+    if [[ "$force" != "1" && -f "$PINGTUNNEL_ENV" ]]; then
+        return 0
+    fi
+
+    key=$(random_pingtunnel_key)
+    secret=$(openssl rand -base64 32 | tr -d '\n')
+    encrypt="chacha20"
+    umask 077
+    cat > "$PINGTUNNEL_ENV" <<EOF
+PINGTUNNEL_KEY=${key}
+PINGTUNNEL_ENCRYPT=${encrypt}
+PINGTUNNEL_ENCRYPT_KEY=${secret}
+EOF
+    chmod 600 "$PINGTUNNEL_ENV"
+    ok "PingTunnel ключи записаны: $PINGTUNNEL_ENV"
+}
+
+download_pingtunnel_binary() {
+    local arch version url tmp zip extracted expected_sha actual_sha
+    arch=$(detect_pingtunnel_arch) || return 1
+    version="${PINGTUNNEL_VERSION:-$PINGTUNNEL_VERSION_PIN}"
+    if [[ "$version" == "latest" ]]; then
+        if [[ "${YURICH_ALLOW_UNVERIFIED_DOWNLOADS:-0}" != "1" ]]; then
+            err "PingTunnel latest запрещён без явного YURICH_ALLOW_UNVERIFIED_DOWNLOADS=1"
+            err "Используй NAIVEPROXY_PINGTUNNEL_VERSION=<tag> и NAIVEPROXY_PINGTUNNEL_SHA256=<sha256>"
+            return 1
+        fi
+        url=$(curl -fsSL https://api.github.com/repos/esrrhs/pingtunnel/releases/latest \
+            | awk -v asset="pingtunnel_linux_${arch}.zip" '
+                $0 ~ "\"name\": \"" asset "\"" {found=1}
+                found && /browser_download_url/ {
+                    gsub(/.*"browser_download_url": "|".*/, "")
+                    print
+                    exit
+                }')
+    else
+        url="https://github.com/esrrhs/pingtunnel/releases/download/${version}/pingtunnel_linux_${arch}.zip"
+    fi
+    [[ -n "${url:-}" ]] || { err "Не найден download URL для PingTunnel (${version}, ${arch})"; return 1; }
+    tmp=$(mktemp -d)
+    zip="${tmp}/pingtunnel.zip"
+    install -d -m 755 "$PINGTUNNEL_DIR"
+    info "Скачиваю PingTunnel ${version}: ${url}"
+    curl -fsSL -o "$zip" "$url" || { rm -rf "$tmp"; err "Не удалось скачать PingTunnel"; return 1; }
+    expected_sha="${NAIVEPROXY_PINGTUNNEL_SHA256:-}"
+    if [[ -z "$expected_sha" && "$version" == "$PINGTUNNEL_DEFAULT_VERSION" ]]; then
+        case "$arch" in
+            amd64) expected_sha="$PINGTUNNEL_SHA256_AMD64" ;;
+            arm64) expected_sha="$PINGTUNNEL_SHA256_ARM64" ;;
+        esac
+    fi
+    if [[ -n "$expected_sha" ]]; then
+        actual_sha=$(sha256sum "$zip" | awk '{print $1}')
+        if [[ "$actual_sha" != "$expected_sha" ]]; then
+            rm -rf "$tmp"
+            err "PingTunnel SHA256 mismatch: expected=${expected_sha}, actual=${actual_sha}"
+            return 1
+        fi
+        ok "PingTunnel SHA256 проверен"
+    elif [[ "${YURICH_ALLOW_UNVERIFIED_DOWNLOADS:-0}" == "1" ]]; then
+        warn "PingTunnel SHA256 не задан, продолжаю из-за YURICH_ALLOW_UNVERIFIED_DOWNLOADS=1"
+    else
+        rm -rf "$tmp"
+        err "Нет SHA256 для PingTunnel ${version}/${arch}"
+        err "Задай NAIVEPROXY_PINGTUNNEL_SHA256=<sha256> или YURICH_ALLOW_UNVERIFIED_DOWNLOADS=1"
+        return 1
+    fi
+    unzip -q "$zip" -d "$tmp/unpack" || { rm -rf "$tmp"; err "Не удалось распаковать PingTunnel"; return 1; }
+    extracted=$(find "$tmp/unpack" -type f -name 'pingtunnel' -perm /111 2>/dev/null | head -1)
+    [[ -n "$extracted" ]] || extracted=$(find "$tmp/unpack" -type f -name 'pingtunnel' 2>/dev/null | head -1)
+    [[ -n "$extracted" ]] || { rm -rf "$tmp"; err "Бинарник pingtunnel не найден в архиве"; return 1; }
+    install -m 755 "$extracted" "$PINGTUNNEL_BIN"
+    rm -rf "$tmp"
+    ok "PingTunnel установлен: $PINGTUNNEL_BIN"
+}
+
+wait_apt_locks() {
+    local i
+    for i in $(seq 1 60); do
+        if fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 \
+            || fuser /var/lib/dpkg/lock >/dev/null 2>&1 \
+            || fuser /var/cache/apt/archives/lock >/dev/null 2>&1; then
+            info "Жду apt/dpkg lock (${i}/60)..."
+            sleep 5
+        else
+            return 0
+        fi
+    done
+    err "apt/dpkg lock не освободился"
+    return 1
+}
+
+write_pingtunnel_service() {
+    cat > "$PINGTUNNEL_SERVICE" <<EOF
+[Unit]
+Description=Yurich PingTunnel ICMP fallback
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=${PINGTUNNEL_ENV}
+ExecStartPre=/usr/sbin/sysctl -w net.ipv4.icmp_echo_ignore_all=1
+ExecStart=${PINGTUNNEL_BIN} -type server -key \${PINGTUNNEL_KEY} -encrypt \${PINGTUNNEL_ENCRYPT} -encrypt-key \${PINGTUNNEL_ENCRYPT_KEY}
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+CapabilityBoundingSet=CAP_NET_RAW
+AmbientCapabilities=CAP_NET_RAW
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    chmod 644 "$PINGTUNNEL_SERVICE"
+
+    cat > "$PINGTUNNEL_SYSCTL_CONF" <<'EOF'
+# Yurich Panel PingTunnel server mode.
+# Prevents the kernel ICMP echo handler from racing with PingTunnel raw socket replies.
+net.ipv4.icmp_echo_ignore_all = 1
+EOF
+    chmod 644 "$PINGTUNNEL_SYSCTL_CONF"
+    sysctl -p "$PINGTUNNEL_SYSCTL_CONF" >/dev/null 2>&1 || true
+}
+
+cmd_pingtunnel_install() {
+    load_config 2>/dev/null || true
+    hr
+    echo -e "${BOLD}  PingTunnel ICMP fallback install${RESET}"
+    hr
+
+    wait_apt_locks || return 1
+    apt-get update
+    wait_apt_locks || return 1
+    DEBIAN_FRONTEND=noninteractive apt-get install -y curl unzip ca-certificates openssl >/dev/null
+    download_pingtunnel_binary || return 1
+    write_pingtunnel_env 0 || return 1
+    write_pingtunnel_service || return 1
+    systemctl daemon-reload
+    systemctl enable --now yurich-pingtunnel
+    sleep 2
+    systemctl is-active --quiet yurich-pingtunnel || { journalctl -u yurich-pingtunnel -n 80 --no-pager; return 1; }
+    ok "PingTunnel active"
+    cmd_pingtunnel_status
+}
+
+cmd_pingtunnel_status() {
+    hr
+    echo -e "${BOLD}  PingTunnel status${RESET}"
+    hr
+    [[ -x "$PINGTUNNEL_BIN" ]] && "$PINGTUNNEL_BIN" -h 2>&1 | head -1 || warn "PingTunnel binary не найден"
+    if systemctl is-active --quiet yurich-pingtunnel 2>/dev/null; then
+        ok "Service active: yurich-pingtunnel"
+    else
+        warn "Service не active: yurich-pingtunnel"
+    fi
+    systemctl show yurich-pingtunnel \
+        -p ActiveState -p SubState -p MainPID -p ExecMainStatus -p NRestarts \
+        --no-pager 2>/dev/null || true
+    if [[ -f "$PINGTUNNEL_ENV" ]]; then
+        awk -F= '
+            $1=="PINGTUNNEL_KEY" {print "key_id="$2}
+            $1=="PINGTUNNEL_ENCRYPT" {print "encrypt="$2}
+            $1=="PINGTUNNEL_ENCRYPT_KEY" {print "encrypt_key=***stored in /etc/naiveproxy/pingtunnel.env***"}
+        ' "$PINGTUNNEL_ENV"
+    fi
+    journalctl -u yurich-pingtunnel -n 12 --no-pager 2>/dev/null \
+        | sed -E 's/(-encrypt-key )[A-Za-z0-9+\/=._-]+/\1***REDACTED***/g' || true
+    sysctl net.ipv4.icmp_echo_ignore_all 2>/dev/null || true
+}
+
+cmd_pingtunnel_config() {
+    if [[ ! -f "$PINGTUNNEL_ENV" ]]; then
+        err "PingTunnel env не найден: $PINGTUNNEL_ENV"
+        return 1
+    fi
+    if [[ "${1:-}" == "--show-secrets" || "${YURICH_SHOW_SECRETS:-0}" == "1" ]]; then
+        cat "$PINGTUNNEL_ENV"
+    else
+        sed -E \
+            -e 's/^(PINGTUNNEL_KEY=).+/\1***REDACTED***/' \
+            -e 's/^(PINGTUNNEL_ENCRYPT_KEY=).+/\1***REDACTED***/' \
+            "$PINGTUNNEL_ENV"
+        warn "Секреты скрыты. Для полного вывода: pingtunnel-config --show-secrets или YURICH_SHOW_SECRETS=1"
+    fi
+}
+
+write_pingtunnel_subscription_file() {
+    local out_file="$1" domain="$2" user="$3" key encrypt encrypt_key
+    [[ -n "$out_file" && -n "$domain" && -f "$PINGTUNNEL_ENV" ]] || return 1
+    # shellcheck source=/dev/null
+    source "$PINGTUNNEL_ENV"
+    key="${PINGTUNNEL_KEY:-}"
+    encrypt="${PINGTUNNEL_ENCRYPT:-chacha20}"
+    encrypt_key="${PINGTUNNEL_ENCRYPT_KEY:-}"
+    [[ -n "$key" && -n "$encrypt_key" ]] || return 1
+    cat > "$out_file" <<EOF
+Yurich Connect PingTunnel / ICMP fallback
+
+Profile: ${user}
+Server: ${domain}
+Mode: SOCKS5 over ICMP
+Local SOCKS5: 127.0.0.1:10888
+
+Linux / macOS:
+sudo ./pingtunnel -type client -l 127.0.0.1:10888 -s ${domain} -sock5 1 -key ${key} -encrypt ${encrypt} -encrypt-key ${encrypt_key}
+
+Windows PowerShell (run as Administrator):
+.\pingtunnel.exe -type client -l 127.0.0.1:10888 -s ${domain} -sock5 1 -key ${key} -encrypt ${encrypt} -encrypt-key ${encrypt_key}
+
+Test:
+curl --socks5-hostname 127.0.0.1:10888 https://www.cloudflare.com/cdn-cgi/trace
+
+Note:
+PingTunnel is not a standard subscription URI. Hiddify, v2rayNG, NekoBox and Streisand will not import it directly. Use it as a manual fallback tunnel when TCP/UDP profiles are blocked.
+EOF
+    chmod 600 "$out_file"
+}
+
+cmd_pingtunnel_rotate() {
+    hr
+    echo -e "${BOLD}  PingTunnel key rotate${RESET}"
+    hr
+    write_pingtunnel_env 1 || return 1
+    systemctl restart yurich-pingtunnel
+    systemctl is-active --quiet yurich-pingtunnel || { journalctl -u yurich-pingtunnel -n 80 --no-pager; return 1; }
+    ok "PingTunnel ключи обновлены и сервис перезапущен"
+}
+
+cmd_pingtunnel_remove() {
+    hr
+    echo -e "${BOLD}  PingTunnel remove${RESET}"
+    hr
+    systemctl disable --now yurich-pingtunnel 2>/dev/null || true
+    rm -f "$PINGTUNNEL_SERVICE" "$PINGTUNNEL_SYSCTL_CONF"
+    sysctl -w net.ipv4.icmp_echo_ignore_all=0 >/dev/null 2>&1 || true
+    systemctl daemon-reload
+    ok "PingTunnel service удалён. Конфиг и ключи оставлены: $PINGTUNNEL_ENV"
 }
 
 write_haproxy_logging_config() {
@@ -3045,7 +3620,9 @@ write_haproxy_sni_mux_config() {
     local reality_port="${XRAY_REALITY_PORT:-$XRAY_REALITY_PORT_DEFAULT}"
     local mobile_alt_port="${XRAY_MOBILE_ALT_PORT:-$XRAY_MOBILE_ALT_PORT_DEFAULT}"
     local mobile_alt_sni="${XRAY_MOBILE_ALT_SERVER_NAME:-$XRAY_MOBILE_ALT_SERVER_NAME_DEFAULT}"
-    local backup_file="" nbthread_value="" nbthread_block="" mobile_alt_acl="" mobile_alt_backend=""
+    local github_test_port="${XRAY_GITHUB_TEST_PORT:-$XRAY_GITHUB_TEST_PORT_DEFAULT}"
+    local github_test_sni="${XRAY_GITHUB_TEST_SERVER_NAME:-$XRAY_GITHUB_TEST_SERVER_NAME_DEFAULT}"
+    local backup_file="" nbthread_value="" nbthread_block="" mobile_alt_acl="" mobile_alt_backend="" github_test_acl="" github_test_backend=""
 
     mkdir -p /etc/haproxy "$BACKUP_DIR"
     if [[ -f "$HAPROXY_CFG" ]]; then
@@ -3060,6 +3637,14 @@ write_haproxy_sni_mux_config() {
     if [[ -s "$XRAY_COMPAT_USERS_FILE" ]]; then
         mobile_alt_acl="    use_backend xray_reality_mobile_alt if { req.ssl_sni -i ${mobile_alt_sni} }"$'\n'
         mobile_alt_backend=$'\n'"backend xray_reality_mobile_alt"$'\n'"    mode tcp"$'\n'"    server xray_mobile_alt 127.0.0.1:${mobile_alt_port} check inter 2s fall 3 rise 2"$'\n'
+    fi
+    if [[ "${XRAY_GITHUB_TEST_ENABLED:-0}" == "1" ]]; then
+        if ! is_valid_domain "$github_test_sni"; then
+            err "Некорректный XRAY_GITHUB_TEST_SERVER_NAME: $github_test_sni"
+            return 1
+        fi
+        github_test_acl="    use_backend xray_reality_github_test if { req.ssl_sni -i ${github_test_sni} }"$'\n'
+        github_test_backend=$'\n'"backend xray_reality_github_test"$'\n'"    mode tcp"$'\n'"    option tcp-check"$'\n'"    server xray_github 127.0.0.1:${github_test_port} check inter 2s fall 3 rise 2"$'\n'
     fi
 
     cat > "$HAPROXY_CFG" <<EOF
@@ -3094,6 +3679,7 @@ frontend yurich_tls_443
     tcp-request content set-var(sess.ssl_sni) req.ssl_sni if { req.ssl_hello_type 1 }
     tcp-request content accept if { req.ssl_hello_type 1 }
     log-format "client=hidden ts=%t frontend=%ft backend=%b server=%s sni=%[var(sess.ssl_sni),lower] bytes=%B term=%ts conn=%ac/%fc/%bc/%sc/%rc timers=%Tw/%Tc/%Tt queues=%sq/%bq"
+${github_test_acl}
 ${mobile_alt_acl}    use_backend caddy_tls if { req.ssl_sni -i ${domain} }
     default_backend xray_reality
 
@@ -3105,6 +3691,7 @@ backend xray_reality
     mode tcp
     server xray 127.0.0.1:${reality_port} check inter 2s fall 3 rise 2
 ${mobile_alt_backend}
+${github_test_backend}
 EOF
 
     if ! haproxy -c -f "$HAPROXY_CFG"; then
@@ -3361,7 +3948,7 @@ cmd_haproxy_logs() {
     hr
 }
 
-cmd_haproxy_apply() {
+apply_haproxy_sni_mux_runtime() {
     load_config
     check_installed || { err "Сначала установи Yurich Panel"; return 1; }
     if ! is_valid_domain "${DOMAIN:-}"; then
@@ -3369,25 +3956,21 @@ cmd_haproxy_apply() {
         return 1
     fi
 
-    hr
-    echo -e "${BOLD}  Применение HAProxy SNI mux${RESET}"
-    hr
-
     ensure_haproxy_packages || return 1
     write_haproxy_logging_config
 
-    XRAY_REALITY_SNI_MUX_ENABLED="1"
-    XRAY_REALITY_PUBLIC_PORT="443"
-    XRAY_REALITY_PORT="${XRAY_REALITY_PORT:-$XRAY_REALITY_PORT_DEFAULT}"
-    XRAY_CADDY_FALLBACK_PORT="${XRAY_CADDY_FALLBACK_PORT:-$XRAY_CADDY_FALLBACK_PORT_DEFAULT}"
+    set_edge_routing_mode "haproxy" || return 1
     save_config
 
     info "Пересобираю Caddy для внутреннего TLS порта ${XRAY_CADDY_FALLBACK_PORT}"
     rewrite_caddyfile_current || return 1
-    systemctl reload caddy 2>/dev/null || systemctl restart caddy
+    if ! systemctl reload caddy 2>/dev/null && ! systemctl restart caddy; then
+        err "Caddy не применил fallback-конфиг для HAProxy"
+        return 1
+    fi
 
     if [[ -x "$XRAY_BIN" && -s "$XRAY_USERS_FILE" ]]; then
-        info "Проверяю Xray Reality на TCP/${XRAY_REALITY_PORT}"
+        info "Проверяю Xray Reality на TCP/${XRAY_REALITY_PORT:-$XRAY_REALITY_PORT_DEFAULT}"
         write_xray_config || return 1
         write_xray_service
         systemctl restart xray || return 1
@@ -3406,19 +3989,93 @@ cmd_haproxy_apply() {
     fi
 
     apply_xray_reality_firewall
-
     ok "HAProxy SNI mux применён: ${DOMAIN}:443 -> Caddy, default SNI -> Xray Reality"
+}
+
+apply_caddy_only_runtime() {
+    load_config
+    check_installed || { err "Сначала установи Yurich Panel"; return 1; }
+
+    set_edge_routing_mode "caddy" || return 1
+    save_config
+
+    info "Останавливаю HAProxy, чтобы освободить TCP/443 для Caddy"
+    systemctl disable --now haproxy >/dev/null 2>&1 || true
+    systemctl stop haproxy >/dev/null 2>&1 || true
+    pkill -x haproxy >/dev/null 2>&1 || true
+
+    info "Пересобираю Caddyfile для прямого Caddy-only режима на 443"
+    rewrite_caddyfile_current || return 1
+    if ! systemctl reload caddy 2>/dev/null && ! systemctl restart caddy; then
+        err "Caddy не применил Caddy-only конфиг"
+        return 1
+    fi
+
+    if [[ -x "$XRAY_BIN" && -s "$XRAY_USERS_FILE" ]]; then
+        info "Пересобираю Xray Reality для прямого TCP-порта ${XRAY_REALITY_PORT:-$XRAY_REALITY_PORT_DEFAULT}"
+        write_xray_config || return 1
+        write_xray_service
+        systemctl restart xray || return 1
+    fi
+
+    apply_xray_reality_firewall
+    ok "Caddy-only применён: Caddy держит 443, Reality использует отдельный TCP-порт"
+}
+
+refresh_haproxy_if_enabled() {
+    load_config
+    edge_routing_mode_is_haproxy || return 0
+    command -v haproxy >/dev/null 2>&1 || return 0
+    write_haproxy_sni_mux_config || return 1
+    systemctl reload haproxy 2>/dev/null || systemctl restart haproxy
+}
+
+cmd_edge_routing_mode() {
+    load_config
+    local mode="${1:-}"
+    if [[ -z "$mode" ]]; then
+        prompt_edge_routing_mode || return 1
+        mode="${EDGE_ROUTING_MODE:-caddy}"
+    else
+        set_edge_routing_mode "$mode" || return 1
+    fi
+
+    if [[ "$mode" == "haproxy" ]]; then
+        apply_haproxy_sni_mux_runtime || return 1
+        cmd_haproxy_status
+    else
+        apply_caddy_only_runtime || return 1
+        cmd_health_check
+    fi
+}
+
+cmd_haproxy_apply() {
+    load_config
+    check_installed || { err "Сначала установи Yurich Panel"; return 1; }
+    if ! is_valid_domain "${DOMAIN:-}"; then
+        err "Домен не настроен или некорректен: ${DOMAIN:-}"
+        return 1
+    fi
+
+    hr
+    echo -e "${BOLD}  Применение HAProxy SNI mux${RESET}"
+    hr
+
+    apply_haproxy_sni_mux_runtime || return 1
     cmd_haproxy_status
 }
 
 cmd_haproxy_menu() {
     while true; do
+        load_config
         hr
-        echo -e "${BOLD}  HAProxy SNI mux${RESET}"
+        echo -e "${BOLD}  Routing mode / HAProxy SNI mux${RESET}"
         hr
+        echo -e "  Текущий режим: ${CYAN}$(edge_routing_mode_label)${RESET}"
         echo -e "  ${BOLD}1)${RESET} Статус и маршруты"
         echo -e "  ${BOLD}2)${RESET} Применить / пересобрать SNI mux"
         echo -e "  ${BOLD}3)${RESET} Последние SNI-логи"
+        echo -e "  ${BOLD}4)${RESET} Переключить на Caddy-only"
         echo -e "  ${BOLD}0)${RESET} Назад"
         hr
         echo -ne "${CYAN}Выбор: ${RESET}"
@@ -3427,6 +4084,7 @@ cmd_haproxy_menu() {
             1) cmd_haproxy_status ;;
             2) cmd_haproxy_apply ;;
             3) cmd_haproxy_logs ;;
+            4) cmd_edge_routing_mode caddy ;;
             0|"") return ;;
             *) warn "Неверный выбор" ;;
         esac
@@ -3458,7 +4116,7 @@ cmd_security_audit() {
         [[ "$value" == "no" ]] && ok "SSH password login disabled" || { err "SSH passwordauthentication=${value:-unknown}"; failed=$((failed + 1)); }
         value=$(sshd -T 2>/dev/null | awk '/^permitrootlogin /{print $2; exit}' || true)
         case "$value" in
-            no|prohibit-password|forced-commands-only) ok "SSH root login restricted: ${value}" ;;
+            no|prohibit-password|without-password|forced-commands-only) ok "SSH root login restricted: ${value}" ;;
             *) err "SSH permitrootlogin=${value:-unknown}"; failed=$((failed + 1)) ;;
         esac
     else
@@ -3490,7 +4148,14 @@ cmd_security_audit() {
 
     ports=$(ss -tulpen 2>/dev/null | awk 'NR>1{print $5}' | sed -E 's/.*:([0-9]+)$/\1/' | sort -n | uniq | tr '\n' ' ' || true)
     echo "Open ports: ${ports:-n/a}"
-    if ss -tulpen 2>/dev/null | grep -Eq ':(23|25|3306|5432|6379|9200)[[:space:]]'; then
+    if ss -H -tulpen 2>/dev/null | awk '
+        {
+            port=$5
+            sub(/.*:/, "", port)
+            if (port ~ /^(23|25|3306|5432|6379|9200)$/) found=1
+        }
+        END { exit(found ? 0 : 1) }
+    '; then
         err "Найдены потенциально лишние публичные порты"
         failed=$((failed + 1))
     else
@@ -4083,8 +4748,15 @@ node_app_links_for_user() {
         local line sudo_cmd remote_cmd
         line="${name}|${host}|${port}|${ssh_user}|${node_domain}|${role}|${weight}|${enabled}"
         sudo_cmd=$(nodes_remote_sudo_prefix "$ssh_user")
-        remote_cmd="${sudo_cmd}bash -lc 'u=\"${user}\"; token_file=\"/etc/naiveproxy/subscriptions/\${u}.token\"; token=\$(cat \"\$token_file\" 2>/dev/null || true); links=\"/var/www/html/s/\${token}/links.txt\"; if { [ -z \"\$token\" ] || [ ! -s \"\$links\" ]; } && [ -x /usr/local/bin/yurich-panel.sh ]; then bash /usr/local/bin/yurich-panel.sh nodes-subscriptions >/dev/null 2>&1 || true; token=\$(cat \"\$token_file\" 2>/dev/null || true); links=\"/var/www/html/s/\${token}/links.txt\"; fi; if [ -s \"\$links\" ]; then if systemctl is-active --quiet hysteria 2>/dev/null; then awk '\''/^(hy2:\\/\\/|hysteria2:\\/\\/)/ && \$0 !~ /[Hh]op/ {print}'\'' \"\$links\" || true; fi; if systemctl is-active --quiet xray 2>/dev/null; then awk '\''/^vless:\\/\\// && \$0 ~ /security=reality/ && \$0 ~ /type=tcp/ && \$0 ~ /:443\\?/ {print}'\'' \"\$links\" || true; fi; fi'"
-        nodes_ssh "$line" "$remote_cmd" 2>/dev/null || true
+        remote_cmd="${sudo_cmd}bash -lc 'u=\"${user}\"; token_file=\"/etc/naiveproxy/subscriptions/\${u}.token\"; token=\$(cat \"\$token_file\" 2>/dev/null || true); links=\"/var/www/html/s/\${token}/links.txt\"; if { [ -z \"\$token\" ] || [ ! -s \"\$links\" ]; } && [ -x /usr/local/bin/yurich-panel.sh ]; then bash /usr/local/bin/yurich-panel.sh nodes-subscriptions >/dev/null 2>&1 || true; token=\$(cat \"\$token_file\" 2>/dev/null || true); links=\"/var/www/html/s/\${token}/links.txt\"; fi; if [ -s \"\$links\" ]; then if systemctl is-active --quiet hysteria 2>/dev/null; then awk '\''/^(hy2:\\/\\/|hysteria2:\\/\\/)/ && \$0 !~ /[Hh]op/ {print}'\'' \"\$links\" || true; fi; if systemctl is-active --quiet xray 2>/dev/null; then awk '\''/^vless:\\/\\// && \$0 ~ /security=reality/ && \$0 ~ /type=tcp/ && \$0 ~ /^vless:\\/\\/[^@]+@[^/?#]+:[0-9]+\\?/ {print}'\'' \"\$links\" || true; fi; fi'"
+        local output attempt
+        for attempt in 1 2 3; do
+            if output=$(nodes_ssh "$line" "$remote_cmd" 2>/dev/null); then
+                [[ -n "$output" ]] && printf '%s\n' "$output"
+                break
+            fi
+            sleep 2
+        done
     done
 }
 
@@ -4101,8 +4773,23 @@ node_mobile_test_links_for_user() {
         line="${name}|${host}|${port}|${ssh_user}|${node_domain}|${role}|${weight}|${enabled}"
         sudo_cmd=$(nodes_remote_sudo_prefix "$ssh_user")
         remote_cmd="${sudo_cmd}bash -lc 'u=\"${user}\"; token_file=\"/etc/naiveproxy/subscriptions/\${u}.token\"; token=\$(cat \"\$token_file\" 2>/dev/null || true); links=\"/var/www/html/s/\${token}/mobile-test.txt\"; if { [ -z \"\$token\" ] || [ ! -s \"\$links\" ]; } && [ -x /usr/local/bin/yurich-panel.sh ]; then bash /usr/local/bin/yurich-panel.sh nodes-subscriptions >/dev/null 2>&1 || true; token=\$(cat \"\$token_file\" 2>/dev/null || true); links=\"/var/www/html/s/\${token}/mobile-test.txt\"; fi; if [ -s \"\$links\" ]; then awk '\''/^vless:\\/\\// && \$0 ~ /security=reality/ && \$0 ~ /mobile-alt/ {print}'\'' \"\$links\" || true; fi'"
-        nodes_ssh "$line" "$remote_cmd" 2>/dev/null || true
+        local output attempt
+        for attempt in 1 2 3; do
+            if output=$(nodes_ssh "$line" "$remote_cmd" 2>/dev/null); then
+                [[ -n "$output" ]] && printf '%s\n' "$output"
+                break
+            fi
+            sleep 2
+        done
     done
+}
+
+subscription_filter_published_links() {
+    awk '
+        /Reality GitHub TEST/ { next }
+        /spx=%2Fgithub-test-/ { next }
+        NF && !seen[$0]++ { print }
+    '
 }
 
 cmd_nodes_rebuild_subscriptions() {
@@ -4158,7 +4845,7 @@ protocol_line_allowed() {
             return
         ;;
         vless://*)
-            [[ "$line" == *"security=reality"* && "$line" == *"type=tcp"* && "$line" =~ ^vless://[^@]+@[^/?#]+:443\? ]]
+            [[ "$line" == *"security=reality"* && "$line" == *"type=tcp"* && "$line" =~ ^vless://[^@]+@[^/?#]+:[0-9]{1,5}\? ]]
             return
             ;;
     esac
@@ -4179,7 +4866,7 @@ protocol_line_forbidden() {
     [[ "$line" == *"VLESS%20XHTTP"* ]] && return 0
     [[ "$line" == *"VLESS%20mKCP"* ]] && return 0
     [[ "$line" == *"Hysteria2%20Hop"* || "$line" == *"Hop%20"* ]] && return 0
-    [[ "$line" == vless://* && ! "$line" =~ ^vless://[^@]+@[^/?#]+:443\? ]] && return 0
+    [[ "$line" == vless://* && ! "$line" =~ ^vless://[^@]+@[^/?#]+:[0-9]{1,5}\? ]] && return 0
     return 1
 }
 
@@ -4187,9 +4874,13 @@ cmd_protocol_validate() {
     load_config
     load_users
     local failed=0 checked=0 user token file line count bad files
-    files="links.txt hiddify.txt streisand.txt nekobox.txt v2rayng.txt"
+    files="links.txt hiddify.txt streisand.txt happ.txt nekobox.txt v2rayng.txt"
     while IFS= read -r user; do
         [[ -z "$user" ]] && continue
+        if user_is_expired "$user"; then
+            printf 'SKIP %-24s expired\n' "$user"
+            continue
+        fi
         token=$(cat "${SUBS_DIR}/${user}.token" 2>/dev/null || true)
         if [[ -z "$token" ]]; then
             printf 'FAIL %-24s no_token\n' "$user"
@@ -4269,11 +4960,11 @@ lines = [x.strip() for x in links_path.read_text(encoding="utf-8", errors="repla
 csv_path = os.environ.get("YURICH_BENCHMARK_CSV", "").strip()
 csv_user = os.environ.get("YURICH_BENCHMARK_USER", "").strip()
 try:
-    slow_threshold_ms = int(os.environ.get("YURICH_BENCHMARK_MAX_AVG_MS", "1500"))
+    slow_threshold_ms = int(os.environ.get("YURICH_BENCHMARK_MAX_AVG_MS", "2500"))
 except Exception:
-    slow_threshold_ms = 1500
+    slow_threshold_ms = 2500
 if slow_threshold_ms < 1:
-    slow_threshold_ms = 1500
+    slow_threshold_ms = 2500
 profiles = []
 for line in lines:
     u = urlsplit(line)
@@ -4541,9 +5232,16 @@ protocol_benchmark_default_user() {
 cmd_protocol_benchmark_monitor() {
     load_config
     load_users
-    local user="${1:-}" rounds="${2:-${PROTOCOL_BENCHMARK_ROUNDS:-3}}" max_ms="${PROTOCOL_BENCHMARK_MAX_AVG_MS:-1500}"
+    local user="${1:-}" rounds="${2:-${PROTOCOL_BENCHMARK_ROUNDS:-3}}" max_ms="${PROTOCOL_BENCHMARK_MAX_AVG_MS:-2500}"
     local min_rounds="${PROTOCOL_BENCHMARK_MONITOR_MIN_ROUNDS:-3}" slow_min_hits="${PROTOCOL_BENCHMARK_SLOW_MIN_HITS:-2}"
-    local log_file="${PROTOCOL_BENCHMARK_LOG:-$PROTOCOL_BENCHMARK_LOG_DEFAULT}" tmp rc=0 issues safe_issues safe_tail
+    local warn_min_ok="${PROTOCOL_BENCHMARK_WARN_MIN_OK_HITS:-2}"
+    local alert_repeat="${PROTOCOL_BENCHMARK_ALERT_REPEAT:-2}"
+    local alert_cooldown_minutes="${PROTOCOL_BENCHMARK_ALERT_COOLDOWN_MINUTES:-60}"
+    local alert_state="${PROTOCOL_BENCHMARK_ALERT_STATE:-$CONFIG_DIR/protocol-benchmark-alert.state}"
+    local recovery_alert="${PROTOCOL_BENCHMARK_RECOVERY_ALERT:-1}"
+    local log_file="${PROTOCOL_BENCHMARK_LOG:-$PROTOCOL_BENCHMARK_LOG_DEFAULT}" tmp rc=0 issues safe_issues safe_tail safe_alert_note
+    local alert_class prev_class="" prev_count=0 prev_sent=0 prev_fingerprint="" prev_recovered=0 issue_count=1 now_ts cooldown_sec should_alert=0 hard_alert=0 last_sent=0
+    local fingerprint state_line state_a state_b state_c state_d state_e state_f issue_changed=0
     if [[ -z "$user" ]]; then
         user=$(protocol_benchmark_default_user) || { err "Нет пользователя для benchmark monitor"; return 1; }
     fi
@@ -4554,11 +5252,20 @@ cmd_protocol_benchmark_monitor() {
     (( min_rounds < 1 )) && min_rounds=3
     (( min_rounds > 5 )) && min_rounds=5
     (( rounds < min_rounds )) && rounds="$min_rounds"
-    [[ "$max_ms" =~ ^[0-9]+$ ]] || max_ms=1500
+    [[ "$max_ms" =~ ^[0-9]+$ ]] || max_ms=2500
     [[ "$slow_min_hits" =~ ^[0-9]+$ ]] || slow_min_hits=2
     (( slow_min_hits < 1 )) && slow_min_hits=1
     (( slow_min_hits > 5 )) && slow_min_hits=5
     (( slow_min_hits > rounds )) && slow_min_hits="$rounds"
+    [[ "$warn_min_ok" =~ ^[0-9]+$ ]] || warn_min_ok=2
+    (( warn_min_ok < 1 )) && warn_min_ok=1
+    (( warn_min_ok > rounds )) && warn_min_ok="$rounds"
+    [[ "$alert_repeat" =~ ^[0-9]+$ ]] || alert_repeat=2
+    (( alert_repeat < 1 )) && alert_repeat=1
+    (( alert_repeat > 10 )) && alert_repeat=10
+    [[ "$alert_cooldown_minutes" =~ ^[0-9]+$ ]] || alert_cooldown_minutes=60
+    (( alert_cooldown_minutes < 5 )) && alert_cooldown_minutes=5
+    (( alert_cooldown_minutes > 1440 )) && alert_cooldown_minutes=1440
 
     tmp=$(mktemp /tmp/yurich-protocol-benchmark-monitor-XXXXXX.out)
     if YURICH_BENCHMARK_CSV="$log_file" YURICH_BENCHMARK_USER="$user" YURICH_BENCHMARK_MAX_AVG_MS="$max_ms" cmd_protocol_benchmark "$user" "$rounds" > "$tmp" 2>&1; then
@@ -4567,9 +5274,15 @@ cmd_protocol_benchmark_monitor() {
         rc=$?
     fi
     cat "$tmp"
-    issues=$(awk -v max="$max_ms" -v min_hits="$slow_min_hits" '
+    issues=$(awk -v max="$max_ms" -v min_hits="$slow_min_hits" -v warn_min_ok="$warn_min_ok" '
         /^(OK|WARN|FAIL)[[:space:]]/ {
             status=$1; proto=$2; host=$3; avg=$6; gsub(/s/, "", avg)
+            ok_seen=0; ok_total=0
+            if ($4 ~ /^[0-9]+\/[0-9]+$/) {
+                split($4, ok_parts, "/")
+                ok_seen=ok_parts[1] + 0
+                ok_total=ok_parts[2] + 0
+            }
             ms=(avg == "-" ? 0 : int(avg * 1000))
             slow_seen=-1; slow_total=0
             for (i=1; i<=NF; i++) {
@@ -4579,8 +5292,8 @@ cmd_protocol_benchmark_monitor() {
                     slow_total=parts[2] + 0
                 }
             }
-            if (status != "OK") {
-                printf "%s %s %s\n", status, proto, host
+            if (status == "FAIL" || (status == "WARN" && ok_seen < warn_min_ok)) {
+                printf "%s %s %s ok=%s/%s\n", status, proto, host, ok_seen, ok_total
             } else if (slow_seen >= min_hits) {
                 printf "SLOW %s %s slow=%s/%s threshold=%sms avg=%sms\n", proto, host, slow_seen, slow_total, max, ms
             } else if (slow_seen < 0 && ms > max) {
@@ -4590,12 +5303,74 @@ cmd_protocol_benchmark_monitor() {
     ' "$tmp" || true)
 
     if [[ "$rc" -ne 0 || -n "$issues" ]]; then
+        [[ "$rc" -ne 0 ]] && hard_alert=1
+        if grep -q '^FAIL[[:space:]]' <<<"${issues:-}"; then
+            hard_alert=1
+        fi
+        alert_class="SOFT"
+        [[ "$hard_alert" -eq 1 ]] && alert_class="HARD"
+        fingerprint=$(printf 'rc=%s\n%s\n' "$rc" "${issues:-benchmark failed}" | sed '/^[[:space:]]*$/d' | LC_ALL=C sort | sha256sum | awk '{print $1}')
+        if [[ -s "$alert_state" ]]; then
+            state_line=$(head -n1 "$alert_state" 2>/dev/null || true)
+            IFS='|' read -r state_a state_b state_c state_d state_e state_f <<< "$state_line" || true
+            if [[ "$state_a" == "PROTOBM1" ]]; then
+                prev_class="$state_b"
+                prev_count="$state_c"
+                prev_sent="$state_d"
+                prev_fingerprint="$state_e"
+                prev_recovered="$state_f"
+            else
+                prev_class="$state_a"
+                prev_count="$state_b"
+                prev_sent="$state_c"
+                prev_fingerprint=""
+                prev_recovered=0
+            fi
+        fi
+        [[ "$prev_count" =~ ^[0-9]+$ ]] || prev_count=0
+        [[ "$prev_sent" =~ ^[0-9]+$ ]] || prev_sent=0
+        [[ "$prev_recovered" =~ ^[0-9]+$ ]] || prev_recovered=0
+        if [[ "$prev_fingerprint" != "$fingerprint" ]]; then
+            issue_changed=1
+        fi
+        if [[ "$prev_class" == "$alert_class" && "$prev_fingerprint" == "$fingerprint" ]]; then
+            issue_count=$((prev_count + 1))
+        else
+            issue_count=1
+        fi
+        now_ts=$(date +%s)
+        cooldown_sec=$((alert_cooldown_minutes * 60))
+        if [[ "$hard_alert" -eq 1 ]]; then
+            if (( issue_changed == 1 || issue_count == 1 || now_ts - prev_sent >= cooldown_sec )); then
+                should_alert=1
+            fi
+        elif (( issue_count >= alert_repeat && (issue_changed == 1 || now_ts - prev_sent >= cooldown_sec) )); then
+            should_alert=1
+        fi
+        last_sent="$prev_sent"
+        if [[ "$should_alert" -eq 1 ]]; then
+            last_sent="$now_ts"
+        fi
+        mkdir -p "$CONFIG_DIR" 2>/dev/null || true
+        { printf 'PROTOBM1|%s|%s|%s|%s|0\n' "$alert_class" "$issue_count" "$last_sent" "$fingerprint" > "$alert_state" && chmod 600 "$alert_state"; } 2>/dev/null || true
+
+        if [[ "$should_alert" -ne 1 ]]; then
+            if [[ "$hard_alert" -eq 1 ]]; then
+                info "Benchmark alert suppressed: hard repeat=${issue_count}, same_issue=$((1 - issue_changed)), cooldown=${alert_cooldown_minutes}m"
+            else
+                info "Benchmark alert suppressed: soft repeat=${issue_count}/${alert_repeat}, same_issue=$((1 - issue_changed)), cooldown=${alert_cooldown_minutes}m"
+            fi
+            rm -f "$tmp"
+            return "$rc"
+        fi
         safe_issues=$(html_escape_text "${issues:-benchmark failed}")
         safe_tail=$(html_escape_text "$(tail -n 18 "$tmp")")
+        safe_alert_note=$(html_escape_text "Антиспам: ${alert_class}, повтор ${issue_count}, cooldown ${alert_cooldown_minutes} мин.")
         tg_send "⚠️ <b>Yurich Connect protocol benchmark</b>
 📡 Сервер: <code>$(hostname)</code>
 👤 Пользователь: <code>$(html_escape_text "$user")</code>
 📈 Порог: <code>${max_ms} ms, ${slow_min_hits}/${rounds} медленных попыток</code>
+🔕 <code>${safe_alert_note}</code>
 🕐 $(date '+%Y-%m-%d %H:%M:%S')
 
 <b>Проблемы:</b>
@@ -4603,6 +5378,26 @@ cmd_protocol_benchmark_monitor() {
 
 <b>Последний тест:</b>
 <pre>${safe_tail}</pre>"
+    else
+        if [[ -s "$alert_state" && "$recovery_alert" == "1" ]]; then
+            state_line=$(head -n1 "$alert_state" 2>/dev/null || true)
+            IFS='|' read -r state_a state_b state_c state_d state_e state_f <<< "$state_line" || true
+            if [[ "$state_a" == "PROTOBM1" ]]; then
+                prev_class="$state_b"; prev_count="$state_c"; prev_sent="$state_d"
+            else
+                prev_class="$state_a"; prev_count="$state_b"; prev_sent="$state_c"
+            fi
+            [[ "$prev_sent" =~ ^[0-9]+$ ]] || prev_sent=0
+            if (( prev_sent > 0 )); then
+                tg_send "✅ <b>Yurich Connect protocol benchmark восстановлен</b>
+📡 Сервер: <code>$(hostname)</code>
+👤 Пользователь: <code>$(html_escape_text "$user")</code>
+🕐 $(date '+%Y-%m-%d %H:%M:%S')
+
+<pre>Проблемы больше не повторяются. Последний тест прошёл без FAIL/SLOW по заданным порогам.</pre>"
+            fi
+        fi
+        rm -f "$alert_state" 2>/dev/null || true
     fi
     rm -f "$tmp"
     return "$rc"
@@ -4729,7 +5524,7 @@ cmd_protocol_health() {
         warn "Reality/Xray не установлен"
     fi
 
-    if [[ "${XRAY_REALITY_SNI_MUX_ENABLED:-0}" == "1" ]] || command -v haproxy >/dev/null 2>&1; then
+    if edge_routing_mode_is_haproxy; then
         systemctl is-active --quiet haproxy 2>/dev/null && ok "HAProxy active" || { err "HAProxy не active"; failed=$((failed + 1)); }
         [[ -f "$HAPROXY_CFG" ]] && haproxy -c -f "$HAPROXY_CFG" >/dev/null 2>&1 && ok "HAProxy config valid" || { err "HAProxy config invalid"; failed=$((failed + 1)); }
         if haproxy_backends_healthy >/tmp/yurich_haproxy_backend_health.out 2>&1; then
@@ -4766,7 +5561,13 @@ cmd_protocol_health() {
 
 cmd_protocol_monitor() {
     load_config
-    local tmp rc
+    local tmp rc alert_state="${PROTOCOL_MONITOR_ALERT_STATE:-$CONFIG_DIR/protocol-health-alert.state}"
+    local alert_cooldown_minutes="${PROTOCOL_MONITOR_ALERT_COOLDOWN_MINUTES:-60}" recovery_alert="${PROTOCOL_MONITOR_RECOVERY_ALERT:-1}"
+    local cooldown_sec now_ts fingerprint state_line state_a state_b state_c state_d state_e
+    local prev_count=0 prev_sent=0 prev_fingerprint="" issue_count=1 issue_changed=0 should_alert=0 last_sent=0
+    [[ "$alert_cooldown_minutes" =~ ^[0-9]+$ ]] || alert_cooldown_minutes=60
+    (( alert_cooldown_minutes < 5 )) && alert_cooldown_minutes=5
+    (( alert_cooldown_minutes > 1440 )) && alert_cooldown_minutes=1440
     tmp=$(mktemp)
     if cmd_protocol_health > "$tmp" 2>&1; then
         rc=0
@@ -4774,12 +5575,70 @@ cmd_protocol_monitor() {
         rc=$?
     fi
     if [[ "$rc" -ne 0 ]]; then
-        tg_send "⚠️ <b>Yurich Connect protocol health</b>
+        fingerprint=$(sed '/^[[:space:]]*$/d' "$tmp" | LC_ALL=C sort | sha256sum | awk '{print $1}')
+        if [[ -s "$alert_state" ]]; then
+            state_line=$(head -n1 "$alert_state" 2>/dev/null || true)
+            IFS='|' read -r state_a state_b state_c state_d state_e <<< "$state_line" || true
+            if [[ "$state_a" == "PROTOHEALTH1" ]]; then
+                prev_count="$state_b"
+                prev_sent="$state_c"
+                prev_fingerprint="$state_d"
+            else
+                prev_count="$state_b"
+                prev_sent="$state_c"
+                prev_fingerprint=""
+            fi
+        fi
+        [[ "$prev_count" =~ ^[0-9]+$ ]] || prev_count=0
+        [[ "$prev_sent" =~ ^[0-9]+$ ]] || prev_sent=0
+        if [[ "$prev_fingerprint" != "$fingerprint" ]]; then
+            issue_changed=1
+        fi
+        if [[ "$prev_fingerprint" == "$fingerprint" ]]; then
+            issue_count=$((prev_count + 1))
+        else
+            issue_count=1
+        fi
+        now_ts=$(date +%s)
+        cooldown_sec=$((alert_cooldown_minutes * 60))
+        if (( issue_changed == 1 || issue_count == 1 || now_ts - prev_sent >= cooldown_sec )); then
+            should_alert=1
+        fi
+        last_sent="$prev_sent"
+        [[ "$should_alert" -eq 1 ]] && last_sent="$now_ts"
+        mkdir -p "$CONFIG_DIR" 2>/dev/null || true
+        { printf 'PROTOHEALTH1|%s|%s|%s|0\n' "$issue_count" "$last_sent" "$fingerprint" > "$alert_state" && chmod 600 "$alert_state"; } 2>/dev/null || true
+        if [[ "$should_alert" -eq 1 ]]; then
+            tg_send "⚠️ <b>Yurich Connect protocol health</b>
+📡 Сервер: <code>$(hostname)</code>
+🌐 Домен: <code>${DOMAIN:-unknown}</code>
+🔕 <code>Антиспам: повтор ${issue_count}, cooldown ${alert_cooldown_minutes} мин.</code>
+🕐 $(date '+%Y-%m-%d %H:%M:%S')
+
+<pre>$(tail -n 30 "$tmp" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')</pre>"
+        else
+            info "Protocol health alert suppressed: repeat=${issue_count}, same_issue=$((1 - issue_changed)), cooldown=${alert_cooldown_minutes}m"
+        fi
+    else
+        if [[ -s "$alert_state" && "$recovery_alert" == "1" ]]; then
+            state_line=$(head -n1 "$alert_state" 2>/dev/null || true)
+            IFS='|' read -r state_a state_b state_c state_d state_e <<< "$state_line" || true
+            if [[ "$state_a" == "PROTOHEALTH1" ]]; then
+                prev_sent="$state_c"
+            else
+                prev_sent="$state_c"
+            fi
+            [[ "$prev_sent" =~ ^[0-9]+$ ]] || prev_sent=0
+            if (( prev_sent > 0 )); then
+                tg_send "✅ <b>Yurich Connect protocol health восстановлен</b>
 📡 Сервер: <code>$(hostname)</code>
 🌐 Домен: <code>${DOMAIN:-unknown}</code>
 🕐 $(date '+%Y-%m-%d %H:%M:%S')
 
-<pre>$(tail -n 30 "$tmp" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')</pre>"
+<pre>Health-check снова проходит без ошибок.</pre>"
+            fi
+        fi
+        rm -f "$alert_state" 2>/dev/null || true
     fi
     cat "$tmp"
     rm -f "$tmp"
@@ -4914,6 +5773,7 @@ profile_flag_for_label() {
     lowered=$(printf '%s' "$label" | tr '[:upper:]' '[:lower:]')
     case "$lowered" in
         *finland*|*helsinki*|*suomi*) printf '🇫🇮' ;;
+        swe|*sweden*|*stockholm*) printf '🇸🇪' ;;
         *germany*|*deutschland*|*berlin*|*frankfurt*) printf '🇩🇪' ;;
         *netherlands*|*holland*|*amsterdam*) printf '🇳🇱' ;;
         *united\ states*|*america*|*california*|*fremont*|*new\ york*) printf '🇺🇸' ;;
@@ -4932,9 +5792,11 @@ node_location_label() {
         germany|de|main) printf 'Germany' ;;
         finland|fi) printf 'Finland' ;;
         finland2|finland-2|helsinki|n8n) printf 'Finland 2' ;;
+        swe|sweden|finland3|finland-3) printf 'SWE' ;;
         netit|net-it|netherlands|nl) printf 'Netherlands' ;;
         usa|us|america|california|fremont) printf 'USA California' ;;
         poland|pl|warsaw) printf 'Poland' ;;
+        poland2|pl2|usa2|test-go-it|test) printf 'Poland 2' ;;
         *) printf '%s' "$node" ;;
     esac
 }
@@ -4981,6 +5843,7 @@ happ_location_code() {
     local label="${1:-}" lowered
     lowered=$(printf '%s' "$label" | tr '[:upper:]' '[:lower:]')
     case "$lowered" in
+        *swe*|*sweden*|*stockholm*|*swe.go-it*) printf 'SWE' ;;
         *finland\ 2*|*finland2*|*n8n*) printf 'FI2' ;;
         *finland*|*helsinki*|*suomi*|*dns-ai*) printf 'FI' ;;
         *germany*|*deutschland*|*berlin*|*frankfurt*|*plus-dns*) printf 'DE' ;;
@@ -5016,12 +5879,16 @@ import urllib.parse
 
 def loc_code(host, label):
     text = f"{host} {label}".lower()
+    if "swe.go-it" in text or "sweden" in text or "stockholm" in text or "swe •" in text:
+        return "SWE"
     if "finland 2" in text or "finland2" in text or "n8n" in text:
         return "FI2"
     if "poland" in text or "warsaw" in text or "polska" in text:
         return "PL"
     if "usa" in text or "america" in text or "california" in text:
         return "US"
+    if "russia" in text or "russian" in text or "moscow" in text or "rus.go-it" in text or "ru " in text:
+        return "RU"
     if "finland" in text or "helsinki" in text or "suomi" in text or "dns-ai" in text:
         return "FI"
     if "germany" in text or "deutschland" in text or "frankfurt" in text or "plus-dns" in text:
@@ -5099,12 +5966,16 @@ import urllib.parse
 
 def loc_code(host, label):
     text = f"{host} {label}".lower()
+    if "swe.go-it" in text or "sweden" in text or "stockholm" in text or "swe •" in text:
+        return "SWE"
     if "finland 2" in text or "finland2" in text or "n8n" in text:
         return "FI2"
     if "poland" in text or "warsaw" in text or "polska" in text:
         return "PL"
     if "usa" in text or "america" in text or "california" in text:
         return "US"
+    if "russia" in text or "russian" in text or "moscow" in text or "rus.go-it" in text or "ru " in text:
+        return "RU"
     if "finland" in text or "helsinki" in text or "suomi" in text or "dns-ai" in text:
         return "FI"
     if "germany" in text or "deutschland" in text or "frankfurt" in text or "plus-dns" in text:
@@ -5158,7 +6029,7 @@ def one(line):
         port = f":{port_num}" if split.port else ""
         user = split.username or ""
         netloc = f"{user}@{host}{port}" if user else f"{host}{port}"
-        drop = {"flow", "headerType", "packetEncoding"}
+        drop = {"headerType", "packetEncoding"}
         pairs = [(k, v) for k, v in urllib.parse.parse_qsl(split.query, keep_blank_values=True) if k not in drop]
         query = urllib.parse.urlencode(pairs)
         return urllib.parse.urlunsplit((split.scheme, netloc, split.path, query, clean_label(host, old_label, "Reality")))
@@ -6698,9 +7569,12 @@ Wants=network-online.target
 [Service]
 User=root
 ExecStart=${XRAY_BIN} run -config ${XRAY_CONFIG}
-Restart=on-failure
-RestartSec=5s
+Restart=always
+RestartSec=2s
+TimeoutStopSec=15s
 LimitNOFILE=1048576
+LimitNPROC=4096
+TasksMax=infinity
 
 [Install]
 WantedBy=multi-user.target
@@ -6751,11 +7625,12 @@ write_xray_config() {
     fi
     ensure_xray_reality_keys || return 1
 
-    local cert key fallback_enabled fallback_port reality_port reality_listen mobile_alt_port mobile_alt_target mobile_alt_sni trojan_pass reality_target reality_sni zapret_enabled xray_config_backup
+    local cert key fallback_enabled fallback_port reality_port reality_listen mobile_alt_port mobile_alt_target mobile_alt_sni github_test_port github_test_target github_test_sni trojan_pass reality_target reality_sni zapret_enabled xray_config_backup xray_warp_enabled
     fallback_enabled="${XRAY_FALLBACK_ENABLED:-0}"
     fallback_port="${XRAY_CADDY_FALLBACK_PORT:-$XRAY_CADDY_FALLBACK_PORT_DEFAULT}"
     reality_port="${XRAY_REALITY_PORT:-$XRAY_REALITY_PORT_DEFAULT}"
     mobile_alt_port="${XRAY_MOBILE_ALT_PORT:-$XRAY_MOBILE_ALT_PORT_DEFAULT}"
+    github_test_port="${XRAY_GITHUB_TEST_PORT:-$XRAY_GITHUB_TEST_PORT_DEFAULT}"
     reality_listen="0.0.0.0"
     if [[ "${XRAY_REALITY_SNI_MUX_ENABLED:-0}" == "1" ]]; then
         reality_listen="127.0.0.1"
@@ -6766,7 +7641,21 @@ write_xray_config() {
     reality_sni="${XRAY_REALITY_SERVER_NAME:-www.microsoft.com}"
     mobile_alt_target="${XRAY_MOBILE_ALT_TARGET:-$XRAY_MOBILE_ALT_TARGET_DEFAULT}"
     mobile_alt_sni="${XRAY_MOBILE_ALT_SERVER_NAME:-$XRAY_MOBILE_ALT_SERVER_NAME_DEFAULT}"
+    github_test_target="${XRAY_GITHUB_TEST_TARGET:-$XRAY_GITHUB_TEST_TARGET_DEFAULT}"
+    github_test_sni="${XRAY_GITHUB_TEST_SERVER_NAME:-$XRAY_GITHUB_TEST_SERVER_NAME_DEFAULT}"
     zapret_enabled="0"
+    xray_warp_enabled="${XRAY_WARP_ENABLED:-${WARP_PROXY_ENABLED:-0}}"
+    [[ "$xray_warp_enabled" == "1" ]] || xray_warp_enabled="0"
+    if [[ "${XRAY_GITHUB_TEST_ENABLED:-0}" == "1" ]]; then
+        if ! is_valid_domain "$github_test_sni"; then
+            err "Некорректный XRAY_GITHUB_TEST_SERVER_NAME: $github_test_sni"
+            return 1
+        fi
+        if ! is_valid_host_port "$github_test_target"; then
+            err "Некорректный XRAY_GITHUB_TEST_TARGET: $github_test_target"
+            return 1
+        fi
+    fi
 
     cert=""
     key=""
@@ -6797,15 +7686,26 @@ write_xray_config() {
     "error": "/var/log/xray/error.log",
     "loglevel": "warning"
   },
+  "policy": {
+    "levels": {
+      "0": {
+        "handshake": 8,
+        "connIdle": 600,
+        "uplinkOnly": 2,
+        "downlinkOnly": 5,
+        "bufferSize": 512
+      }
+    }
+  },
 EOF
 
-    if [[ "$zapret_enabled" == "1" || "${WARP_PROXY_ENABLED:-0}" == "1" ]]; then
+    if [[ "$zapret_enabled" == "1" || "$xray_warp_enabled" == "1" ]]; then
         cat >> "$XRAY_CONFIG" <<EOF
   "routing": {
     "domainStrategy": "AsIs",
     "rules": [
 EOF
-        if [[ "${WARP_PROXY_ENABLED:-0}" == "1" ]]; then
+        if [[ "$xray_warp_enabled" == "1" ]]; then
             cat >> "$XRAY_CONFIG" <<EOF
       { "type": "field", "network": "tcp,udp", "outboundTag": "warp-proxy" }
 EOF
@@ -6878,7 +7778,7 @@ $(xray_clients_json_reality)
         },
         "realitySettings": {
           "show": false,
-          "target": "${reality_target}",
+          "dest": "${reality_target}",
           "serverNames": ["${reality_sni}"],
           "privateKey": "${XRAY_REALITY_PRIVATE_KEY}",
           "shortIds": ["${XRAY_REALITY_SHORT_ID}"]
@@ -6916,8 +7816,47 @@ $(xray_clients_json_compat_only)
         },
         "realitySettings": {
           "show": false,
-          "target": "${mobile_alt_target}",
+          "dest": "${mobile_alt_target}",
           "serverNames": ["${mobile_alt_sni}"],
+          "privateKey": "${XRAY_REALITY_PRIVATE_KEY}",
+          "shortIds": ["${XRAY_REALITY_SHORT_ID}"]
+        }
+      }
+    }
+EOF
+    fi
+
+    if [[ "${XRAY_GITHUB_TEST_ENABLED:-0}" == "1" ]]; then
+        cat >> "$XRAY_CONFIG" <<EOF
+    ,
+    {
+      "tag": "vless-reality-github-test",
+      "listen": "${reality_listen}",
+      "port": ${github_test_port},
+      "protocol": "vless",
+      "settings": {
+        "clients": [
+$(xray_clients_json_reality)
+        ],
+        "decryption": "none"
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": ["http", "tls"],
+        "routeOnly": false
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "sockopt": {
+          "tcpKeepAliveIdle": 60,
+          "tcpKeepAliveInterval": 15,
+          "tcpUserTimeout": 30000
+        },
+        "realitySettings": {
+          "show": false,
+          "dest": "${github_test_target}",
+          "serverNames": ["${github_test_sni}"],
           "privateKey": "${XRAY_REALITY_PRIVATE_KEY}",
           "shortIds": ["${XRAY_REALITY_SHORT_ID}"]
         }
@@ -6931,7 +7870,7 @@ EOF
   "outbounds": [
 EOF
 
-    if [[ "${WARP_PROXY_ENABLED:-0}" == "1" ]]; then
+    if [[ "$xray_warp_enabled" == "1" ]]; then
         cat >> "$XRAY_CONFIG" <<EOF
     {
       "protocol": "socks",
@@ -6974,8 +7913,10 @@ EOF
     [[ -n "$xray_config_backup" ]] && rm -f "$xray_config_backup" 2>/dev/null || true
     save_config
     ok "Xray config создан: $XRAY_CONFIG"
-    if [[ "${WARP_PROXY_ENABLED:-0}" == "1" ]]; then
+    if [[ "$xray_warp_enabled" == "1" ]]; then
         ok "Xray outbound направлен через WARP proxy: 127.0.0.1:${WARP_PROXY_PORT:-$WARP_PROXY_PORT_DEFAULT}"
+    else
+        ok "Xray outbound: direct VPS"
     fi
 }
 
@@ -7047,29 +7988,151 @@ subscription_human_bytes() {
     fi
 }
 
+subscription_traffic_cache_path() {
+    printf '%s\n' "${SUBSCRIPTION_TRAFFIC_CACHE_FILE:-/tmp/yurich-subscription-traffic-cache.tsv}"
+}
+
+subscription_traffic_cache_fresh() {
+    local cache="$1" max_age now mtime age
+    max_age="${SUBSCRIPTION_TRAFFIC_REFRESH_SECONDS:-300}"
+    [[ "$max_age" =~ ^[0-9]+$ ]] || max_age=300
+    [[ -s "$cache" ]] || return 1
+    now=$(date +%s 2>/dev/null || echo 0)
+    mtime=$(stat -c %Y "$cache" 2>/dev/null || echo 0)
+    [[ "$now" =~ ^[0-9]+$ && "$mtime" =~ ^[0-9]+$ ]] || return 1
+    age=$((now - mtime))
+    [[ "$age" -ge 0 && "$age" -le "$max_age" ]]
+}
+
+subscription_build_traffic_cache() {
+    local cache tmp logs=()
+    cache=$(subscription_traffic_cache_path)
+    subscription_traffic_cache_fresh "$cache" && return 0
+    mapfile -t logs < <(device_log_files)
+    [[ "${#logs[@]}" -gt 0 ]] || return 1
+    tmp=$(mktemp)
+    if command -v python3 >/dev/null 2>&1; then
+        python3 - "$tmp" "${logs[@]}" <<'PY'
+import gzip
+import json
+import sys
+from collections import defaultdict
+
+out_path = sys.argv[1]
+paths = sys.argv[2:]
+totals = defaultdict(int)
+
+def open_log(path):
+    if path.endswith(".gz"):
+        return gzip.open(path, "rt", encoding="utf-8", errors="ignore")
+    return open(path, "rt", encoding="utf-8", errors="ignore")
+
+for path in paths:
+    try:
+        fh = open_log(path)
+    except OSError:
+        continue
+    with fh:
+        for line in fh:
+            line = line.strip()
+            if not line or '"user_id"' not in line:
+                continue
+            try:
+                row = json.loads(line)
+            except Exception:
+                continue
+            user = str(row.get("user_id") or "")
+            if not user:
+                continue
+            total = 0
+            for key in ("bytes_read", "size"):
+                value = row.get(key, 0)
+                if isinstance(value, (int, float)) and value > 0:
+                    total += int(value)
+            if total > 0:
+                totals[user] += total
+
+with open(out_path, "w", encoding="utf-8") as out:
+    for user in sorted(totals):
+        out.write(f"{user}\t{totals[user]}\n")
+PY
+    else
+        awk '
+            /"user_id":/ {
+                user=""; br=0; sz=0;
+                tmp=$0; sub(/^.*"user_id":"/, "", tmp); sub(/".*$/, "", tmp); user=tmp;
+                if (user == "") next;
+                tmp=$0; if (tmp ~ /"bytes_read":[0-9]+/) { sub(/^.*"bytes_read":/, "", tmp); sub(/[^0-9].*$/, "", tmp); br=tmp+0; }
+                tmp=$0; if (tmp ~ /"size":[0-9]+/) { sub(/^.*"size":/, "", tmp); sub(/[^0-9].*$/, "", tmp); sz=tmp+0; }
+                if (br + sz > 0) totals[user] += br + sz;
+            }
+            END { for (u in totals) print u "\t" totals[u]; }
+        ' "${logs[@]}" > "$tmp"
+    fi
+    install -m 600 "$tmp" "$cache" 2>/dev/null || cp "$tmp" "$cache"
+    rm -f "$tmp"
+    [[ -s "$cache" ]]
+}
+
+subscription_refresh_traffic_meta() {
+    local user="$1" cache bytes
+    is_valid_proxy_user "$user" || return 1
+    subscription_build_traffic_cache || return 1
+    cache=$(subscription_traffic_cache_path)
+    bytes=$(awk -F'\t' -v u="$user" '$1 == u {print $2; exit}' "$cache" 2>/dev/null || true)
+    [[ "$bytes" =~ ^[0-9]+$ ]] || return 1
+    user_meta_set "$user" TRAFFIC_USED_BYTES "$bytes" >/dev/null 2>&1 || return 1
+    user_meta_set "$user" TRAFFIC_UPDATED_AT "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" >/dev/null 2>&1 || true
+}
+
 subscription_traffic_summary() {
-    local user="$1" used_bytes iface rx tx total user_used
+    local user="$1" used_bytes user_used updated_at
 
     used_bytes=$(user_meta_get "$user" TRAFFIC_USED_BYTES 2>/dev/null || true)
     if [[ "$used_bytes" =~ ^[0-9]+$ && "$used_bytes" -gt 0 ]]; then
         user_used=$(subscription_human_bytes "$used_bytes")
-        printf 'По профилю: %s. ' "$user_used"
-    fi
-
-    iface=$(ip route show default 2>/dev/null | awk '{print $5; exit}' || true)
-    if [[ -n "$iface" && -r "/sys/class/net/${iface}/statistics/rx_bytes" && -r "/sys/class/net/${iface}/statistics/tx_bytes" ]]; then
-        rx=$(cat "/sys/class/net/${iface}/statistics/rx_bytes" 2>/dev/null || echo 0)
-        tx=$(cat "/sys/class/net/${iface}/statistics/tx_bytes" 2>/dev/null || echo 0)
-        rx="${rx//[^0-9]/}"; tx="${tx//[^0-9]/}"
-        rx="${rx:-0}"; tx="${tx:-0}"
-        total=$((rx + tx))
-        printf 'Сервер страницы: %s всего, вход %s, выход %s.' \
-            "$(subscription_human_bytes "$total")" \
-            "$(subscription_human_bytes "$rx")" \
-            "$(subscription_human_bytes "$tx")"
+        updated_at=$(user_meta_get "$user" TRAFFIC_UPDATED_AT 2>/dev/null || true)
+        if [[ -n "$updated_at" ]]; then
+            printf 'По доступным логам Naive HTTPS: %s. Обновлено: %s.' "$user_used" "$updated_at"
+        else
+            printf 'По доступным логам Naive HTTPS: %s.' "$user_used"
+        fi
     else
-        printf 'Статистика сетевого интерфейса недоступна.'
+        printf 'По доступным логам Naive HTTPS активность пока не найдена. VLESS/Turbo требуют отдельного stats-сборщика.'
     fi
+}
+
+subscription_remnawave_page_enabled() {
+    local user="${1:-}" list="${SUBSCRIPTION_REMWAVE_USERS:-all}" item
+    [[ -n "$user" ]] || return 1
+    for item in $list; do
+        case "$item" in
+            "*"|"all"|"$user") return 0 ;;
+        esac
+    done
+    return 1
+}
+
+subscription_remnawave_preview_page_enabled() {
+    local user="${1:-}" list="${SUBSCRIPTION_REMWAVE_PREVIEW_USERS:-all}" item
+    [[ -n "$user" ]] || return 1
+    for item in $list; do
+        case "$item" in
+            "*"|"all"|"$user") return 0 ;;
+        esac
+    done
+    return 1
+}
+
+subscription_premium_v2_page_enabled() {
+    local user="${1:-}" list="${SUBSCRIPTION_PREMIUM_V2_USERS:-ivan}" item
+    [[ -n "$user" ]] || return 1
+    for item in $list; do
+        case "$item" in
+            "*"|"all"|"$user") return 0 ;;
+        esac
+    done
+    return 1
 }
 
 subscription_profile_protocol() {
@@ -7128,6 +8191,7 @@ subscription_active_locations_label() {
         [[ -z "$location" || "$location" == "$name" ]] && continue
         text="$(printf '%s %s' "$host" "$location" | tr '[:upper:]' '[:lower:]')"
         case "$text" in
+            *swe*|*sweden*|*stockholm*|*swe.go-it*) location="🇸🇪 SWE" ;;
             *n8n-cloud*|*finland\ 2*|*finland2*|*fi2*) location="🇫🇮 Finland 2" ;;
             *poland*|*warsaw*|*polska*) location="🇵🇱 Poland" ;;
             *finland*|*helsinki*|*suomi*) location="🇫🇮 Finland" ;;
@@ -7273,6 +8337,135 @@ PY
         <div class="recommend-title">Рейтинг появится после теста</div>
         <div class="recommend-name">Запусти benchmark на сервере</div>
         <div class="recommend-meta">sudo yurich-panel.sh protocol-benchmark-monitor</div>
+      </article>
+EOF
+    fi
+}
+
+subscription_all_recommendations_html() {
+    local links="${1:-}" log_file="${PROTOCOL_BENCHMARK_LOG:-$PROTOCOL_BENCHMARK_LOG_DEFAULT}"
+    if command -v python3 >/dev/null 2>&1; then
+        LINKS="$links" LOG_FILE="$log_file" python3 - <<'PY'
+import csv
+import html
+import os
+from urllib.parse import unquote, urlsplit
+
+links = [x.strip() for x in os.environ.get("LINKS", "").splitlines() if x.strip()]
+log_file = os.environ.get("LOG_FILE", "")
+
+rows = []
+try:
+    if log_file and os.path.exists(log_file):
+        with open(log_file, "r", encoding="utf-8", errors="replace") as f:
+            rows = list(csv.DictReader(f))[-700:]
+except Exception:
+    rows = []
+
+scores = {}
+for r in rows:
+    key = (r.get("scheme", ""), r.get("host", ""))
+    item = scores.setdefault(key, {"ok": 0, "fail": 0, "avg": []})
+    if r.get("status") == "OK":
+        item["ok"] += 1
+        try:
+            item["avg"].append(int(r.get("avg_ms") or 0))
+        except Exception:
+            pass
+    elif r.get("status") == "FAIL":
+        item["fail"] += 1
+
+def proto_label(scheme: str) -> str:
+    if scheme.startswith("naive"):
+        return "HTTPS"
+    if scheme in ("hy2", "hysteria2"):
+        return "Turbo"
+    if scheme == "vless":
+        return "Reality"
+    return scheme or "Профиль"
+
+def display_host(u):
+    host = u.hostname or ""
+    try:
+        port = u.port
+    except ValueError:
+        port = None
+    if port:
+        return f"{host}:{port}"
+    return host
+
+out = []
+seen = set()
+for line in links:
+    try:
+        u = urlsplit(line)
+    except Exception:
+        continue
+    scheme = (u.scheme or "").lower()
+    host = u.hostname or ""
+    key = (scheme, host, u.fragment, u.netloc)
+    if key in seen:
+        continue
+    seen.add(key)
+    proto = proto_label(scheme)
+    name = unquote(u.fragment or f"{display_host(u)} • {proto}")
+    score = scores.get((scheme, host), {})
+    vals = score.get("avg") or []
+    if vals:
+        metric = f"avg {int(sum(vals) / len(vals))} ms"
+        if score.get("fail", 0):
+            metric += f" / warn {score.get('fail', 0)}"
+    else:
+        metric = "ожидает benchmark"
+    out.append(f'''      <article class="recommend-card">
+        <div>
+          <div class="recommend-title">{html.escape(proto)}</div>
+          <div class="recommend-name">{html.escape(name)}</div>
+          <div class="recommend-meta">{html.escape(display_host(u))} / {html.escape(metric)}</div>
+        </div>
+        <button class="btn copy recommend-copy" data-copy="{html.escape(line, quote=True)}">Скопировать</button>
+      </article>''')
+
+if not out:
+    out.append('''      <article class="recommend-card">
+        <div class="recommend-title">Профили не найдены</div>
+        <div class="recommend-name">Активные подключения пока не настроены</div>
+        <div class="recommend-meta">Проверь подписку и список серверов</div>
+      </article>''')
+print("\n".join(out))
+PY
+        return
+    fi
+
+    local line protocol host name safe_line safe_protocol safe_host safe_name count=0
+    while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
+        count=$((count + 1))
+        protocol=$(subscription_profile_protocol "$line")
+        host=$(subscription_profile_host "$line")
+        name=$(subscription_profile_name_from_uri "$line")
+        safe_line=$(html_escape_text "$line")
+        safe_protocol=$(html_escape_text "$protocol")
+        safe_host=$(html_escape_text "$host")
+        safe_name=$(html_escape_text "$name")
+        cat <<EOF
+      <article class="recommend-card">
+        <div>
+          <div class="recommend-title">${safe_protocol}</div>
+          <div class="recommend-name">${safe_name}</div>
+          <div class="recommend-meta">${safe_host} / ожидает benchmark</div>
+        </div>
+        <button class="btn copy recommend-copy" data-copy="${safe_line}">Скопировать</button>
+      </article>
+EOF
+    done <<< "$links"
+
+    if [[ "$count" -eq 0 ]]; then
+        cat <<'EOF'
+      <article class="recommend-card">
+        <div class="recommend-title">Профили не найдены</div>
+        <div class="recommend-name">Активные подключения пока не настроены</div>
+        <div class="recommend-meta">Проверь подписку и список серверов</div>
       </article>
 EOF
     fi
@@ -7585,16 +8778,17 @@ generate_subscription_page() {
 
     ensure_web_privacy_files
 
-    local token token_file page_dir links_file hiddify_file streisand_file nekobox_file v2rayng_file mobile_test_file naive_pass naive_uri yurich_uri naive_json naive_singbox_tun_json hy2_uri hy2_json expiry_label expiry_tag node_links node_app_links node_mobile_test_links active_links app_links v2rayng_links mobile_test_links
+    local token token_file page_dir links_file hiddify_file streisand_file happ_file nekobox_file v2rayng_file pingtunnel_file naive_pass naive_uri naive_json naive_singbox_tun_json hy2_uri hy2_json expiry_label expiry_tag node_links node_app_links active_links app_links happ_links v2rayng_links
     token_file="${SUBS_DIR}/${user}.token"
     token=$(get_or_create_token_file "$token_file")
     page_dir="${SUBS_WEB_DIR}/${token}"
     links_file="${page_dir}/links.txt"
     hiddify_file="${page_dir}/hiddify.txt"
     streisand_file="${page_dir}/streisand.txt"
+    happ_file="${page_dir}/happ.txt"
     nekobox_file="${page_dir}/nekobox.txt"
     v2rayng_file="${page_dir}/v2rayng.txt"
-    mobile_test_file="${page_dir}/mobile-test.txt"
+    pingtunnel_file="${page_dir}/pingtunnel.txt"
     mkdir -p "$page_dir"
     chmod 755 "$page_dir"
     expiry_label=$(user_expiry_label "$user")
@@ -7645,7 +8839,7 @@ EOF
         fi
     fi
 
-    local uuid compat_uuid reality_link compat_link mobile_alt_link reality_direct_link reality_links reality_test_links trojan_link reality_public_port reality_direct_port reality_public_label reality_direct_label
+    local uuid compat_uuid reality_link compat_link mobile_alt_link github_test_link reality_direct_link reality_links reality_test_links trojan_link reality_public_port reality_direct_port reality_public_label reality_direct_label github_test_users_norm github_test_sni
     reality_public_port=$(xray_reality_public_port)
     reality_direct_port="${XRAY_REALITY_PORT:-$XRAY_REALITY_PORT_DEFAULT}"
     uuid=$(get_xray_user_uuid "$user" 2>/dev/null || true)
@@ -7653,6 +8847,7 @@ EOF
     reality_link=""
     compat_link=""
     mobile_alt_link=""
+    github_test_link=""
     reality_direct_link=""
     reality_links=""
     reality_test_links=""
@@ -7661,6 +8856,13 @@ EOF
         reality_public_label="Reality"
         reality_direct_label="Reality"
         reality_link=$(uri_with_profile_name "vless://${uuid}@${DOMAIN}:${reality_public_port}?encryption=none&security=reality&type=tcp&flow=xtls-rprx-vision&sni=${XRAY_REALITY_SERVER_NAME:-www.microsoft.com}&fp=chrome&pbk=${XRAY_REALITY_PUBLIC_KEY:-PUBLIC_KEY}&sid=${XRAY_REALITY_SHORT_ID:-SHORT_ID}&spx=%2F" "$(pretty_profile_name "$user" "$reality_public_label")")
+        if [[ "${XRAY_GITHUB_TEST_ENABLED:-0}" == "1" ]]; then
+            github_test_users_norm=",${XRAY_GITHUB_TEST_USERS//[[:space:]]/},"
+            if [[ -z "${XRAY_GITHUB_TEST_USERS:-}" || "$github_test_users_norm" == *",$user,"* ]]; then
+                github_test_sni="${XRAY_GITHUB_TEST_SERVER_NAME:-$XRAY_GITHUB_TEST_SERVER_NAME_DEFAULT}"
+                github_test_link=$(uri_with_profile_name "vless://${uuid}@${DOMAIN}:${reality_public_port}?encryption=none&security=reality&type=tcp&flow=xtls-rprx-vision&sni=${github_test_sni}&fp=chrome&pbk=${XRAY_REALITY_PUBLIC_KEY:-PUBLIC_KEY}&sid=${XRAY_REALITY_SHORT_ID:-SHORT_ID}&spx=%2Fgithub-test-${user}" "$(pretty_profile_name "$user" "Reality GitHub TEST")")
+            fi
+        fi
     fi
     if [[ -n "$compat_uuid" ]]; then
         compat_link=$(uri_with_profile_name "vless://${compat_uuid}@${DOMAIN}:${reality_public_port}?encryption=none&security=reality&type=tcp&headerType=none&packetEncoding=xudp&sni=${XRAY_REALITY_SERVER_NAME:-www.microsoft.com}&fp=chrome&pbk=${XRAY_REALITY_PUBLIC_KEY:-PUBLIC_KEY}&sid=${XRAY_REALITY_SHORT_ID:-SHORT_ID}&spx=%2Fcompat-${user}" "$(pretty_profile_name "$user" "Reality MOBILE TEST")")
@@ -7668,6 +8870,7 @@ EOF
     fi
     reality_links=$({
         [[ -n "$reality_link" ]] && printf '%s\n' "$reality_link"
+        [[ -n "$github_test_link" ]] && printf '%s\n' "$github_test_link"
     } | awk 'NF')
     reality_test_links=$({
         [[ -n "$compat_link" ]] && printf '%s\n' "$compat_link"
@@ -7675,9 +8878,7 @@ EOF
     } | awk 'NF')
     node_links=$(node_links_for_user "$user" "$naive_pass" "$expiry_tag" 2>/dev/null || true)
     node_app_links=$(node_app_links_for_user "$user" 2>/dev/null || true)
-    node_mobile_test_links=$(node_mobile_test_links_for_user "$user" 2>/dev/null || true)
-
-    local subscription_local_enabled subscription_local_position local_links local_app_links local_mobile_test_links
+    local subscription_local_enabled subscription_local_position local_links local_app_links
     subscription_local_enabled="${SUBSCRIPTION_LOCAL_ENABLED:-1}"
     [[ "$subscription_local_enabled" == "0" ]] || subscription_local_enabled="1"
     subscription_local_position="${SUBSCRIPTION_LOCAL_POSITION:-first}"
@@ -7694,14 +8895,12 @@ EOF
         [[ -n "$hy2_uri" ]] && printf '%s\n' "$hy2_uri"
         [[ -n "$reality_links" ]] && printf '%s\n' "$reality_links"
     } | awk 'NF')
-    local_mobile_test_links=$(printf '%s\n' "$reality_test_links" | awk 'NF && /^vless:\/\// && /security=reality/ && /mobile-alt/ { if (!seen[$0]++) print }')
     if [[ "$subscription_local_enabled" == "0" ]]; then
         active_links=$({
             [[ -n "$node_links" ]] && printf '%s\n' "$node_links"
             [[ -n "$node_app_links" ]] && printf '%s\n' "$node_app_links"
         } | awk 'NF')
         app_links=$(printf '%s\n' "$node_app_links" | awk 'NF')
-        mobile_test_links=$(printf '%s\n' "$node_mobile_test_links" | awk 'NF')
     elif [[ "$subscription_local_position" == "last" ]]; then
         active_links=$({
             [[ -n "$node_links" ]] && printf '%s\n' "$node_links"
@@ -7712,10 +8911,6 @@ EOF
             [[ -n "$node_app_links" ]] && printf '%s\n' "$node_app_links"
             [[ -n "$local_app_links" ]] && printf '%s\n' "$local_app_links"
         } | awk 'NF')
-        mobile_test_links=$({
-            [[ -n "$node_mobile_test_links" ]] && printf '%s\n' "$node_mobile_test_links"
-            [[ -n "$local_mobile_test_links" ]] && printf '%s\n' "$local_mobile_test_links"
-        } | awk 'NF && !seen[$0]++')
     else
         active_links=$({
             [[ -n "$local_links" ]] && printf '%s\n' "$local_links"
@@ -7726,35 +8921,53 @@ EOF
             [[ -n "$local_app_links" ]] && printf '%s\n' "$local_app_links"
             [[ -n "$node_app_links" ]] && printf '%s\n' "$node_app_links"
         } | awk 'NF')
-        mobile_test_links=$({
-            [[ -n "$local_mobile_test_links" ]] && printf '%s\n' "$local_mobile_test_links"
-            [[ -n "$node_mobile_test_links" ]] && printf '%s\n' "$node_mobile_test_links"
-        } | awk 'NF && !seen[$0]++')
     fi
+    active_links=$(printf '%s\n' "$active_links" | subscription_filter_published_links)
+    app_links=$(printf '%s\n' "$app_links" | subscription_filter_published_links)
     v2rayng_links=$(printf '%s\n' "$app_links" | awk 'NF && /^vless:\/\// && /security=reality/ && /type=tcp/ { if (!seen[$0]++) print }')
-    mobile_test_links=$(printf '%s\n' "$mobile_test_links" | awk 'NF && /^vless:\/\// && /security=reality/ && /sni=www.cloudflare.com/ && /mobile-alt/ { if (!seen[$0]++) print }')
+    happ_links=$(printf '%s\n' "$v2rayng_links" | happ_compat_links)
     printf '%s\n' "$active_links" > "$links_file"
     printf '%s\n' "$app_links" > "$nekobox_file"
     printf '%s\n' "$v2rayng_links" > "$v2rayng_file"
-    printf '%s\n' "$mobile_test_links" > "$mobile_test_file"
-    rm -f "${page_dir}/happ.txt" "${page_dir}/qr-happ.png" 2>/dev/null || true
-    chmod 644 "$links_file" "$nekobox_file" "$v2rayng_file" "$mobile_test_file"
+    {
+        printf '#routing-enable: 0\n'
+        printf '#server-address-resolve-enable: 1\n'
+        printf '#server-address-resolve-dns-domain: https://common.dot.dns.yandex.net/dns-query\n'
+        printf '#server-address-resolve-dns-ip: 77.88.8.8\n'
+        printf '#ping-type proxy\n'
+        printf '#check-url-via-proxy: https://cp.cloudflare.com/generate_204\n'
+        printf '#subscription-ping-onopen-enabled: 1\n'
+        printf '#subscription-auto-update-enable: 1\n'
+        printf '%s\n' "$happ_links"
+    } > "$happ_file"
+    rm -f "${page_dir}/qr-happ.png" "${page_dir}/mobile-test.txt" "${page_dir}/qr-mobile-test.png" 2>/dev/null || true
+    chmod 644 "$links_file" "$happ_file" "$nekobox_file" "$v2rayng_file"
+    if [[ -f "$PINGTUNNEL_ENV" && -x "$PINGTUNNEL_BIN" ]]; then
+        write_pingtunnel_subscription_file "$pingtunnel_file" "$DOMAIN" "$user" || rm -f "$pingtunnel_file"
+    else
+        rm -f "$pingtunnel_file"
+    fi
 
-    local sub_url links_url hiddify_url streisand_url nekobox_url v2rayng_url mobile_test_url hiddify_open_url hiddify_expire_epoch hiddify_used_bytes hiddify_links title display_profile_label active_locations safe_active_locations safe_user safe_domain safe_expiry_label safe_profile_label safe_naive_uri safe_yurich_uri safe_naive_json safe_naive_singbox_tun_json safe_hy2_uri safe_hy2_json safe_node_links
-    local safe_android_url safe_windows_url safe_streisand_url safe_telegram_url safe_tg_bot_url safe_tg_id_bot_url safe_vk_url safe_support_email safe_support_mailto
-    local traffic_summary safe_traffic_summary profile_cards_html profile_count qr_cards_html recommendations_html
-    local qr_links_png qr_hiddify_png qr_streisand_png qr_nekobox_png qr_v2rayng_png qr_mobile_test_png
+    local sub_url links_url hiddify_url streisand_url happ_url nekobox_url v2rayng_url pingtunnel_url hiddify_open_url hiddify_expire_epoch hiddify_used_bytes hiddify_used_human hiddify_links title display_profile_label active_locations safe_active_locations safe_user safe_domain safe_expiry_label safe_days_left safe_hiddify_used_human safe_profile_label safe_naive_uri safe_naive_json safe_naive_singbox_tun_json safe_hy2_uri safe_hy2_json safe_node_links
+    local safe_android_url safe_windows_url safe_streisand_url safe_karing_url safe_telegram_url safe_donation_url safe_tg_bot_url safe_tg_id_bot_url safe_vk_url safe_support_email safe_support_mailto
+    local traffic_summary safe_traffic_summary profile_cards_html profile_count qr_cards_html recommendations_html recommendations_all_html
+    local subscription_logo_source subscription_logo_name subscription_logo_html subscription_header_logo_html
+    local project_help_qr_source project_help_qr_name project_help_qr_html
+    local qr_links_png qr_hiddify_png qr_streisand_png qr_happ_png qr_nekobox_png qr_v2rayng_png
     sub_url="https://${DOMAIN}/s/${token}/"
     links_url="${sub_url}links.txt"
     hiddify_url="${sub_url}hiddify.txt"
     streisand_url="${sub_url}streisand.txt"
+    happ_url="${sub_url}happ.txt"
     nekobox_url="${sub_url}nekobox.txt"
     v2rayng_url="${sub_url}v2rayng.txt"
-    mobile_test_url="${sub_url}mobile-test.txt"
+    pingtunnel_url="${sub_url}pingtunnel.txt"
     hiddify_open_url="hiddify://import/${hiddify_url}#$(uri_fragment_encode "Yurich Connect ${user}")"
     hiddify_expire_epoch=$(user_expiry_epoch "$user" 2>/dev/null || true)
+    subscription_refresh_traffic_meta "$user" >/dev/null 2>&1 || true
     hiddify_used_bytes=$(user_meta_get "$user" TRAFFIC_USED_BYTES 2>/dev/null || true)
     [[ "$hiddify_used_bytes" =~ ^[0-9]+$ ]] || hiddify_used_bytes="0"
+    hiddify_used_human=$(subscription_human_bytes "$hiddify_used_bytes")
     {
         printf '#profile-title: Yurich Connect %s\n' "$user"
         printf '#profile-update-interval: 12\n'
@@ -7763,10 +8976,7 @@ EOF
         fi
         printf '#support-url: %s\n' "$TELEGRAM_COMMUNITY_URL"
         printf '#profile-web-page-url: %s\n' "$sub_url"
-        hiddify_links=$({
-            printf '%s\n' "$app_links" | awk 'NF && /^(hy2|hysteria2):\/\// {print}'
-            printf '%s\n' "$mobile_test_links"
-        } | awk 'NF && !seen[$0]++' | hiddify_compat_links)
+        hiddify_links=$(printf '%s\n' "$app_links" | awk 'NF && !seen[$0]++' | hiddify_compat_links)
         printf '%s\n' "$hiddify_links"
     } > "$hiddify_file"
     {
@@ -7783,24 +8993,53 @@ EOF
     qr_links_png="${page_dir}/qr-links.png"
     qr_hiddify_png="${page_dir}/qr-hiddify.png"
     qr_streisand_png="${page_dir}/qr-streisand.png"
+    qr_happ_png="${page_dir}/qr-happ.png"
     qr_nekobox_png="${page_dir}/qr-nekobox.png"
     qr_v2rayng_png="${page_dir}/qr-v2rayng.png"
-    qr_mobile_test_png="${page_dir}/qr-mobile-test.png"
     write_subscription_qr "$links_url" "$qr_links_png" || rm -f "$qr_links_png"
     write_subscription_qr "$hiddify_url" "$qr_hiddify_png" || rm -f "$qr_hiddify_png"
     write_subscription_qr "$streisand_url" "$qr_streisand_png" || rm -f "$qr_streisand_png"
+    rm -f "$qr_happ_png"
     write_subscription_qr "$nekobox_url" "$qr_nekobox_png" || rm -f "$qr_nekobox_png"
     write_subscription_qr "$v2rayng_url" "$qr_v2rayng_png" || rm -f "$qr_v2rayng_png"
-    write_subscription_qr "$mobile_test_url" "$qr_mobile_test_png" || rm -f "$qr_mobile_test_png"
-    title="Yurich Panel subscription for ${user}"
+    subscription_logo_source="${SUBSCRIPTION_LOGO_PATH:-$SUBSCRIPTION_LOGO_PATH_DEFAULT}"
+    subscription_logo_name="yurich-connect-logo.png"
+    if [[ -s "$subscription_logo_source" ]]; then
+        cp -f "$subscription_logo_source" "${page_dir}/${subscription_logo_name}" 2>/dev/null || true
+        chmod 644 "${page_dir}/${subscription_logo_name}" 2>/dev/null || true
+    fi
+    if [[ -s "${page_dir}/${subscription_logo_name}" ]]; then
+        subscription_header_logo_html="<img src=\"${subscription_logo_name}\" alt=\"Yurich Connect\" loading=\"lazy\">"
+        subscription_logo_html="<img src=\"${subscription_logo_name}\" alt=\"Yurich Connect\" loading=\"lazy\">"
+    else
+        subscription_header_logo_html="<span>YC</span>"
+        subscription_logo_html="<span>YC</span>"
+    fi
+    project_help_qr_source="${SUBSCRIPTION_PROJECT_HELP_QR_PATH:-$SUBSCRIPTION_PROJECT_HELP_QR_PATH_DEFAULT}"
+    project_help_qr_name="project-help-qr.jpg"
+    if [[ -s "$project_help_qr_source" ]]; then
+        cp -f "$project_help_qr_source" "${page_dir}/${project_help_qr_name}" 2>/dev/null || true
+        chmod 644 "${page_dir}/${project_help_qr_name}" 2>/dev/null || true
+    fi
+    if [[ -s "${page_dir}/${project_help_qr_name}" ]]; then
+        project_help_qr_html="<div class=\"help-qr-card\"><img class=\"help-qr\" src=\"${project_help_qr_name}\" alt=\"QR для помощи проекту\" loading=\"lazy\"><span>QR для помощи проекту</span></div>"
+    else
+        project_help_qr_html=""
+    fi
+    title="Yurich Connect: подписка ${user}"
     safe_user=$(html_escape_text "$user")
     safe_domain=$(html_escape_text "$DOMAIN")
     safe_expiry_label=$(html_escape_text "$expiry_label")
+    if [[ -n "$(get_user_expiry "$user" 2>/dev/null || true)" ]]; then
+        safe_days_left=$(html_escape_text "$(days_until_expiry "$(get_user_expiry "$user")" 2>/dev/null || printf '0')")
+    else
+        safe_days_left="∞"
+    fi
+    safe_hiddify_used_human=$(html_escape_text "$hiddify_used_human")
     display_profile_label=$(subscription_active_locations_label "$active_links")
     [[ -n "$display_profile_label" ]] || display_profile_label=$(profile_location_label)
     safe_profile_label=$(html_escape_text "$display_profile_label")
     safe_naive_uri=$(html_escape_text "$naive_uri")
-    safe_yurich_uri=$(html_escape_text "$yurich_uri")
     safe_naive_json=$(html_escape_text "$naive_json")
     safe_naive_singbox_tun_json=$(html_escape_text "$naive_singbox_tun_json")
     safe_hy2_uri=$(html_escape_text "$hy2_uri")
@@ -7809,7 +9048,9 @@ EOF
     safe_android_url=$(html_escape_text "$ANDROID_APP_RELEASES_URL")
     safe_windows_url=$(html_escape_text "$WINDOWS_APP_RELEASES_URL")
     safe_streisand_url=$(html_escape_text "$STREISAND_APP_URL")
+    safe_karing_url=$(html_escape_text "$KARING_APP_URL")
     safe_telegram_url=$(html_escape_text "$TELEGRAM_COMMUNITY_URL")
+    safe_donation_url=$(html_escape_text "$PROJECT_DONATION_URL")
     safe_tg_bot_url=$(html_escape_text "$TELEGRAM_BOT_URL")
     safe_tg_id_bot_url=$(html_escape_text "$TELEGRAM_ID_BOT_URL")
     safe_vk_url=$(html_escape_text "$VK_COMMUNITY_URL")
@@ -7822,25 +9063,793 @@ EOF
     safe_active_locations=$(html_escape_text "$active_locations")
     profile_cards_html=$(subscription_profile_cards_html "$active_links")
     recommendations_html=$(subscription_recommendations_html "$active_links")
+    recommendations_all_html=$(subscription_all_recommendations_html "$active_links")
     profile_count=$(printf '%s\n' "$active_links" | awk 'NF{c++} END{print c+0}')
     qr_cards_html=$(printf '%s\n' \
         "Основная|${qr_links_png}|${links_url}|Для Yurich Connect, v2rayN и универсального импорта" \
         "Hiddify|${qr_hiddify_png}|${hiddify_url}|Сканируй внутри Hiddify: это обычный URL подписки" \
         "Streisand iOS|${qr_streisand_png}|${streisand_url}|Отдельный iOS-набор для Streisand и совместимых клиентов" \
         "NekoBox|${qr_nekobox_png}|${nekobox_url}|Для NekoBox и совместимых клиентов" \
-        "v2rayNG|${qr_v2rayng_png}|${v2rayng_url}|Только VLESS Reality через TCP/${reality_public_port}" \
-        "Mobile test|${qr_mobile_test_png}|${mobile_test_url}|Только Reality ALT MOBILE TEST для проверки мобильной сети" | subscription_qr_cards_html)
+        "v2rayNG|${qr_v2rayng_png}|${v2rayng_url}|Только VLESS Reality через TCP/${reality_public_port}" | subscription_qr_cards_html)
 
-    local safe_reality safe_trojan safe_links_url safe_hiddify_url safe_streisand_sub_url safe_hiddify_open_url safe_nekobox_url safe_v2rayng_url safe_mobile_test_url
+    local safe_reality safe_trojan safe_links_url safe_hiddify_url safe_streisand_sub_url safe_happ_url safe_hiddify_open_url safe_nekobox_url safe_v2rayng_url safe_pingtunnel_url pingtunnel_panel_html
     safe_reality=$(html_escape_text "$reality_link")
     safe_trojan=$(html_escape_text "$trojan_link")
     safe_links_url=$(html_escape_text "$links_url")
     safe_hiddify_url=$(html_escape_text "$hiddify_url")
     safe_streisand_sub_url=$(html_escape_text "$streisand_url")
+    safe_happ_url=$(html_escape_text "$happ_url")
     safe_hiddify_open_url=$(html_escape_text "$hiddify_open_url")
     safe_nekobox_url=$(html_escape_text "$nekobox_url")
     safe_v2rayng_url=$(html_escape_text "$v2rayng_url")
-    safe_mobile_test_url=$(html_escape_text "$mobile_test_url")
+    safe_pingtunnel_url=$(html_escape_text "$pingtunnel_url")
+    pingtunnel_panel_html=""
+    if [[ -s "$pingtunnel_file" ]]; then
+        pingtunnel_panel_html=$(cat <<EOF
+    <section class="panel notice">
+      <h2>PingTunnel / ICMP fallback</h2>
+      <p class="lead">Ручной резервный туннель через ICMP. Он не импортируется напрямую в Hiddify, v2rayNG, NekoBox или Streisand: сначала запускается локальный SOCKS5-клиент, потом приложение или браузер направляется на <code>127.0.0.1:10888</code>.</p>
+      <div class="steps">
+        <div class="step"><b>1. Скачать</b>Скачай PingTunnel под свою ОС и запусти от администратора/root.</div>
+        <div class="step"><b>2. Запустить</b>Открой файл <code>pingtunnel.txt</code> и выполни команду клиента.</div>
+        <div class="step"><b>3. Проверить</b>Проверь выход через SOCKS5: <code>127.0.0.1:10888</code>.</div>
+      </div>
+      <a class="btn gold" href="${safe_pingtunnel_url}">Открыть pingtunnel.txt</a>
+      <button class="btn copy" data-copy="${safe_pingtunnel_url}">Скопировать PingTunnel URL</button>
+    </section>
+EOF
+)
+    fi
+
+    if subscription_premium_v2_page_enabled "$user"; then
+        cat > "${page_dir}/index.html" <<EOF
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'none'; upgrade-insecure-requests">
+<title>${title}</title>
+<style>
+:root{--bg:#080a0f;--panel:#101720;--panel2:#151f2b;--ink:#f7fbff;--muted:#93a4b6;--soft:#d9e6f2;--line:#263747;--line2:#3d566b;--cyan:#36e2cf;--blue:#76a9ff;--green:#77dd9a;--gold:#ffc766;--rose:#ff7d8e;--shadow:0 22px 58px rgba(0,0,0,.32)}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;max-width:100%;overflow-x:hidden}
+body{min-height:100vh;background:linear-gradient(180deg,#090b10 0%,#111720 46%,#090b10 100%);color:var(--ink);font-family:Inter,Arial,sans-serif;font-size:16px;line-height:1.55;letter-spacing:0}
+body:before{content:"";position:fixed;inset:0;z-index:-1;background:linear-gradient(120deg,rgba(54,226,207,.18),transparent 30%),linear-gradient(240deg,rgba(118,169,255,.15),transparent 34%),linear-gradient(180deg,rgba(255,199,102,.08),transparent 42%)}
+a{color:inherit}
+.page{width:min(1180px,100%);margin:0 auto;padding:22px 16px 52px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:18px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:950}
+.brand-logo{width:48px;height:48px;border-radius:8px;background:linear-gradient(135deg,rgba(54,226,207,.18),rgba(118,169,255,.18));border:1px solid rgba(255,255,255,.14);display:grid;place-items:center;overflow:hidden;box-shadow:0 18px 40px rgba(0,0,0,.22)}
+.brand-logo img{display:block;width:100%;height:100%;object-fit:contain;padding:4px}
+.brand-logo span{color:var(--cyan);font-size:13px;font-weight:950}
+.brand-text b{display:block;font-size:18px}.brand-text span{display:block;color:var(--muted);font-size:12px;font-weight:850}
+.top-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:10px 15px;border-radius:8px;border:1px solid rgba(255,255,255,.13);background:#141e2a;color:var(--ink);font-size:14px;font-weight:950;text-decoration:none;cursor:pointer;white-space:nowrap;transition:transform .16s ease,border-color .16s ease,background .16s ease}
+.btn:hover{transform:translateY(-1px);border-color:rgba(54,226,207,.58);background:#1a2735}
+.btn.primary{background:linear-gradient(135deg,#3ce6d2,#81b2ff);border-color:rgba(54,226,207,.72);color:#041015}
+.btn.gold{background:linear-gradient(135deg,#ffd27a,#ff9c5a);border-color:rgba(255,199,102,.72);color:#170d03}
+.hero{position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.12);border-radius:8px;background:linear-gradient(135deg,rgba(19,30,42,.96),rgba(10,14,20,.98));box-shadow:var(--shadow);padding:30px;margin-bottom:12px}
+.hero:before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:linear-gradient(90deg,var(--cyan),var(--blue),var(--gold),var(--rose))}
+.hero:after{content:"YC";position:absolute;right:28px;bottom:-24px;color:rgba(255,255,255,.035);font-size:168px;line-height:1;font-weight:950;pointer-events:none}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:24px;align-items:stretch}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;color:#bffff7;background:rgba(54,226,207,.10);border:1px solid rgba(54,226,207,.24);border-radius:999px;padding:6px 10px;font-size:12px;font-weight:950;text-transform:uppercase;letter-spacing:.06em}
+h1{font-size:58px;line-height:1;margin:14px 0 12px;letter-spacing:0}
+.lead{margin:0;max-width:740px;color:#d2deea;font-size:18px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border-radius:999px;background:rgba(255,255,255,.065);border:1px solid rgba(255,255,255,.13);font-size:13px;font-weight:900}
+.chip:nth-child(1){border-color:rgba(54,226,207,.36);background:rgba(54,226,207,.10)}.chip:nth-child(2){border-color:rgba(255,199,102,.36);background:rgba(255,199,102,.10)}.chip:nth-child(3){border-color:rgba(118,169,255,.36);background:rgba(118,169,255,.10)}
+.account-card{position:relative;border:1px solid rgba(255,255,255,.14);border-radius:8px;background:linear-gradient(160deg,rgba(255,255,255,.10),rgba(255,255,255,.035));padding:16px;backdrop-filter:blur(14px);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+.account-card:before{content:"ACCESS PASS";display:block;color:#bffff7;font-size:11px;font-weight:950;letter-spacing:.12em;margin-bottom:6px}
+.account-row{display:grid;grid-template-columns:98px minmax(0,1fr);gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.09)}
+.account-row:last-child{border-bottom:0}.account-row span{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em;font-weight:900}.account-row b{text-align:right;overflow-wrap:anywhere}
+.metrics{display:grid;grid-template-columns:1.35fr 1fr 1fr;gap:10px;margin-bottom:14px;padding:10px;border:1px solid rgba(255,255,255,.10);border-radius:8px;background:rgba(255,255,255,.045)}
+.card{border:1px solid rgba(255,255,255,.10);border-radius:8px;background:rgba(16,23,34,.86);box-shadow:0 16px 42px rgba(0,0,0,.18)}
+.metric{padding:13px 14px;min-height:104px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden;background:rgba(9,13,19,.50)}
+.metric:before{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:linear-gradient(90deg,var(--cyan),var(--blue),var(--gold))}
+.metric small{color:var(--muted);font-size:10px;font-weight:950;text-transform:uppercase;letter-spacing:.08em}.metric strong{font-size:30px;line-height:1.05;overflow-wrap:anywhere}.metric p{margin:7px 0 0;color:var(--muted);font-size:12px}
+.section{margin-top:14px}.section-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-end;margin-bottom:10px}.section h2{font-size:21px;line-height:1.15;margin:0}.muted{color:var(--muted)}
+.install{padding:18px}.install-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:12px}
+.app-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.app-card{display:flex;flex-direction:column;justify-content:space-between;gap:12px;min-height:150px;padding:16px;border-radius:8px;border:1px solid rgba(255,255,255,.10);background:linear-gradient(180deg,rgba(255,255,255,.060),rgba(255,255,255,.026))}
+.app-card.featured{border-color:rgba(54,226,207,.38);background:linear-gradient(180deg,rgba(26,78,73,.40),rgba(255,255,255,.035))}
+.app-title{font-size:16px;font-weight:950}.app-text{color:var(--muted);font-size:13px;margin-top:4px}
+.side{padding:15px;border-radius:8px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.10)}
+.file-row{display:grid;grid-template-columns:1fr;gap:8px;margin-top:10px}.file-row .btn{width:100%;min-height:36px}
+.recommend-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.recommend-card{display:flex;flex-direction:column;justify-content:space-between;gap:10px;border:1px solid rgba(255,255,255,.10);border-radius:8px;background:linear-gradient(180deg,rgba(20,32,45,.90),rgba(10,15,22,.94));padding:14px;min-height:132px}
+.recommend-title{color:var(--gold);font-size:12px;text-transform:uppercase;letter-spacing:.05em;font-weight:950}.recommend-name{font-size:15px;font-weight:950;overflow-wrap:anywhere}.recommend-meta{color:var(--muted);font-size:12px;overflow-wrap:anywhere}.recommend-copy{width:100%;min-height:36px}
+.qr-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.qr-item{border:1px solid rgba(255,255,255,.10);border-radius:8px;background:linear-gradient(180deg,rgba(20,32,45,.92),rgba(10,15,22,.96));padding:13px;text-align:center;overflow:hidden}
+.qr-glow{height:3px;margin:-12px -12px 12px;background:linear-gradient(90deg,var(--cyan),var(--blue),var(--gold))}
+.qr-item img{display:block;width:100%;max-width:164px;aspect-ratio:1/1;margin:0 auto 10px;background:#fff;border-radius:8px;padding:8px}
+.qr-title{font-size:14px;font-weight:950;overflow-wrap:anywhere}.qr-hint{color:var(--muted);font-size:12px;min-height:50px;margin:5px 0 9px}.qr-copy{width:100%}
+.project-help{position:relative;overflow:hidden;padding:18px;border-color:rgba(54,226,207,.26);background:linear-gradient(135deg,rgba(54,226,207,.10),rgba(118,169,255,.08),rgba(255,199,102,.08)),rgba(16,23,34,.94)}
+.help-layout{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center}.project-help h2{font-size:21px;margin:0 0 6px}.help-text{margin:0;color:#c8d5e3;max-width:780px}.help-actions{display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.help-qr-card{display:flex;flex-direction:column;align-items:center;gap:6px;color:#c8d5e3;font-size:12px;font-weight:900}.help-qr{display:block;width:132px;max-width:100%;height:auto;background:#fff;border-radius:8px;padding:5px}
+.notice{padding:16px;border-color:rgba(255,191,91,.26);background:linear-gradient(135deg,rgba(255,191,91,.10),rgba(95,157,255,.06)),rgba(16,23,34,.94)}
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}.step{border:1px solid rgba(255,255,255,.09);border-radius:8px;background:#111a27;padding:12px}.step b{display:block;color:var(--gold);margin-bottom:4px}.mini{display:inline-block;margin-top:5px;color:var(--cyan);font-weight:900;text-decoration:none}
+.profiles-details{padding:14px}.profiles-details summary{cursor:pointer;font-weight:950;color:#eaf5ff}.profile-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
+.profile-card{padding:12px;border-radius:8px;background:#111a27;border:1px solid rgba(255,255,255,.09)}.profile-top{display:flex;justify-content:space-between;gap:8px;margin-bottom:8px}.profile-type{color:var(--cyan);font-size:11px;font-weight:950;text-transform:uppercase}.profile-host{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.profile-name{font-size:15px;font-weight:950;margin-bottom:10px;overflow-wrap:anywhere}.profile-copy{width:100%}
+code{color:#dffbff}.empty-state{border:1px dashed rgba(255,255,255,.16);border-radius:8px;padding:14px;color:var(--muted)}
+@media(max-width:1040px){.hero-grid,.install-grid,.metrics{grid-template-columns:1fr}.recommend-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.qr-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.profile-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:680px){body{font-size:15px}.page{padding:12px 10px 34px}.topbar{display:block}.brand{margin-bottom:10px}.top-actions{display:grid;grid-template-columns:1fr}.btn{width:100%;white-space:normal}.hero{padding:18px}.hero:after{right:8px;bottom:18px;font-size:78px}.hero-grid{gap:16px}h1{font-size:38px}.lead{font-size:16px}.chips{display:grid;grid-template-columns:1fr}.account-row{grid-template-columns:1fr;gap:4px}.account-row b{text-align:left}.metrics{grid-template-columns:1fr;padding:0;background:transparent;border:0}.metric{min-height:96px}.section-head{display:block}.app-grid,.recommend-grid,.qr-grid,.steps,.profile-list{grid-template-columns:1fr}.qr-hint{min-height:auto}.help-layout{grid-template-columns:1fr}.help-actions{display:grid;grid-template-columns:1fr}.help-qr-card{justify-self:center;width:100%;max-width:220px}.help-qr{width:min(210px,100%)}}
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-logo">${subscription_header_logo_html}</div>
+      <div class="brand-text"><b>Yurich Connect</b><span>Личная страница подписки</span></div>
+    </div>
+    <div class="top-actions">
+      <button class="btn primary copy" data-copy="${safe_links_url}">Скопировать подписку</button>
+      <a class="btn" href="${safe_telegram_url}" target="_blank" rel="noopener noreferrer">Telegram</a>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-grid">
+      <div>
+        <div class="eyebrow">Профиль ${safe_user} • активна</div>
+        <h1>Yurich Connect VPN</h1>
+        <p class="lead">Современная страница подключения для телефона и компьютера: одна подписка, быстрый импорт в приложения, QR-коды и рекомендации по рабочим локациям.</p>
+        <div class="chips">
+          <span class="chip">HTTPS</span>
+          <span class="chip">Turbo</span>
+          <span class="chip">Reality</span>
+          <span class="chip">${safe_active_locations}</span>
+        </div>
+      </div>
+      <aside class="account-card">
+        <div class="account-row"><span>Статус</span><b>Активна</b></div>
+        <div class="account-row"><span>Срок</span><b>${safe_expiry_label}</b></div>
+        <div class="account-row"><span>Осталось</span><b>${safe_days_left} дней</b></div>
+        <div class="account-row"><span>Профилей</span><b>${profile_count}</b></div>
+        <div class="account-row"><span>Домен</span><b>${safe_domain}</b></div>
+      </aside>
+    </div>
+  </section>
+
+  <section class="metrics">
+    <article class="card metric"><small>Использовано трафика</small><strong>${safe_hiddify_used_human}</strong><p>${safe_traffic_summary}</p></article>
+    <article class="card metric"><small>Дней осталось</small><strong>${safe_days_left}</strong><p>${safe_expiry_label}</p></article>
+    <article class="card metric"><small>Активные профили</small><strong>${profile_count}</strong><p>${safe_active_locations}</p></article>
+  </section>
+
+  <section class="section card install">
+    <div class="section-head">
+      <div><h2>Подключение</h2><div class="muted">Выбери приложение и добавь подписку без ручной настройки.</div></div>
+    </div>
+    <div class="install-grid">
+      <div class="app-grid">
+        <article class="app-card featured">
+          <div><div class="app-title">Yurich Connect</div><div class="app-text">Основной вариант для Android и Windows.</div></div>
+          <button class="btn primary copy" data-copy="${safe_links_url}">Скопировать URL</button>
+        </article>
+        <article class="app-card featured">
+          <div><div class="app-title">Hiddify</div><div class="app-text">Используй hiddify.txt или QR с обычным URL подписки.</div></div>
+          <a class="btn gold" href="${safe_hiddify_open_url}">Открыть Hiddify</a>
+        </article>
+        <article class="app-card">
+          <div><div class="app-title">iPhone</div><div class="app-text">Streisand или Karing для iOS.</div></div>
+          <button class="btn copy" data-copy="${safe_streisand_sub_url}">Скопировать iOS</button>
+        </article>
+        <article class="app-card">
+          <div><div class="app-title">NekoBox / v2rayNG</div><div class="app-text">Отдельные совместимые файлы для ручного импорта.</div></div>
+          <button class="btn copy" data-copy="${safe_nekobox_url}">Скопировать NekoBox</button>
+        </article>
+      </div>
+      <aside class="side">
+        <h2>Приложения</h2>
+        <p class="muted">Скачай клиент и добавь подписку с этой страницы.</p>
+        <div class="file-row">
+          <a class="btn primary" href="${safe_android_url}" target="_blank" rel="noopener noreferrer">Android</a>
+          <a class="btn" href="${safe_windows_url}" target="_blank" rel="noopener noreferrer">Windows</a>
+          <a class="btn" href="${safe_streisand_url}" target="_blank" rel="noopener noreferrer">Streisand iOS</a>
+          <a class="btn" href="${safe_karing_url}" target="_blank" rel="noopener noreferrer">Karing iOS</a>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div><h2>Рекомендации по подключению</h2><div class="muted">Все активные серверы и протоколы. Если один профиль временно медленный, попробуй соседний.</div></div>
+    </div>
+    <div class="recommend-grid">
+${recommendations_all_html}
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div><h2>QR-коды</h2><div class="muted">Сканируй внутри приложения. Для Hiddify лучше использовать QR hiddify.txt.</div></div>
+    </div>
+    <div class="qr-grid">
+${qr_cards_html}
+    </div>
+  </section>
+
+${pingtunnel_panel_html}
+
+  <section class="section card project-help">
+    <div class="help-layout">
+      <div>
+        <h2>Помощь проекту</h2>
+        <p class="help-text">Собираем помощь для развития Yurich Connect и разработки приложений для Android и iPhone. Поддержка помогает быстрее выпускать обновления, улучшать стабильность серверов и делать подключение проще.</p>
+      </div>
+      <div class="help-actions">
+        ${project_help_qr_html}
+        <a class="btn primary" href="${safe_donation_url}" target="_blank" rel="noopener noreferrer">Поддержать проект</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section card notice">
+    <h2>Уведомления о подписке</h2>
+    <p class="muted">Чтобы получать напоминания об окончании подписки и новости, отправь разработчику свой Telegram ID.</p>
+    <div class="steps">
+      <div class="step"><b>1. Получи ID</b>Открой <a class="mini" href="${safe_tg_id_bot_url}" target="_blank" rel="noopener noreferrer">@getmyid_bot</a> и нажми Start.</div>
+      <div class="step"><b>2. Отправь ID</b>Отправь цифры Telegram ID вместе с именем профиля: <code>${safe_user}</code>.</div>
+      <div class="step"><b>3. Включи бота</b>Открой <a class="mini" href="${safe_tg_bot_url}" target="_blank" rel="noopener noreferrer">бота уведомлений</a> и нажми Start.</div>
+    </div>
+  </section>
+
+  <details class="section card profiles-details">
+    <summary>Отдельные профили для ручного копирования</summary>
+    <div class="profile-list">
+${profile_cards_html}
+    </div>
+  </details>
+</main>
+<script>
+document.querySelectorAll('.copy').forEach(function(btn){
+  var originalText = btn.textContent;
+  btn.addEventListener('click', function(){
+    var value = btn.getAttribute('data-copy') || '';
+    function reset(text){btn.textContent=text;setTimeout(function(){btn.textContent=originalText},1600)}
+    function fallback(){
+      var ta=document.createElement('textarea');
+      ta.value=value;ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.left='-9999px';
+      document.body.appendChild(ta);ta.select();
+      try{document.execCommand('copy')?reset('Скопировано'):reset('Скопируй вручную')}catch(e){reset('Скопируй вручную')}
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(value).then(function(){reset('Скопировано')}).catch(fallback);
+    } else {
+      fallback();
+    }
+  });
+});
+</script>
+</body>
+</html>
+EOF
+        chmod 644 "${page_dir}/index.html"
+        printf '%s\n' "$sub_url"
+        return 0
+    fi
+
+    if subscription_remnawave_preview_page_enabled "$user"; then
+        cat > "${page_dir}/index.html" <<EOF
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'none'; upgrade-insecure-requests">
+<title>${title}</title>
+<style>
+:root{--bg:#090d14;--bg2:#0d141d;--surface:#111923;--surface2:#151f2b;--surface3:#192634;--line:#243445;--line2:#31475d;--text:#f6fbff;--muted:#8fa2b6;--cyan:#19e6d0;--cyan2:#0fa9c0;--green:#66d58d;--gold:#e58a36;--red:#d85c5c;--blue:#5a8dff;--shadow:0 24px 70px rgba(0,0,0,.38)}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;max-width:100%;overflow-x:hidden}
+body{min-height:100vh;background:radial-gradient(circle at 20% 0%,rgba(25,230,208,.12),transparent 34%),radial-gradient(circle at 84% 16%,rgba(90,141,255,.10),transparent 30%),linear-gradient(180deg,#090d14 0%,#0b111a 48%,#080b11 100%);color:var(--text);font-family:Inter,Arial,sans-serif;font-size:16px;line-height:1.58;letter-spacing:0}
+a{color:inherit}
+.rw-page{width:min(1180px,100%);margin:0 auto;padding:22px 16px 56px;display:block}
+.rw-main{display:flex;flex-direction:column;gap:14px}
+.rw-header{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid rgba(255,255,255,.05);padding:4px 0 14px}
+.rw-title{display:flex;align-items:center;gap:9px;color:var(--cyan);font-weight:950;font-size:17px}
+.rw-title-mark{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,rgba(25,230,208,.12),rgba(90,141,255,.16));border:1px solid rgba(25,230,208,.24);box-shadow:0 0 18px rgba(25,230,208,.16);display:grid;place-items:center;overflow:hidden;flex:0 0 auto}
+.rw-title-mark img{display:block;width:100%;height:100%;object-fit:contain;padding:3px}
+.rw-title-mark span{font-size:12px;font-weight:950;color:var(--cyan)}
+.rw-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.icon-btn{display:inline-flex;align-items:center;justify-content:center;min-width:38px;min-height:36px;border:1px solid rgba(255,255,255,.10);border-radius:8px;background:#111a24;color:#dffbff;font-size:13px;font-weight:950;text-decoration:none;cursor:pointer}
+.icon-btn:hover{border-color:rgba(25,230,208,.62);background:#172332}
+.panel{border:1px solid rgba(255,255,255,.08);border-radius:8px;background:linear-gradient(180deg,rgba(17,25,35,.94),rgba(10,15,22,.96));box-shadow:0 18px 46px rgba(0,0,0,.24)}
+.account{padding:18px}
+.account-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;margin-bottom:13px}
+.account-name{display:flex;align-items:center;gap:10px}
+.account-logo{width:54px;height:54px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,rgba(25,230,208,.10),rgba(90,141,255,.12));border:1px solid rgba(25,230,208,.28);color:var(--gold);font-weight:950;overflow:hidden;flex:0 0 auto}
+.account-logo img{display:block;width:100%;height:100%;object-fit:contain;padding:4px}
+.account-logo span{font-size:13px;font-weight:950;color:var(--cyan)}
+.account-name b{display:block;font-size:18px}
+.account-name span{display:block;color:var(--gold);font-size:13px;font-weight:900}
+.status-pill{display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(102,213,141,.28);background:rgba(102,213,141,.12);color:#ceffd9;border-radius:999px;padding:7px 10px;font-size:13px;font-weight:950}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 16px rgba(102,213,141,.72)}
+.account-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.account-cell{border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:11px 12px;background:#131e29;min-height:70px}
+.account-cell:nth-child(1){background:linear-gradient(135deg,rgba(90,141,255,.14),rgba(19,30,41,.96))}
+.account-cell:nth-child(2){background:linear-gradient(135deg,rgba(102,213,141,.14),rgba(19,30,41,.96))}
+.account-cell:nth-child(3){background:linear-gradient(135deg,rgba(216,92,92,.15),rgba(19,30,41,.96))}
+.account-cell:nth-child(4){background:linear-gradient(135deg,rgba(229,138,54,.15),rgba(19,30,41,.96))}
+.cell-label{display:block;color:#9fb1c5;font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.05em}
+.cell-value{display:block;color:#fff;font-size:16px;font-weight:950;margin-top:5px;overflow-wrap:anywhere}
+.cell-note{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.traffic-meter{margin-top:12px;display:grid;grid-template-columns:minmax(0,1fr) 260px;gap:14px;align-items:stretch;border:1px solid rgba(25,230,208,.18);border-radius:8px;background:linear-gradient(135deg,rgba(25,230,208,.10),rgba(90,141,255,.08) 45%,rgba(229,138,54,.10));padding:16px;overflow:hidden}
+.traffic-title{color:#bdf9f2;font-size:13px;font-weight:950;text-transform:uppercase;letter-spacing:.08em}
+.traffic-value{font-size:58px;line-height:1;font-weight:950;color:#fff;text-shadow:0 0 32px rgba(25,230,208,.22);margin:8px 0}
+.traffic-note{color:#b8c8d9;font-size:14px;max-width:720px}
+.traffic-visual{display:flex;flex-direction:column;justify-content:center;gap:10px}
+.traffic-ring{height:86px;border-radius:8px;background:conic-gradient(from 210deg,var(--cyan),var(--blue),var(--gold),var(--cyan));padding:1px;box-shadow:0 0 40px rgba(25,230,208,.10)}
+.traffic-ring-inner{height:100%;border-radius:7px;background:linear-gradient(180deg,#101923,#0b1119);display:grid;place-items:center;color:#dffefa;font-weight:950}
+.traffic-bar{height:10px;border-radius:999px;background:#0c1520;border:1px solid rgba(255,255,255,.08);overflow:hidden}
+.traffic-bar span{display:block;width:68%;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--cyan),var(--blue),var(--gold));box-shadow:0 0 22px rgba(25,230,208,.36)}
+.install{padding:18px}
+.section-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:13px}
+.section-head h2{font-size:20px;line-height:1.15;margin:0}
+.muted{color:var(--muted)}
+.tabs{display:flex;gap:8px;flex-wrap:wrap}
+.tab{border:1px solid rgba(255,255,255,.10);border-radius:8px;background:#121d29;color:#d7eaff;font-size:13px;font-weight:950;padding:8px 11px;text-decoration:none}
+.tab.active{border-color:rgba(25,230,208,.54);background:rgba(25,230,208,.12);color:#dffdfa}
+.platform{border:1px solid rgba(255,255,255,.10);border-radius:8px;background:#121d29;padding:8px 11px;color:#dcecff;font-size:13px;font-weight:950}
+.install-flow{display:grid;gap:10px}
+.flow-card{display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:12px;align-items:center;border:1px solid rgba(255,255,255,.08);border-radius:8px;background:#101923;padding:13px}
+.flow-icon{width:40px;height:40px;border-radius:11px;background:rgba(25,230,208,.12);display:grid;place-items:center;color:var(--cyan);font-size:18px;font-weight:950;flex:0 0 auto}
+.flow-icon svg{width:21px;height:21px;stroke:currentColor;stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.flow-title{font-size:16px;font-weight:950}
+.flow-text{color:var(--muted);font-size:13px;margin-top:3px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:10px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:#132033;color:#f7fbff;font-size:14px;font-weight:950;text-decoration:none;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:rgba(25,230,208,.62);background:#17283c}
+.btn.primary{background:linear-gradient(135deg,#18ded0,#48b6ff);border-color:rgba(25,230,208,.72);color:#031014}
+.btn.gold{background:linear-gradient(135deg,#ffc65b,#ff9b4d);border-color:rgba(229,138,54,.72);color:#160c04}
+.file-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;width:100%;justify-self:stretch}
+.section{display:flex;flex-direction:column;gap:12px}
+.recommend-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.recommend-card{display:flex;flex-direction:column;justify-content:space-between;gap:12px;border:1px solid rgba(255,255,255,.08);border-radius:8px;background:linear-gradient(180deg,rgba(17,27,38,.94),rgba(10,15,22,.96));padding:14px;min-height:132px}
+.recommend-title{color:var(--gold);font-size:12px;text-transform:uppercase;letter-spacing:.05em;font-weight:950;margin-bottom:7px}
+.recommend-name{font-size:16px;line-height:1.34;font-weight:950;overflow-wrap:anywhere}
+.recommend-meta{color:var(--muted);font-size:13px;margin-top:7px;overflow-wrap:anywhere}
+.recommend-copy{width:100%;min-height:36px}
+.qr-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.qr-item{border:1px solid rgba(255,255,255,.08);border-radius:8px;background:linear-gradient(180deg,rgba(17,27,38,.94),rgba(10,15,22,.96));padding:12px;text-align:center}
+.qr-glow{height:3px;margin:-12px -12px 12px;border-radius:8px 8px 0 0;background:linear-gradient(90deg,var(--cyan),var(--blue),var(--gold))}
+.qr-item img{display:block;width:100%;max-width:142px;aspect-ratio:1/1;margin:0 auto 9px;background:#fff;border-radius:8px;padding:7px}
+.qr-title{font-size:15px;font-weight:950;overflow-wrap:anywhere}
+.qr-hint{color:var(--muted);font-size:13px;min-height:48px;margin:5px 0 9px}
+.qr-copy{width:100%}
+.project-help{position:relative;overflow:hidden;padding:18px;border-color:rgba(25,230,208,.30);background:linear-gradient(135deg,rgba(25,230,208,.10),rgba(90,141,255,.08) 52%,rgba(229,138,54,.10)),rgba(17,25,35,.94)}
+.project-help:before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,var(--cyan),var(--blue),var(--gold))}
+.help-layout{display:grid;grid-template-columns:50px minmax(0,1fr) auto;gap:14px;align-items:center}
+.help-icon{width:48px;height:48px;border-radius:14px;background:rgba(25,230,208,.13);border:1px solid rgba(25,230,208,.28);display:grid;place-items:center;color:var(--cyan);box-shadow:0 0 28px rgba(25,230,208,.10)}
+.help-icon svg{width:25px;height:25px;stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.project-help h2{font-size:21px;line-height:1.15;margin:0 0 6px}
+.help-text{margin:0;color:#c6d4e3;font-size:15px;line-height:1.62;max-width:760px}
+.help-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.help-qr-card{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:142px;color:#c6d4e3;font-size:12px;font-weight:900;text-align:center}
+.help-qr{display:block;width:150px;max-width:100%;height:auto;background:#fff;border-radius:8px;padding:5px;border:1px solid rgba(255,255,255,.16);box-shadow:0 16px 36px rgba(0,0,0,.22)}
+.notice{padding:16px;border-color:rgba(229,138,54,.30);background:linear-gradient(135deg,rgba(229,138,54,.10),rgba(25,230,208,.06)),rgba(17,25,35,.94)}
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}
+.step{border:1px solid rgba(255,255,255,.08);border-radius:8px;background:#101923;padding:12px}
+.step b{display:block;color:#ffd38a;margin-bottom:4px}
+.mini{display:inline-block;margin-top:5px;color:var(--cyan);font-weight:900;text-decoration:none}
+code{color:#dffbff}
+.empty-state{border:1px dashed rgba(255,255,255,.16);border-radius:8px;padding:14px;color:var(--muted)}
+@media(max-width:1040px){.account-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.traffic-meter{grid-template-columns:1fr}.recommend-grid,.qr-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:680px){body{font-size:15px}.rw-page{width:100%;max-width:100%;padding:12px 10px 34px;overflow:hidden}.rw-main{gap:12px}.rw-header{align-items:flex-start;flex-direction:column}.rw-actions{width:100%;display:grid;grid-template-columns:1fr 1fr}.icon-btn{width:100%;min-height:38px}.panel,.recommend-card,.qr-item,.step{width:100%;max-width:100%;overflow:hidden}.account,.install,.notice,.project-help{padding:14px}.account-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px}.account-name{align-items:center}.account-logo{width:58px;height:58px}.status-pill{margin-top:0;justify-self:end}.account-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.account-cell{min-height:112px;padding:13px 12px}.cell-label{font-size:10px}.cell-value{font-size:18px}.cell-note{font-size:12px;line-height:1.35}.recommend-grid,.qr-grid,.steps{grid-template-columns:1fr}.traffic-meter{grid-template-columns:1fr;padding:14px}.traffic-value{font-size:42px}.traffic-visual{display:none}.section-head{display:block}.section-head h2{font-size:22px}.tabs{display:grid;grid-template-columns:1fr 1fr}.tab,.platform{width:100%;text-align:center}.flow-card{grid-template-columns:40px minmax(0,1fr);align-items:flex-start;padding:12px}.flow-card .btn{grid-column:1 / -1;width:100%}.btn{width:100%;white-space:normal}.file-row{grid-column:1 / -1;display:grid;grid-template-columns:1fr}.recommend-card{min-height:auto}.qr-hint{min-height:auto}.help-layout{grid-template-columns:46px minmax(0,1fr);align-items:flex-start}.help-icon{width:44px;height:44px}.help-actions{grid-column:1 / -1;display:grid;grid-template-columns:1fr;justify-content:stretch}.help-qr-card{justify-self:center;width:100%;max-width:240px}.help-qr{width:min(220px,100%)}.help-text{font-size:14px}}
+@media(max-width:360px){.account-head{grid-template-columns:1fr}.status-pill{justify-self:start}.account-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main class="rw-page">
+  <section class="rw-main">
+    <header class="rw-header">
+      <div class="rw-title"><span class="rw-title-mark">${subscription_header_logo_html}</span><span>Подписка</span></div>
+      <div class="rw-actions">
+        <button class="icon-btn copy" data-copy="${safe_links_url}" title="Скопировать ссылку подписки">Ссылка</button>
+        <a class="icon-btn" href="${safe_telegram_url}" target="_blank" rel="noopener noreferrer" title="Telegram">TG</a>
+      </div>
+    </header>
+
+    <section class="panel account">
+      <div class="account-head">
+        <div class="account-name">
+          <div class="account-logo">${subscription_logo_html}</div>
+          <div><b>Yurich Connect</b><span>Осталось ${safe_days_left} дней</span></div>
+        </div>
+        <div class="status-pill"><span class="status-dot"></span>Активна</div>
+      </div>
+      <div class="account-grid">
+        <div class="account-cell"><span class="cell-label">Пользователь</span><span class="cell-value">${safe_user}</span><span class="cell-note">${safe_domain}</span></div>
+        <div class="account-cell"><span class="cell-label">Статус</span><span class="cell-value">Активна</span><span class="cell-note">Подписка включена</span></div>
+        <div class="account-cell"><span class="cell-label">Срок</span><span class="cell-value">${safe_expiry_label}</span><span class="cell-note">Осталось ${safe_days_left} дней</span></div>
+        <div class="account-cell"><span class="cell-label">Подключения</span><span class="cell-value">${profile_count}</span><span class="cell-note">Доступные локации и протоколы</span></div>
+      </div>
+      <div class="traffic-meter">
+        <div>
+          <div class="traffic-title">Персональный счетчик трафика</div>
+          <div class="traffic-value">${safe_hiddify_used_human}</div>
+          <div class="traffic-note">${safe_traffic_summary}</div>
+        </div>
+        <div class="traffic-visual">
+          <div class="traffic-ring"><div class="traffic-ring-inner">Naive HTTPS</div></div>
+          <div class="traffic-bar"><span></span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel install">
+      <div class="section-head">
+        <div>
+          <h2>Установка</h2>
+          <div class="muted">Установи приложение и добавь подписку одной кнопкой.</div>
+        </div>
+        <div class="platform">Android / iOS / Windows</div>
+      </div>
+      <div class="tabs">
+        <a class="tab active" href="${safe_hiddify_open_url}">Hiddify</a>
+        <button class="tab copy" data-copy="${safe_streisand_sub_url}">Streisand</button>
+        <button class="tab copy" data-copy="${safe_nekobox_url}">NekoBox</button>
+        <button class="tab copy" data-copy="${safe_v2rayng_url}">v2rayNG</button>
+      </div>
+      <div class="install-flow">
+        <article class="flow-card">
+          <div class="flow-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg></div>
+          <div><div class="flow-title">Установи приложение</div><div class="flow-text">Скачай приложение для Android или Windows. Для iPhone используй Streisand или Karing.</div></div>
+          <div class="file-row">
+            <a class="btn primary" href="${safe_android_url}" target="_blank" rel="noopener noreferrer">Android</a>
+            <a class="btn" href="${safe_windows_url}" target="_blank" rel="noopener noreferrer">Windows</a>
+            <a class="btn" href="${safe_streisand_url}" target="_blank" rel="noopener noreferrer">Streisand iOS</a>
+            <a class="btn" href="${safe_karing_url}" target="_blank" rel="noopener noreferrer">Karing iOS</a>
+          </div>
+        </article>
+        <article class="flow-card">
+          <div class="flow-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg></div>
+          <div><div class="flow-title">Добавь подписку</div><div class="flow-text">Основная ссылка подходит для Yurich Connect, Hiddify, NekoBox, v2rayNG и совместимых клиентов.</div></div>
+          <button class="btn gold copy" data-copy="${safe_links_url}">Скопировать URL</button>
+        </article>
+        <article class="flow-card">
+          <div class="flow-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 4h6v6H4z"></path><path d="M14 4h6v6h-6z"></path><path d="M4 14h6v6H4z"></path><path d="M14 14h2"></path><path d="M20 14v2"></path><path d="M14 20h2"></path><path d="M18 18h2"></path><path d="M18 20v-4"></path></svg></div>
+          <div><div class="flow-title">Импорт по QR</div><div class="flow-text">Для Hiddify сканируй QR с обычным URL подписки, чтобы не создавался пустой профиль.</div></div>
+          <a class="btn" href="${safe_hiddify_url}">hiddify.txt</a>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div><h2>Рекомендации</h2><div class="muted">Все доступные подключения по активным локациям. Начинай с Turbo для скорости, HTTPS для совместимости, Reality для стабильного TCP-подключения.</div></div>
+      </div>
+      <div class="recommend-grid">
+${recommendations_all_html}
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div><h2>QR-коды</h2><div class="muted">Отдельные QR для разных приложений и сценариев импорта.</div></div>
+      </div>
+      <div class="qr-grid">
+${qr_cards_html}
+      </div>
+    </section>
+
+${pingtunnel_panel_html}
+
+    <section class="panel project-help">
+      <div class="help-layout">
+        <div class="help-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.35-9.2-8.1C1.1 10 2 6.5 5.1 5.4c1.9-.7 3.8.1 4.9 1.5 1.1-1.4 3-2.2 4.9-1.5C18 6.5 18.9 10 17.2 12.9 15 16.65 12 21 12 21Z"></path><path d="M12 8v5"></path><path d="M9.5 10.5h5"></path></svg></div>
+        <div>
+          <h2>Помощь проекту</h2>
+          <p class="help-text">Собираем помощь для развития проекта Yurich Connect и разработки приложений для Android и iPhone. Каждый вклад помогает быстрее выпускать обновления, улучшать стабильность подключений и делать приложение удобнее.</p>
+        </div>
+        <div class="help-actions">
+          ${project_help_qr_html}
+          <a class="btn primary" href="${safe_donation_url}" target="_blank" rel="noopener noreferrer">Поддержать проект</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel notice">
+      <h2>Telegram-уведомления</h2>
+      <div class="muted">Чтобы получать напоминания об окончании подписки и важные новости, отправь разработчику свой Telegram ID.</div>
+      <div class="steps">
+        <div class="step"><b>1. Получи ID</b>Открой <a class="mini" href="${safe_tg_id_bot_url}" target="_blank" rel="noopener noreferrer">@getmyid_bot</a> и нажми Start.</div>
+        <div class="step"><b>2. Отправь ID</b>Отправь цифры Telegram ID вместе с именем профиля: <code>${safe_user}</code>.</div>
+        <div class="step"><b>3. Включи бота</b>Открой <a class="mini" href="${safe_tg_bot_url}" target="_blank" rel="noopener noreferrer">бота уведомлений</a> и нажми Start.</div>
+      </div>
+    </section>
+
+  </section>
+</main>
+<script>
+document.querySelectorAll('.copy').forEach(function(btn){
+  var originalText = btn.textContent;
+  btn.addEventListener('click', function(){
+    var value = btn.getAttribute('data-copy') || '';
+    function reset(text){btn.textContent=text;setTimeout(function(){btn.textContent=originalText},1600)}
+    function fallback(){
+      var ta=document.createElement('textarea');
+      ta.value=value;ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.left='-9999px';
+      document.body.appendChild(ta);ta.select();
+      try{document.execCommand('copy')?reset('Скопировано'):reset('Скопируй вручную')}catch(e){reset('Скопируй вручную')}
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(value).then(function(){reset('Скопировано')}).catch(fallback);
+    } else {
+      fallback();
+    }
+  });
+});
+</script>
+</body>
+</html>
+EOF
+        chmod 644 "${page_dir}/index.html"
+        printf '%s\n' "$sub_url"
+        return 0
+    fi
+
+    if subscription_remnawave_page_enabled "$user"; then
+        cat > "${page_dir}/index.html" <<EOF
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'none'; form-action 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'none'; upgrade-insecure-requests">
+<title>${title}</title>
+<style>
+:root{--bg:#05070b;--panel:#0d131b;--panel2:#111a24;--soft:#172332;--line:#273546;--text:#f7fbff;--muted:#98a7b8;--cyan:#2de8c8;--blue:#69a7ff;--gold:#ffd166;--green:#77f29b;--red:#ff6f91;--shadow:0 24px 70px rgba(0,0,0,.42)}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;max-width:100%;overflow-x:hidden}
+body{min-height:100vh;background:radial-gradient(circle at 50% -20%,rgba(45,232,200,.13),transparent 34%),linear-gradient(180deg,#05070b 0%,#08111a 52%,#05070b 100%);color:var(--text);font-family:Inter,Arial,sans-serif;line-height:1.55;letter-spacing:0}
+a{color:inherit}
+.page{width:min(1120px,100%);margin:0 auto;padding:22px 16px 56px}
+.topbar{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:16px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:950}
+.brand-mark{display:grid;place-items:center;width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--cyan),var(--blue));color:#041014;font-weight:950}
+.brand-text{display:flex;flex-direction:column;line-height:1.1}
+.brand-text small{color:var(--muted);font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.top-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:9px 13px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:#101b28;color:var(--text);font-weight:900;font-size:13px;text-decoration:none;cursor:pointer}
+.btn:hover{border-color:rgba(45,232,200,.66);background:#162538}
+.btn.primary{background:linear-gradient(135deg,var(--cyan),var(--blue));border-color:rgba(45,232,200,.72);color:#031014}
+.btn.gold{background:linear-gradient(135deg,var(--gold),#ff9f68);border-color:rgba(255,209,102,.72);color:#170d04}
+.hero{position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.10);border-radius:8px;background:linear-gradient(135deg,rgba(13,19,27,.96),rgba(13,31,37,.96) 58%,rgba(21,20,31,.96));box-shadow:var(--shadow);padding:24px}
+.hero:before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:linear-gradient(90deg,var(--cyan),var(--blue),var(--gold),var(--red))}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px;align-items:stretch}
+.eyebrow{color:var(--cyan);font-size:12px;font-weight:950;text-transform:uppercase;letter-spacing:.1em}
+h1{font-size:42px;line-height:1.05;margin:8px 0 12px;letter-spacing:0}
+.lead{max-width:720px;color:#c1ccd8;font-size:16px;margin:0}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+.chip{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);font-size:13px;font-weight:900}
+.chip:nth-child(1){border-color:rgba(45,232,200,.35);background:rgba(45,232,200,.09)}
+.chip:nth-child(2){border-color:rgba(255,209,102,.35);background:rgba(255,209,102,.09)}
+.chip:nth-child(3){border-color:rgba(105,167,255,.35);background:rgba(105,167,255,.09)}
+.account-card{background:rgba(5,7,11,.68);border:1px solid rgba(255,255,255,.11);border-radius:8px;padding:14px}
+.account-row{display:grid;grid-template-columns:95px minmax(0,1fr);gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+.account-row:last-child{border-bottom:0}
+.account-row span{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em;font-weight:900}
+.account-row b{overflow-wrap:anywhere;text-align:right}
+.grid{display:grid;gap:14px}
+.metrics{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:14px}
+.card{background:linear-gradient(180deg,rgba(17,26,36,.94),rgba(8,12,18,.96));border:1px solid rgba(255,255,255,.10);border-radius:8px;box-shadow:0 16px 44px rgba(0,0,0,.22)}
+.metric{padding:16px;min-height:126px;display:flex;flex-direction:column;justify-content:space-between}
+.metric small{color:var(--muted);font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.08em}
+.metric strong{font-size:31px;line-height:1.05;overflow-wrap:anywhere}
+.metric p{margin:7px 0 0;color:var(--muted);font-size:12px}
+.section{margin-top:16px}
+.section-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-end;margin-bottom:10px}
+.section h2{font-size:20px;margin:0}
+.muted{color:var(--muted)}
+.install{padding:16px}
+.install-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px}
+.app-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.app-card{display:flex;flex-direction:column;justify-content:space-between;gap:14px;min-height:142px;padding:14px;border-radius:8px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.035)}
+.app-card.featured{border-color:rgba(45,232,200,.42);background:linear-gradient(180deg,rgba(17,49,47,.58),rgba(255,255,255,.035))}
+.app-title{font-weight:950;font-size:16px}
+.app-text{color:var(--muted);font-size:13px;margin-top:5px}
+.side-panel{padding:14px;border-radius:8px;background:rgba(5,7,11,.55);border:1px solid rgba(255,255,255,.10)}
+.side-panel h3{margin:0 0 9px;font-size:15px}
+.file-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.file-row .btn{min-height:34px;padding:7px 10px}
+.recommend-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.recommend-card{min-height:104px;padding:13px;border-radius:8px;background:linear-gradient(180deg,rgba(18,28,38,.96),rgba(9,14,20,.96));border:1px solid rgba(255,255,255,.10)}
+.recommend-title{color:var(--gold);font-size:12px;text-transform:uppercase;letter-spacing:.05em;font-weight:950;margin-bottom:7px}
+.recommend-name{font-weight:950;overflow-wrap:anywhere}
+.recommend-meta{color:var(--muted);font-size:12px;margin-top:7px}
+.qr-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.qr-item{padding:12px;text-align:center;border-radius:8px;background:linear-gradient(180deg,rgba(15,24,34,.96),rgba(8,12,18,.96));border:1px solid rgba(255,255,255,.10)}
+.qr-item:nth-child(2){border-color:rgba(45,232,200,.44)}
+.qr-glow{height:3px;margin:-12px -12px 12px;background:linear-gradient(90deg,var(--cyan),var(--blue),var(--gold))}
+.qr-item img{display:block;width:100%;max-width:150px;aspect-ratio:1/1;margin:0 auto 10px;background:#fff;border-radius:8px;padding:7px}
+.qr-title{font-weight:950;font-size:14px;overflow-wrap:anywhere}
+.qr-hint{color:var(--muted);font-size:12px;min-height:52px;margin:5px 0 10px}
+.qr-copy{width:100%;margin:0}
+.profile-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.profile-card{padding:13px;border-radius:8px;background:linear-gradient(180deg,rgba(15,24,34,.96),rgba(8,12,18,.96));border:1px solid rgba(255,255,255,.10)}
+.profile-top{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:8px}
+.profile-type{color:var(--cyan);font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.04em}
+.profile-host{max-width:150px;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.profile-name{font-size:15px;font-weight:950;margin-bottom:10px;overflow-wrap:anywhere}
+.profile-copy{width:100%;margin:0}
+.notice{padding:16px;border-color:rgba(255,209,102,.24);background:linear-gradient(180deg,rgba(30,26,18,.88),rgba(11,15,20,.94))}
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0}
+.step{padding:12px;border-radius:8px;background:rgba(5,8,13,.58);border:1px solid rgba(255,255,255,.10)}
+.step b{display:block;color:var(--gold);margin-bottom:4px}
+.mini{display:inline-block;margin-top:5px;color:var(--cyan);font-weight:900;text-decoration:none}
+code{color:#d9fbff}
+.empty-state{border:1px dashed rgba(255,255,255,.16);border-radius:8px;padding:14px;color:var(--muted)}
+@media(max-width:980px){.hero-grid,.install-grid,.metrics,.recommend-grid{grid-template-columns:1fr}.app-grid,.qr-grid,.profile-list,.steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:680px){.page{padding:12px 10px 34px}.topbar{flex-direction:column;align-items:stretch}.top-actions{width:100%;display:grid;grid-template-columns:1fr;justify-content:stretch}.top-actions .btn{width:100%}.hero{padding:17px}.hero-grid{grid-template-columns:1fr}h1{font-size:30px}.chips{display:grid;grid-template-columns:1fr}.account-row{grid-template-columns:1fr;gap:4px}.account-row b{text-align:left}.section-head{display:block}.app-grid,.qr-grid,.profile-list,.steps{grid-template-columns:1fr}.btn{width:100%;margin-right:0}.qr-hint{min-height:auto}}
+</style>
+</head>
+<body>
+<main class="page">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">Y</div>
+      <div class="brand-text"><b>Yurich Connect</b><small>Subscription</small></div>
+    </div>
+    <div class="top-actions">
+      <button class="btn copy" data-copy="${safe_links_url}">Скопировать URL</button>
+      <a class="btn" href="${safe_android_url}" target="_blank" rel="noopener noreferrer">Android</a>
+      <a class="btn" href="${safe_windows_url}" target="_blank" rel="noopener noreferrer">Windows</a>
+    </div>
+  </div>
+
+  <section class="hero">
+    <div class="hero-grid">
+      <div>
+        <div class="eyebrow">Private access</div>
+        <h1>Подписка ${safe_user}</h1>
+        <p class="lead">Единая страница для установки приложения, импорта подписки и копирования отдельных профилей. Ссылка скрыта от индексации, но доступна всем, у кого есть этот URL.</p>
+        <div class="chips">
+          <span class="chip">HTTPS</span>
+          <span class="chip">Turbo</span>
+          <span class="chip">Reality</span>
+          <span class="chip">${safe_active_locations}</span>
+        </div>
+      </div>
+      <aside class="account-card">
+        <div class="account-row"><span>Пользователь</span><b>${safe_user}</b></div>
+        <div class="account-row"><span>Статус</span><b>Активна</b></div>
+        <div class="account-row"><span>Срок</span><b>${safe_expiry_label}</b></div>
+        <div class="account-row"><span>Осталось</span><b>${safe_days_left} дней</b></div>
+        <div class="account-row"><span>Профилей</span><b>${profile_count}</b></div>
+      </aside>
+    </div>
+  </section>
+
+  <section class="grid metrics">
+    <div class="card metric"><small>Трафик</small><strong>${safe_hiddify_used_human}</strong><p>${safe_traffic_summary}</p></div>
+    <div class="card metric"><small>Локации</small><strong>${profile_count}</strong><p>Активные профили по доступным серверам.</p></div>
+    <div class="card metric"><small>Обновлено</small><strong>$(date '+%H:%M')</strong><p>$(date '+%Y-%m-%d') по времени сервера.</p></div>
+  </section>
+
+  <section class="section card install">
+    <div class="section-head">
+      <div>
+        <h2>Installation</h2>
+        <div class="muted">Выбери клиент и добавь подписку одной кнопкой.</div>
+      </div>
+    </div>
+    <div class="install-grid">
+      <div class="app-grid">
+        <article class="app-card featured">
+          <div><div class="app-title">Yurich Connect</div><div class="app-text">Основная подписка для Android, Windows и совместимых клиентов.</div></div>
+          <button class="btn primary copy" data-copy="${safe_links_url}">Добавить подписку</button>
+        </article>
+        <article class="app-card featured">
+          <div><div class="app-title">Hiddify</div><div class="app-text">Обычный URL подписки и deeplink для быстрого импорта.</div></div>
+          <a class="btn gold" href="${safe_hiddify_open_url}">Открыть Hiddify</a>
+        </article>
+        <article class="app-card">
+          <div><div class="app-title">Streisand iOS</div><div class="app-text">Подписка для iPhone и iPad.</div></div>
+          <button class="btn copy" data-copy="${safe_streisand_sub_url}">Скопировать iOS</button>
+        </article>
+        <article class="app-card">
+          <div><div class="app-title">NekoBox</div><div class="app-text">Отдельная совместимая подписка.</div></div>
+          <button class="btn copy" data-copy="${safe_nekobox_url}">Скопировать NekoBox</button>
+        </article>
+        <article class="app-card">
+          <div><div class="app-title">v2rayNG</div><div class="app-text">Только VLESS Reality через TCP/${reality_public_port}.</div></div>
+          <button class="btn copy" data-copy="${safe_v2rayng_url}">Скопировать v2rayNG</button>
+        </article>
+      </div>
+      <aside class="side-panel">
+        <h3>Файлы подписки</h3>
+        <div class="muted">Для ручного импорта и диагностики.</div>
+        <div class="file-row">
+          <a class="btn" href="${safe_links_url}">links.txt</a>
+          <a class="btn" href="${safe_hiddify_url}">hiddify.txt</a>
+          <a class="btn" href="${safe_streisand_sub_url}">streisand.txt</a>
+          <a class="btn" href="${safe_nekobox_url}">nekobox.txt</a>
+          <a class="btn" href="${safe_v2rayng_url}">v2rayng.txt</a>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div><h2>Рекомендации</h2><div class="muted">Что лучше пробовать первым на текущих серверах.</div></div>
+    </div>
+    <div class="recommend-grid">
+${recommendations_html}
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div><h2>QR-коды</h2><div class="muted">Сканируй QR внутри клиента или копируй ссылку.</div></div>
+    </div>
+    <div class="qr-grid">
+${qr_cards_html}
+    </div>
+  </section>
+
+${pingtunnel_panel_html}
+
+  <section class="section card notice">
+    <h2>Telegram-уведомления</h2>
+    <p class="muted">Чтобы получать напоминания об окончании подписки и важные новости, отправь разработчику свой Telegram ID.</p>
+    <div class="steps">
+      <div class="step"><b>1. Получи ID</b>Открой <a class="mini" href="${safe_tg_id_bot_url}" target="_blank" rel="noopener noreferrer">@getmyid_bot</a> и нажми Start.</div>
+      <div class="step"><b>2. Отправь ID</b>Отправь цифры Telegram ID вместе с именем профиля: <code>${safe_user}</code>.</div>
+      <div class="step"><b>3. Включи бота</b>Открой <a class="mini" href="${safe_tg_bot_url}" target="_blank" rel="noopener noreferrer">бота уведомлений</a> и нажми Start.</div>
+    </div>
+    <a class="btn" href="${safe_tg_id_bot_url}" target="_blank" rel="noopener noreferrer">Получить Telegram ID</a>
+    <a class="btn" href="${safe_tg_bot_url}" target="_blank" rel="noopener noreferrer">Открыть бота уведомлений</a>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div><h2>Активные профили</h2><div class="muted">Каждый профиль можно скопировать отдельно.</div></div>
+    </div>
+    <div class="profile-list">
+${profile_cards_html}
+    </div>
+  </section>
+</main>
+<script>
+document.querySelectorAll('.copy').forEach(function(btn){
+  var originalText = btn.textContent;
+  btn.addEventListener('click', function(){
+    var value = btn.getAttribute('data-copy') || '';
+    function reset(text){btn.textContent=text;setTimeout(function(){btn.textContent=originalText},1600)}
+    function fallback(){
+      var ta=document.createElement('textarea');
+      ta.value=value;ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.left='-9999px';
+      document.body.appendChild(ta);ta.select();
+      try{document.execCommand('copy')?reset('Скопировано'):reset('Скопируй вручную')}catch(e){reset('Скопируй вручную')}
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(value).then(function(){reset('Скопировано')}).catch(fallback);
+    } else {
+      fallback();
+    }
+  });
+});
+</script>
+</body>
+</html>
+EOF
+        chmod 644 "${page_dir}/index.html"
+        printf '%s\n' "$sub_url"
+        return 0
+    fi
 
     cat > "${page_dir}/index.html" <<EOF
 <!DOCTYPE html>
@@ -7876,10 +9885,15 @@ body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.22;ba
 .section-head{display:flex;justify-content:space-between;gap:16px;align-items:end;margin:0 0 10px}
 .section h2{font-size:18px;margin:0}
 .panel{background:rgba(15,23,36,.82);border:1px solid var(--line);border-radius:8px;padding:16px;box-shadow:0 14px 38px rgba(0,0,0,.18)}
-.dashboard{display:grid;grid-template-columns:1.15fr .85fr;gap:14px}
+.dashboard{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
 .traffic-value{font-size:19px;font-weight:900;color:var(--green);overflow-wrap:anywhere}
 .traffic-note{color:var(--muted);font-size:13px;margin-top:6px}
 .stat-number{font-size:40px;line-height:1;font-weight:950;color:var(--gold)}
+.metric-card{position:relative;overflow:hidden;min-height:150px;display:flex;flex-direction:column;justify-content:space-between}
+.metric-card:before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,var(--cyan),var(--gold))}
+.metric-kicker{color:var(--muted);font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
+.metric-big{font-size:34px;line-height:1.05;font-weight:950;color:#fff;overflow-wrap:anywhere}
+.metric-caption{color:var(--muted);font-size:13px}
 .quick-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}
 .action-tile{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:8px;background:linear-gradient(180deg,rgba(25,40,61,.9),rgba(13,20,32,.9));padding:13px;min-height:128px;display:flex;flex-direction:column;justify-content:space-between}
 .action-tile:before{content:"";position:absolute;inset:0 0 auto;height:2px;background:linear-gradient(90deg,var(--cyan),var(--blue));opacity:.8}
@@ -7942,9 +9956,12 @@ body:before{opacity:.3;background:linear-gradient(135deg,rgba(255,211,106,.13) 0
 .chip:nth-child(3){border-color:rgba(255,111,145,.42);background:rgba(255,111,145,.1);color:#ffe2e9}
 .chip.locations{max-width:100%;overflow-wrap:anywhere}
 .panel{background:linear-gradient(180deg,rgba(16,24,32,.92),rgba(10,15,19,.92));border-color:rgba(181,193,187,.18);box-shadow:0 16px 44px rgba(0,0,0,.24)}
-.dashboard{grid-template-columns:1.2fr .8fr}
+.dashboard{grid-template-columns:repeat(3,minmax(0,1fr))}
 .traffic-value{color:#dfffca;font-size:20px}
 .stat-number{color:var(--gold);text-shadow:0 0 28px rgba(255,211,106,.24)}
+.metric-card:nth-child(1):before{background:linear-gradient(90deg,var(--gold),var(--cyan))}
+.metric-card:nth-child(2):before{background:linear-gradient(90deg,var(--green),var(--cyan))}
+.metric-card:nth-child(3):before{background:linear-gradient(90deg,var(--rose),var(--blue))}
 .quick-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 .action-tile{border-color:rgba(181,193,187,.18);background:linear-gradient(180deg,rgba(25,37,45,.95),rgba(10,15,19,.95));min-height:142px;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
 .action-tile:before{height:3px;background:linear-gradient(90deg,var(--gold),var(--cyan))}
@@ -7971,6 +9988,70 @@ body:before{opacity:.3;background:linear-gradient(135deg,rgba(255,211,106,.13) 0
 @media(max-width:980px){.hero-layout,.dashboard{grid-template-columns:1fr}.quick-grid,.qr-grid,.os,.recommend-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.profile-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:680px){.wrap{padding:12px 10px 34px}.hero{padding:16px}.h1{font-size:28px}.section-head{display:block}.quick-grid,.qr-grid,.os,.steps,.recommend-grid,.profile-list{grid-template-columns:1fr}.stat-number{font-size:32px}.btn{width:100%;margin-right:0}.status-card{padding:12px}.profile-host{max-width:180px}}
 @media(prefers-reduced-motion:reduce){.hero:before{animation:none}.profile-card{transition:none}}
+/* Yurich subscription redesign */
+:root{--bg:#06080d;--surface:#0d141d;--surface2:#111c27;--surface3:#172534;--line:#263548;--text:#f8fafc;--muted:#a9b4c2;--cyan:#2ce5c7;--blue:#6ea8ff;--gold:#ffd06a;--rose:#ff6e8f;--green:#78f29b;--shadow:0 22px 60px rgba(0,0,0,.34)}
+html,body{max-width:100%;overflow-x:hidden}
+body{background:linear-gradient(180deg,#05070b 0%,#08111a 48%,#06080d 100%);color:var(--text);font-family:Inter,Arial,sans-serif;line-height:1.55}
+*{min-width:0}
+body:before{display:none}
+.wrap{max-width:1160px;display:flex;flex-direction:column;gap:16px;padding:28px 18px 58px}
+.section{margin-top:0}
+.hero{border:1px solid rgba(110,168,255,.28);border-radius:8px;background:linear-gradient(135deg,rgba(13,20,29,.96),rgba(14,29,38,.96) 52%,rgba(18,18,27,.96));box-shadow:var(--shadow);padding:26px}
+.hero:before{height:4px;background:linear-gradient(90deg,var(--cyan),var(--blue),var(--gold));animation:none}
+.hero-layout{grid-template-columns:minmax(0,1.1fr) minmax(280px,.55fr);gap:18px}
+.brand{color:var(--cyan);font-size:12px;font-weight:950;letter-spacing:.08em}
+.h1{font-size:36px;letter-spacing:0;margin:8px 0 12px}
+.hero-copy .muted{max-width:720px;font-size:15px;color:#c1ccd8}
+.chip-row{gap:7px;margin-top:18px}
+.chip{border-radius:8px;border-color:rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#eff7ff;padding:7px 10px;overflow-wrap:anywhere}
+.chip:first-child{border-color:rgba(44,229,199,.45);background:rgba(44,229,199,.10)}
+.chip:nth-child(2){border-color:rgba(255,208,106,.45);background:rgba(255,208,106,.10)}
+.chip:nth-child(3){border-color:rgba(110,168,255,.45);background:rgba(110,168,255,.10)}
+.status-card{background:rgba(5,8,13,.72);border-color:rgba(255,255,255,.12);border-radius:8px;padding:12px}
+.status-row{padding:9px 0;border-color:rgba(255,255,255,.08)}
+.status-row span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.status-row b{font-size:13px;color:#fff;overflow-wrap:anywhere}
+.panel{border-radius:8px;background:linear-gradient(180deg,rgba(17,28,39,.92),rgba(9,14,20,.94));border-color:rgba(255,255,255,.10);box-shadow:0 16px 44px rgba(0,0,0,.22)}
+.dashboard{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.metric-card{min-height:132px;padding:16px}
+.metric-card:before{height:3px;background:linear-gradient(90deg,var(--cyan),var(--blue))}
+.metric-kicker{font-size:11px;color:#93a4b7}
+.metric-big{font-size:30px}
+.metric-caption{font-size:12px;color:var(--muted)}
+.section-head{align-items:flex-start;margin-bottom:10px}
+.section h2{font-size:19px}
+.quick-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+.action-tile{grid-column:span 2;min-height:148px;border-radius:8px;background:linear-gradient(180deg,rgba(20,32,44,.94),rgba(10,15,22,.95));border-color:rgba(255,255,255,.11);padding:15px;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+.action-tile:before{height:3px;background:linear-gradient(90deg,var(--blue),var(--cyan))}
+.action-tile.featured-action{grid-column:span 3;min-height:168px;background:linear-gradient(180deg,rgba(18,50,48,.94),rgba(9,17,22,.96));border-color:rgba(44,229,199,.34)}
+.action-title{font-size:17px;font-weight:950}
+.action-text{font-size:13px;color:#aeb9c6}
+.btn{border-radius:8px;border-color:rgba(255,255,255,.14);background:#122033;color:#f8fafc;font-size:13px;font-weight:900;min-height:40px}
+.btn:hover{border-color:rgba(44,229,199,.7);background:#17283d}
+.btn.primary{background:linear-gradient(135deg,#29e6c5,#72a8ff);border-color:rgba(44,229,199,.75);color:#041014}
+.btn.gold{background:linear-gradient(135deg,#ffd06a,#ff9d66);border-color:rgba(255,208,106,.72);color:#170d04}
+.recommend-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.recommend-card{min-height:104px;border-radius:8px;background:linear-gradient(180deg,rgba(18,28,38,.96),rgba(9,14,20,.96));border-color:rgba(255,208,106,.18)}
+.recommend-title{color:var(--gold)}
+.qr-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.qr-item{border-radius:8px;background:linear-gradient(180deg,rgba(15,24,34,.96),rgba(8,12,18,.96));border-color:rgba(255,255,255,.11);padding:12px}
+.qr-item:nth-child(2){border-color:rgba(44,229,199,.42);box-shadow:0 0 0 1px rgba(44,229,199,.12) inset}
+.qr-item img{max-width:150px;border-radius:8px;padding:7px}
+.qr-glow{height:3px;background:linear-gradient(90deg,var(--cyan),var(--blue),var(--gold))}
+.qr-title{font-size:14px}
+.qr-hint{font-size:12px;min-height:54px}
+.notice{border-color:rgba(255,208,106,.24);background:linear-gradient(180deg,rgba(30,26,18,.88),rgba(11,15,20,.94))}
+.steps{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.step{border-radius:8px;background:rgba(5,8,13,.58);border-color:rgba(255,255,255,.10)}
+.profile-list{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.profile-card{border-radius:8px;background:linear-gradient(180deg,rgba(15,24,34,.96),rgba(8,12,18,.96));border-color:rgba(255,255,255,.11);padding:14px}
+.profile-card:before{display:none}
+.profile-card:hover{transform:none;border-color:rgba(44,229,199,.42)}
+.profile-type{color:var(--cyan)}
+.profile-host{max-width:150px}
+.hero-copy,.hero-copy .muted,.hero-copy .muted b,.status-card,.status-row,.status-row b,.chip,.recommend-name,.profile-name,.qr-title{overflow-wrap:anywhere;word-break:break-word}
+@media(max-width:980px){.hero-layout,.dashboard,.recommend-grid{grid-template-columns:1fr}.quick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.action-tile,.action-tile.featured-action{grid-column:auto}.qr-grid,.profile-list,.steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:680px){.wrap{display:block;width:100vw;max-width:100vw;padding:12px 10px 34px;overflow:hidden}.hero,.panel,.status-card,.action-tile,.qr-item,.profile-card,.recommend-card{width:calc(100vw - 20px);max-width:calc(100vw - 20px);overflow:hidden}.section{margin-top:12px}.hero{padding:17px}.hero-layout{grid-template-columns:minmax(0,1fr)}.hero-copy .muted{display:block;max-width:100%;white-space:normal}.h1{font-size:28px}.chip-row{display:grid;grid-template-columns:1fr;gap:7px}.chip{display:block;width:100%;text-align:center}.chip.locations{display:block;width:100%;font-size:12px;line-height:1.45;text-align:left;white-space:normal}.quick-grid,.qr-grid,.profile-list,.steps{grid-template-columns:1fr}.dashboard{display:grid;grid-template-columns:1fr}.metric-big{font-size:28px}.status-row{display:grid;grid-template-columns:1fr;gap:4px}.status-row b{text-align:left;white-space:normal}.btn{width:100%;margin-right:0}.qr-hint{min-height:auto}.profile-host{max-width:190px}}
 </style>
 </head>
 <body>
@@ -7980,18 +10061,17 @@ body:before{opacity:.3;background:linear-gradient(135deg,rgba(255,211,106,.13) 0
       <div class="hero-copy">
         <div class="brand">Yurich Connect</div>
         <div class="h1">Подписка ${safe_user}</div>
-        <div class="muted">Персональная страница подключения к Yurich Connect. Доступные локации: <b>${safe_active_locations}</b>. Ссылка секретная: не публикуй её в открытом доступе.</div>
+        <div class="muted">Личная ссылка Yurich Connect.<br>Не публикуй её в открытом доступе.</div>
         <div class="chip-row">
           <span class="chip">HTTPS</span>
           <span class="chip">Turbo</span>
           <span class="chip">Reality</span>
-          <span class="chip locations">${safe_active_locations}</span>
         </div>
       </div>
       <aside class="status-card">
         <div class="status-row"><span>Домен</span><b>${safe_domain}</b></div>
         <div class="status-row"><span>Срок</span><b>${safe_expiry_label}</b></div>
-        <div class="status-row"><span>Локация</span><b>${safe_profile_label}</b></div>
+        <div class="status-row"><span>Локации</span><b>см. профили ниже</b></div>
         <div class="status-row"><span>Профилей</span><b>${profile_count}</b></div>
         <div class="status-row"><span>Обновлено</span><b>$(date '+%Y-%m-%d %H:%M')</b></div>
       </aside>
@@ -7999,20 +10079,20 @@ body:before{opacity:.3;background:linear-gradient(135deg,rgba(255,211,106,.13) 0
   </section>
 
   <section class="section dashboard">
-    <div class="panel">
-      <div class="section-head">
-        <div>
-          <h2>Статус трафика</h2>
-          <div class="muted">Сводка по профилю и серверу, который отдал страницу.</div>
-        </div>
-      </div>
-      <div class="traffic-value">${safe_traffic_summary}</div>
-      <div class="traffic-note">Персональная статистика будет точнее после включения отдельного сборщика по каждому профилю.</div>
+    <div class="panel metric-card">
+      <div class="metric-kicker">Срок подписки</div>
+      <div class="metric-big">${safe_days_left} дней</div>
+      <div class="metric-caption">${safe_expiry_label}</div>
     </div>
-    <div class="panel">
-      <div class="muted">Всего активных профилей</div>
-      <div class="stat-number">${profile_count}</div>
-      <div class="muted">Только HTTPS, Turbo и Reality по всем активным локациям.</div>
+    <div class="panel metric-card">
+      <div class="metric-kicker">Трафик клиента</div>
+      <div class="metric-big">${safe_hiddify_used_human}</div>
+      <div class="metric-caption">${safe_traffic_summary} Счетчик персональный, общий трафик сервера здесь не показывается.</div>
+    </div>
+    <div class="panel metric-card">
+      <div class="metric-kicker">Активные профили</div>
+      <div class="metric-big">${profile_count}</div>
+      <div class="metric-caption">HTTPS, Turbo и Reality по доступным локациям.</div>
     </div>
   </section>
 
@@ -8040,28 +10120,24 @@ ${recommendations_html}
         <div><div class="action-title">Yurich Connect</div><div class="action-text">Основная подписка для твоего приложения и совместимых клиентов.</div></div>
         <button class="btn primary copy" data-copy="${safe_links_url}">Скопировать URL</button>
       </article>
-      <article class="action-tile">
-        <div><div class="action-title">v2rayNG</div><div class="action-text">Отдельная подписка только с VLESS Reality через TCP/${reality_public_port}.</div></div>
-        <button class="btn copy" data-copy="${safe_v2rayng_url}">Скопировать v2rayNG</button>
-      </article>
-      <article class="action-tile">
-        <div><div class="action-title">Mobile test</div><div class="action-text">Отдельная диагностика только с Reality ALT MOBILE TEST без остальных профилей.</div></div>
-        <button class="btn copy" data-copy="${safe_mobile_test_url}">Скопировать Mobile test</button>
-      </article>
       <article class="action-tile featured-action">
         <div><div class="action-title">Hiddify</div><div class="action-text">Сканируй QR внутри Hiddify или открой deeplink с телефона.</div></div>
         <a class="btn gold" href="${safe_hiddify_open_url}">Открыть Hiddify</a>
+      </article>
+      <article class="action-tile">
+        <div><div class="action-title">Streisand</div><div class="action-text">Приложение для iPhone и iPad. Импортируй iOS-подписку или открой App Store.</div></div>
+        <div>
+          <a class="btn" href="${safe_streisand_url}" target="_blank" rel="noopener noreferrer">App Store</a>
+          <button class="btn copy" data-copy="${safe_streisand_sub_url}">Скопировать iOS</button>
+        </div>
       </article>
       <article class="action-tile">
         <div><div class="action-title">NekoBox</div><div class="action-text">Отдельная ссылка для NekoBox и похожих клиентов.</div></div>
         <button class="btn copy" data-copy="${safe_nekobox_url}">Скопировать NekoBox</button>
       </article>
       <article class="action-tile">
-        <div><div class="action-title">Streisand</div><div class="action-text">Приложение для iPhone и iPad. Импортируй hiddify.txt или отдельные профили.</div></div>
-        <div>
-          <a class="btn" href="${safe_streisand_url}" target="_blank" rel="noopener noreferrer">App Store</a>
-          <button class="btn copy" data-copy="${safe_streisand_sub_url}">Скопировать iOS</button>
-        </div>
+        <div><div class="action-title">v2rayNG</div><div class="action-text">Отдельная подписка только с VLESS Reality через TCP/${reality_public_port}.</div></div>
+        <button class="btn copy" data-copy="${safe_v2rayng_url}">Скопировать v2rayNG</button>
       </article>
     </div>
     <div class="panel" style="margin-top:10px">
@@ -8070,7 +10146,6 @@ ${recommendations_html}
       <a class="btn" href="${safe_streisand_sub_url}">streisand.txt</a>
       <a class="btn" href="${safe_nekobox_url}">nekobox.txt</a>
       <a class="btn" href="${safe_v2rayng_url}">v2rayng.txt</a>
-      <a class="btn" href="${safe_mobile_test_url}">mobile-test.txt</a>
       <a class="btn" href="${safe_android_url}" target="_blank" rel="noopener noreferrer">Android</a>
       <a class="btn" href="${safe_windows_url}" target="_blank" rel="noopener noreferrer">Windows</a>
       <a class="btn" href="${safe_streisand_url}" target="_blank" rel="noopener noreferrer">Streisand iOS</a>
@@ -8081,13 +10156,15 @@ ${recommendations_html}
     <div class="section-head">
       <div>
         <h2>QR-коды</h2>
-        <div class="muted">QR-коды содержат обычные URL подписок. Mobile test нужен только для проверки мобильной сети.</div>
+        <div class="muted">QR-коды содержат обычные URL подписок для популярных клиентов.</div>
       </div>
     </div>
     <div class="qr-grid">
 ${qr_cards_html}
     </div>
   </section>
+
+${pingtunnel_panel_html}
 
   <section class="section panel notice">
     <h2>Telegram-уведомления</h2>
@@ -8113,35 +10190,24 @@ ${profile_cards_html}
     </div>
   </section>
 
-  <section class="section panel">
-    <h2>Настройки под системы</h2>
-    <div class="os">
-      <div><b>Windows</b><br><span class="muted">Yurich Connect Windows, v2rayN, NekoRay или Hiddify. Импортируй links.txt или вставь нужную URI.</span><br><a class="mini" href="${safe_windows_url}" target="_blank" rel="noopener noreferrer">Скачать Windows</a></div>
-      <div><b>Android</b><br><span class="muted">Yurich Connect Android, Hiddify, NekoBox, v2rayNG. Импортируй ссылку подписки или отдельную URI.</span><br><a class="mini" href="${safe_android_url}" target="_blank" rel="noopener noreferrer">Скачать Android</a></div>
-      <div><b>iOS/macOS</b><br><span class="muted">Streisand, FoXray, Shadowrocket. Импортируй подписку или отдельную ссылку.</span><br><a class="mini" href="${safe_streisand_url}" target="_blank" rel="noopener noreferrer">Скачать Streisand</a></div>
-      <div><b>Linux</b><br><span class="muted">sing-box, v2rayN/NekoRay GUI или другой клиент с поддержкой HTTPS, Turbo и Reality.</span></div>
-    </div>
-  </section>
-
-  <section class="section panel">
-    <h2>Контакты и поддержка</h2>
-    <a class="btn" href="${safe_telegram_url}" target="_blank" rel="noopener noreferrer">Telegram</a>
-    <a class="btn" href="${safe_vk_url}" target="_blank" rel="noopener noreferrer">VK</a>
-    <a class="btn" href="${safe_support_mailto}">${safe_support_email}</a>
-    <p class="muted">По вопросам приложения, подписки и коммерческого использования проекта.</p>
-  </section>
-
 </main>
 <script>
 document.querySelectorAll('.copy').forEach(function(btn){
   var originalText = btn.textContent;
   btn.addEventListener('click', function(){
     var value = btn.getAttribute('data-copy') || '';
-    function done(){btn.textContent='Скопировано';setTimeout(function(){btn.textContent=originalText},1600)}
+    function reset(text){btn.textContent=text;setTimeout(function(){btn.textContent=originalText},1600)}
+    function fallback(){
+      var ta=document.createElement('textarea');
+      ta.value=value;ta.setAttribute('readonly','');ta.style.position='fixed';ta.style.left='-9999px';
+      document.body.appendChild(ta);ta.select();
+      try{document.execCommand('copy')?reset('Скопировано'):reset('Скопируй вручную')}catch(e){reset('Скопируй вручную')}
+      document.body.removeChild(ta);
+    }
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(value).then(done).catch(function(){window.prompt('Скопируй вручную', value)});
+      navigator.clipboard.writeText(value).then(function(){reset('Скопировано')}).catch(fallback);
     } else {
-      window.prompt('Скопируй вручную', value);
+      fallback();
     }
   });
 });
@@ -8280,11 +10346,19 @@ cmd_xray_install() {
     hr
     echo -e "${BOLD}  Xray Modern transports${RESET}"
     hr
-    warn "443 fallback hub переключит внешний порт 443 с Caddy на Xray."
-    warn "NaiveProxy останется доступен на ${DOMAIN}:443 через fallback в Caddy local."
-    echo -ne "${YELLOW}Включить Xray fallback hub на 443? [y/N]: ${RESET}"
-    read -r ans
-    [[ "${ans,,}" == "y" ]] && XRAY_FALLBACK_ENABLED="1" || XRAY_FALLBACK_ENABLED="0"
+    normalize_edge_routing_mode
+    if edge_routing_mode_is_haproxy; then
+        warn "Режим 443: HAProxy SNI mux. Reality будет доступен на ${DOMAIN}:443 через HAProxy."
+        XRAY_FALLBACK_ENABLED="0"
+        XRAY_REALITY_SNI_MUX_ENABLED="1"
+        XRAY_REALITY_PUBLIC_PORT="443"
+    else
+        warn "Режим 443: Caddy-only. Caddy остаётся на 443, Reality будет на отдельном TCP-порту ${XRAY_REALITY_PORT:-$XRAY_REALITY_PORT_DEFAULT}."
+        warn "Legacy fallback hub переключает 443 с Caddy на Xray. Используй только если точно нужен старый режим."
+        echo -ne "${YELLOW}Включить legacy Xray fallback hub на 443? [y/N]: ${RESET}"
+        read -r ans
+        [[ "${ans,,}" == "y" ]] && XRAY_FALLBACK_ENABLED="1" || XRAY_FALLBACK_ENABLED="0"
+    fi
 
     echo -ne "${CYAN}Xray пользователь [xray]: ${RESET}"
     read -r xuser
@@ -8313,6 +10387,7 @@ cmd_xray_install() {
     systemctl restart xray
     XRAY_ENABLED="1"
     save_config
+    refresh_haproxy_if_enabled || return 1
     ok "Xray запущен"
     local sub_url
     sub_url=$(generate_subscription_page "$xuser" 2>/dev/null || true)
@@ -8378,6 +10453,7 @@ provision_xray_user() {
     systemctl restart xray || return 1
     XRAY_ENABLED="1"
     save_config
+    refresh_haproxy_if_enabled || return 1
 }
 
 cmd_xray_add_user() {
@@ -8463,6 +10539,8 @@ cmd_xray_add_compat_user() {
 
     write_xray_service
     systemctl restart xray || return 1
+    save_config
+    refresh_haproxy_if_enabled || return 1
     sub_url=$(generate_subscription_page "$xuser" 2>/dev/null || true)
     [[ -n "$sub_url" ]] && ok "Подписка обновлена: ${sub_url}"
 }
@@ -8488,6 +10566,7 @@ cmd_xray_rebuild() {
     systemctl restart xray || return 1
     XRAY_ENABLED="1"
     save_config
+    refresh_haproxy_if_enabled || return 1
     ok "Xray config пересобран"
 }
 
@@ -8501,6 +10580,60 @@ cmd_xray_status() {
     ss -tulpn | grep -E ":(443|${XRAY_REALITY_PORT:-$XRAY_REALITY_PORT_DEFAULT})([[:space:]]|$)" || true
     [[ -f "$XRAY_CONFIG" ]] && "$XRAY_BIN" run -test -config "$XRAY_CONFIG" || true
     hr
+}
+
+cmd_vless_tune() {
+    load_config 2>/dev/null || true
+    hr
+    echo -e "${BOLD}  VLESS Reality stability tuning${RESET}"
+    hr
+
+    local backup_dir="${BACKUP_DIR}/vless-tune-before-$(date '+%Y%m%d_%H%M%S')"
+    install -d -m 700 "$backup_dir"
+    for item in "$XRAY_CONFIG" "$XRAY_SERVICE" "$HAPROXY_CFG" "$HAPROXY_SYSCTL_CONF" "$XRAY_SYSCTL_CONF"; do
+        [[ -e "$item" ]] && cp -a "$item" "$backup_dir/" 2>/dev/null || true
+    done
+    info "Backup: $backup_dir"
+
+    apply_vless_tcp_tuning
+
+    if [[ -x "$XRAY_BIN" && -f "$XRAY_CONFIG" ]]; then
+        info "Пересобираю Xray с policy/sockopt tuning..."
+        write_xray_config || return 1
+        write_xray_service
+        if ! "$XRAY_BIN" run -test -config "$XRAY_CONFIG" >/dev/null 2>&1; then
+            err "Xray config не прошёл проверку после tuning"
+            "$XRAY_BIN" run -test -config "$XRAY_CONFIG" || true
+            return 1
+        fi
+        systemctl daemon-reload
+        systemctl restart xray || { journalctl -u xray -n 60 --no-pager; return 1; }
+        systemctl is-active --quiet xray || { journalctl -u xray -n 60 --no-pager; return 1; }
+        ok "Xray перезапущен с VLESS tuning"
+    else
+        warn "Xray не установлен или config отсутствует — применён только Linux TCP tuning"
+    fi
+
+    if edge_routing_mode_is_haproxy; then
+        info "Обновляю HAProxy TCP keepalive/SNI mux..."
+        ensure_haproxy_packages || return 1
+        write_haproxy_logging_config
+        write_haproxy_sni_mux_config || return 1
+        systemctl enable haproxy --quiet
+        systemctl reload haproxy 2>/dev/null || systemctl restart haproxy
+        systemctl is-active --quiet haproxy || { journalctl -u haproxy -n 60 --no-pager; return 1; }
+        sleep 3
+        if ! haproxy_backends_healthy >/tmp/yurich-haproxy-health.out 2>&1; then
+            warn "HAProxy запущен, но health-check требует внимания:"
+            sed -n '1,80p' /tmp/yurich-haproxy-health.out || true
+        else
+            ok "HAProxy backend health OK"
+        fi
+    else
+        info "HAProxy режим не включён — VLESS работает напрямую через Xray/Caddy-only порт"
+    fi
+
+    ok "VLESS tuning завершён"
 }
 
 cmd_xray_reality_target() {
@@ -10179,7 +12312,7 @@ cmd_monitor() {
     echo -e "  Диск:   $(df -h / | awk 'NR==2{print $3" / "$2" ("$5")"}')"
     echo -e "  Uptime: $(uptime -p)"
 
-    if command -v haproxy >/dev/null 2>&1 || [[ "${XRAY_REALITY_SNI_MUX_ENABLED:-0}" == "1" ]]; then
+    if edge_routing_mode_is_haproxy; then
         echo
         echo -e "  ${BOLD}HAProxy SNI mux:${RESET}"
         haproxy_stats_text | sed 's/^/  /' || true
@@ -10239,6 +12372,7 @@ cmd_install() {
     fi
 
     prompt_params
+    prompt_edge_routing_mode || return 1
     check_domain "$DOMAIN"
     install_deps
     build_caddy
@@ -10273,6 +12407,10 @@ cmd_install() {
         err "Caddy не запустился. Лог:"
         journalctl -u caddy -n 30 --no-pager
         exit 1
+    fi
+
+    if edge_routing_mode_is_haproxy; then
+        apply_haproxy_sni_mux_runtime || exit 1
     fi
 
     print_client_config
@@ -10654,6 +12792,8 @@ cmd_diagnose() {
         # Naive CONNECT uses the target host in :authority, so the proxy block needs :443 catch-all.
         if grep -q "^:443," "${CADDYFILE}"; then
             _ok "Caddyfile: Naive forward proxy catch-all ':443, domain'"
+        elif edge_routing_mode_is_haproxy && grep -q "^:${XRAY_CADDY_FALLBACK_PORT:-$XRAY_CADDY_FALLBACK_PORT_DEFAULT}," "${CADDYFILE}"; then
+            _ok "Caddyfile: HAProxy fallback port ${XRAY_CADDY_FALLBACK_PORT:-$XRAY_CADDY_FALLBACK_PORT_DEFAULT}"
         elif grep -qE "^http://127\\.0\\.0\\.1:[0-9]+" "${CADDYFILE}"; then
             _ok "Caddyfile: Xray fallback mode"
         elif grep -qE "^[[:alnum:].-]+:443[[:space:]]*\\{" "${CADDYFILE}"; then
@@ -11295,19 +13435,20 @@ sales_reply() {
         -X POST \
         --data-urlencode "chat_id=${chat_id}" \
         --data-urlencode "parse_mode=HTML" \
+        --data-urlencode "disable_web_page_preview=true" \
         --data-urlencode "text=${message}" \
         >/dev/null 2>&1 || true
 }
 
 sales_menu_markup() {
     cat <<'EOF'
-{"keyboard":[[{"text":"Купить VPN"},{"text":"Моя подписка"}],[{"text":"Приложения"},{"text":"Как подключить"}],[{"text":"Канал"},{"text":"Поддержка"}]],"resize_keyboard":true,"one_time_keyboard":false,"is_persistent":true}
+{"keyboard":[[{"text":"💎 Купить VPN"},{"text":"🟢 Моя подписка"}],[{"text":"📲 Приложения"},{"text":"🚀 Как подключить"}],[{"text":"📣 Канал"},{"text":"🛟 Поддержка"}]],"resize_keyboard":true,"one_time_keyboard":false,"is_persistent":true}
 EOF
 }
 
 sales_admin_menu_markup() {
     cat <<'EOF'
-{"keyboard":[[{"text":"Заявки"},{"text":"Статус продаж"}],[{"text":"Купить VPN"},{"text":"Моя подписка"}],[{"text":"Приложения"},{"text":"Канал"}],[{"text":"Поддержка"}]],"resize_keyboard":true,"one_time_keyboard":false,"is_persistent":true}
+{"keyboard":[[{"text":"🧾 Заявки"},{"text":"📊 Статус продаж"}],[{"text":"💎 Купить VPN"},{"text":"🟢 Моя подписка"}],[{"text":"📲 Приложения"},{"text":"📣 Канал"}],[{"text":"🛟 Поддержка"}]],"resize_keyboard":true,"one_time_keyboard":false,"is_persistent":true}
 EOF
 }
 
@@ -11318,9 +13459,65 @@ sales_reply_menu() {
         -X POST \
         --data-urlencode "chat_id=${chat_id}" \
         --data-urlencode "parse_mode=HTML" \
+        --data-urlencode "disable_web_page_preview=true" \
         --data-urlencode "text=${message}" \
         --data-urlencode "reply_markup=${reply_markup}" \
         >/dev/null 2>&1 || true
+}
+
+sales_welcome_text() {
+    cat <<'EOF'
+🤖 <b>Yurich Connect VPN</b>
+
+Быстрые VPN-подписки для телефона и компьютера.
+
+✨ <b>Что внутри</b>
+• стабильные профили HTTPS, Turbo и Reality;
+• личная страница подписки;
+• удобный импорт в Yurich Connect, Hiddify, NekoBox, v2rayNG и Streisand;
+• уведомления о сроке подписки в Telegram.
+
+Выбери тариф ниже, оплати по QR и отправь скрин платежа сюда в бот.
+EOF
+}
+
+sales_send_welcome_visual() {
+    local chat_id="$1" kind="${2:-user}" caption reply_markup animation_path image_path response
+    caption=$(sales_welcome_text)
+    [[ "$kind" == "admin" ]] && reply_markup=$(sales_admin_menu_markup) || reply_markup=$(sales_menu_markup)
+    animation_path="${SALES_BOT_WELCOME_ANIMATION_PATH:-$SALES_BOT_WELCOME_ANIMATION_PATH_DEFAULT}"
+    image_path="${SALES_BOT_WELCOME_IMAGE_PATH:-$SALES_BOT_WELCOME_IMAGE_PATH_DEFAULT}"
+    if [[ -s "$animation_path" ]]; then
+        response=$(sales_tg_api "sendAnimation" -s --max-time 45 \
+            -X POST \
+            --form-string "chat_id=${chat_id}" \
+            --form-string "parse_mode=HTML" \
+            --form-string "caption=${caption}" \
+            --form-string "reply_markup=${reply_markup}" \
+            -F "animation=@${animation_path};type=image/gif" \
+            2>/dev/null || echo "{}")
+        echo "$response" | grep -q '"ok":true' && return 0
+    fi
+    if [[ -s "$image_path" ]]; then
+        response=$(sales_tg_api "sendPhoto" -s --max-time 30 \
+            -X POST \
+            --form-string "chat_id=${chat_id}" \
+            --form-string "parse_mode=HTML" \
+            --form-string "caption=${caption}" \
+            --form-string "reply_markup=${reply_markup}" \
+            -F "photo=@${image_path};type=image/jpeg" \
+            2>/dev/null || echo "{}")
+        echo "$response" | grep -q '"ok":true' && return 0
+    fi
+    return 1
+}
+
+sales_reply_start() {
+    local chat_id="$1" kind="${2:-user}"
+    if ! sales_send_welcome_visual "$chat_id" "$kind"; then
+        sales_reply_menu "$chat_id" "$(sales_welcome_text)" "$kind"
+    fi
+    sales_reply_buy_menu "$chat_id" "$(sales_plans_text)"
 }
 
 sales_bot_commands_json() {
@@ -11388,11 +13585,11 @@ sales_apply_bot_menu() {
         >/dev/null 2>&1 || true
     sales_tg_api "setMyShortDescription" -s --max-time 15 \
         -X POST \
-        --data-urlencode "short_description=Yurich Connect VPN: от 50 руб/день, оплата по QR, выдача после проверки." \
+        --data-urlencode "short_description=VPN-подписки от 50 руб: оплата по QR, выдача после проверки." \
         >/dev/null 2>&1 || true
     sales_tg_api "setMyDescription" -s --max-time 15 \
         -X POST \
-        --data-urlencode "description=Yurich Connect VPN: тарифы на 1 день, 1, 3, 6 и 12 месяцев. Оплата по QR-коду: после оплаты отправьте скрин платежа сюда в бот. Администратор проверит оплату, затем бот создаст профиль и пришлёт страницу подписки. Канал: ${SALES_BOT_CHANNEL_URL:-$SALES_BOT_CHANNEL_URL_DEFAULT}" \
+        --data-urlencode "description=Yurich Connect VPN: HTTPS, Turbo и Reality-профили для телефона и компьютера. Выберите тариф на 1 день, 1, 3, 6 или 12 месяцев, оплатите по QR и отправьте скрин платежа в бот. После проверки бот пришлёт страницу подписки. Канал: ${SALES_BOT_CHANNEL_URL:-$SALES_BOT_CHANNEL_URL_DEFAULT}" \
         >/dev/null 2>&1 || true
 
     resp=$(sales_tg_api "setMyCommands" -s --max-time 15 \
@@ -11447,7 +13644,7 @@ sales_plan_regular_price() {
 }
 
 sales_plans_text() {
-    local item key term p regular discount pct per_month currency channel lines=""
+    local item key term p regular discount pct per_month currency channel lines="" icon badge
     currency="${SALES_BOT_CURRENCY:-$SALES_BOT_CURRENCY_DEFAULT}"
     channel="${SALES_BOT_CHANNEL_URL:-$SALES_BOT_CHANNEL_URL_DEFAULT}"
     IFS=',' read -ra _sales_plan_items <<< "${SALES_BOT_PLANS:-$SALES_BOT_PLANS_DEFAULT}"
@@ -11457,43 +13654,56 @@ sales_plans_text() {
         [[ "$key" =~ ^[0-9]+$ ]] && key="${key}m"
         term=$(normalize_user_term "$key" 2>/dev/null || true)
         [[ -n "$term" && "$p" =~ ^[0-9]+$ ]] || continue
+        case "$term" in
+            1d) icon="⚡"; badge="тест на день" ;;
+            1m) icon="🚀"; badge="стартовый" ;;
+            3m) icon="⭐"; badge="выгоднее" ;;
+            6m) icon="🔥"; badge="популярный" ;;
+            12m) icon="👑"; badge="максимальная выгода" ;;
+            *) icon="💎"; badge="тариф" ;;
+        esac
         regular=$(sales_plan_regular_price "$term" 2>/dev/null || echo "$p")
         if [[ "$p" -lt "$regular" ]]; then
             discount=$((regular - p))
             pct=$(((discount * 100 + regular / 2) / regular))
             if [[ "$term" == *m ]]; then
                 per_month=$((p / ${term%m}))
-                lines="${lines}• <b>$(user_term_label "$term")</b> - <code>${p} ${currency}</code> (~${per_month} руб/мес), экономия ${discount} руб / ${pct}%
+                lines="${lines}${icon} <b>$(user_term_label "$term")</b> — <code>${p} ${currency}</code>
+   ${badge}: ~${per_month} руб/мес, экономия ${discount} руб / ${pct}%
 "
             else
-                lines="${lines}• <b>$(user_term_label "$term")</b> - <code>${p} ${currency}</code>, экономия ${discount} руб / ${pct}%
+                lines="${lines}${icon} <b>$(user_term_label "$term")</b> — <code>${p} ${currency}</code>
+   ${badge}: экономия ${discount} руб / ${pct}%
 "
             fi
         else
-            lines="${lines}• <b>$(user_term_label "$term")</b> - <code>${p} ${currency}</code>
+            lines="${lines}${icon} <b>$(user_term_label "$term")</b> — <code>${p} ${currency}</code>
+   ${badge}
 "
         fi
     done
     cat <<EOF
-<b>Yurich Connect VPN</b>
+💎 <b>Тарифы Yurich Connect VPN</b>
 
-Тарифы:
 ${lines}
-База: <b>250 руб / месяц</b>. Чем больше срок, тем выгоднее цена.
+💡 База: <b>250 руб / месяц</b>.
+Чем больше срок, тем ниже цена за месяц.
 
-Включено:
-• телефон и компьютер
-• личная страница подписки
+✅ <b>Включено</b>
+• телефон и компьютер;
+• личная страница подписки;
+• быстрый импорт в приложения;
+• уведомления о сроке подписки.
 
-Профили в подписке:
-• HTTPS = NaiveProxy
-• Turbo = Hysteria2
-• Reality = VLESS Reality на 443
+🛡 <b>Профили</b>
+• HTTPS = NaiveProxy;
+• Turbo = Hysteria2;
+• Reality = VLESS Reality на 443.
 
-Канал Yurich Connect:
+📣 <b>Канал Yurich Connect</b>
 ${channel}
 
-Чтобы оформить заявку, нажми нужный тариф или отправь:
+👇 Чтобы оформить заявку, нажми нужный тариф или отправь:
 <code>/buy day</code>, <code>/buy 1</code>, <code>/buy 3</code>, <code>/buy 6</code>, <code>/buy 12</code>
 EOF
 }
@@ -11507,7 +13717,7 @@ sales_buy_menu_markup() {
     p12=$(sales_plan_price 12m 2>/dev/null || printf '2400')
     currency="${SALES_BOT_CURRENCY:-$SALES_BOT_CURRENCY_DEFAULT}"
     cat <<EOF
-{"keyboard":[[{"text":"1 день - ${pd} ${currency}"},{"text":"1 месяц - ${p1} ${currency}"}],[{"text":"3 месяца - ${p3} ${currency}"},{"text":"6 месяцев - ${p6} ${currency}"}],[{"text":"12 месяцев - ${p12} ${currency}"}],[{"text":"Моя подписка"},{"text":"Приложения"}],[{"text":"Канал"},{"text":"Поддержка"}]],"resize_keyboard":true,"one_time_keyboard":false,"is_persistent":true}
+{"keyboard":[[{"text":"⚡ 1 день - ${pd} ${currency}"},{"text":"🚀 1 месяц - ${p1} ${currency}"}],[{"text":"⭐ 3 месяца - ${p3} ${currency}"},{"text":"🔥 6 месяцев - ${p6} ${currency}"}],[{"text":"👑 12 месяцев - ${p12} ${currency}"}],[{"text":"🟢 Моя подписка"},{"text":"📲 Приложения"}],[{"text":"📣 Канал"},{"text":"🛟 Поддержка"}]],"resize_keyboard":true,"one_time_keyboard":false,"is_persistent":true}
 EOF
 }
 
@@ -11518,6 +13728,7 @@ sales_reply_buy_menu() {
         -X POST \
         --data-urlencode "chat_id=${chat_id}" \
         --data-urlencode "parse_mode=HTML" \
+        --data-urlencode "disable_web_page_preview=true" \
         --data-urlencode "text=${message}" \
         --data-urlencode "reply_markup=${reply_markup}" \
         >/dev/null 2>&1 || true
@@ -12098,7 +14309,7 @@ sales_handle_command() {
             return
         fi
         case "$text" in
-            "Купить VPN"|"Тарифы"|/start|/menu|/plans|/buy|/buy*)
+            *"Купить VPN"*|*"Тарифы"*|/start|/menu|/plans|/buy|/buy*)
                 if ! sales_captcha_is_verified "$chat_id"; then
                     sales_captcha_prompt "$chat_id"
                     return
@@ -12115,13 +14326,16 @@ sales_handle_command() {
     fi
 
     case "$text" in
-        "Купить VPN"|"Тарифы"|/start|/menu|/plans|/buy)
+        /start|/menu)
+            sales_reply_start "$chat_id" "$([[ "$is_admin" -eq 1 ]] && echo admin || echo user)"
+            ;;
+        *"Купить VPN"*|*"Тарифы"*|/plans|/buy)
             sales_reply_buy_menu "$chat_id" "$(sales_plans_text)"
             ;;
-        "Моя подписка"|/status|/sub|/subscription)
+        *"Моя подписка"*|/status|/sub|/subscription)
             sales_reply_menu "$chat_id" "$(sales_subscription_status_text "$chat_id")" "$([[ "$is_admin" -eq 1 ]] && echo admin || echo user)"
             ;;
-        "Как подключить"|/help)
+        *"Как подключить"*|/help)
             sales_reply_menu "$chat_id" "<b>Как подключить</b>
 
 1. Выбери тариф на 1 день, 1, 3, 6 или 12 месяцев.
@@ -12133,7 +14347,7 @@ Android: Yurich Connect, Hiddify, NekoBox, v2rayNG.
 iPhone: Streisand.
 Windows: Yurich Connect Windows, v2rayN, Hiddify." "$([[ "$is_admin" -eq 1 ]] && echo admin || echo user)"
             ;;
-        "Приложения"|/apps)
+        *"Приложения"*|/apps)
             sales_reply_menu "$chat_id" "<b>Приложения</b>
 
 Тариф включает телефон и компьютер.
@@ -12147,23 +14361,23 @@ ${WINDOWS_APP_RELEASES_URL}
 iPhone:
 ${STREISAND_APP_URL}" "$([[ "$is_admin" -eq 1 ]] && echo admin || echo user)"
             ;;
-        "Канал"|/channel)
+        *"Канал"*|/channel)
             sales_reply_menu "$chat_id" "<b>Канал Yurich Connect</b>
 
 Новости, обновления приложения и важные сообщения:
 ${SALES_BOT_CHANNEL_URL:-$SALES_BOT_CHANNEL_URL_DEFAULT}" "$([[ "$is_admin" -eq 1 ]] && echo admin || echo user)"
             ;;
-        "Поддержка"|/support)
+        *"Поддержка"*|/support)
             sales_reply_menu "$chat_id" "<b>Поддержка</b>
 
 Telegram: ${TELEGRAM_COMMUNITY_URL}
 Email: ${SUPPORT_EMAIL}" "$([[ "$is_admin" -eq 1 ]] && echo admin || echo user)"
             ;;
-        "Заявки"|/sales_orders)
+        *"Заявки"*|/sales_orders)
             if [[ "$is_admin" -ne 1 ]]; then sales_reply "$chat_id" "Команда доступна только администратору."; return; fi
             sales_reply_menu "$chat_id" "$(sales_orders_text)" "admin"
             ;;
-        "Статус продаж"|/sales_status)
+        *"Статус продаж"*|/sales_status)
             if [[ "$is_admin" -ne 1 ]]; then sales_reply "$chat_id" "Команда доступна только администратору."; return; fi
             sales_reply_menu "$chat_id" "<b>Бот продаж Yurich Connect</b>
 
@@ -12656,7 +14870,8 @@ ${caddy_status}
             fi
 
             # Caddyfile
-            if grep -qE "^:443,|^http://127\\.0\\.0\\.1:[0-9]+" "${CADDYFILE:-/etc/caddy/Caddyfile}" 2>/dev/null; then
+            if grep -qE "^:443,|^http://127\\.0\\.0\\.1:[0-9]+" "${CADDYFILE:-/etc/caddy/Caddyfile}" 2>/dev/null \
+                || { edge_routing_mode_is_haproxy && grep -q "^:${XRAY_CADDY_FALLBACK_PORT:-$XRAY_CADDY_FALLBACK_PORT_DEFAULT}," "${CADDYFILE:-/etc/caddy/Caddyfile}" 2>/dev/null; }; then
                 diag_result+="✅ Caddyfile формат OK
 "
                 pass=$((pass+1))
@@ -13535,7 +15750,7 @@ tg_send_stats_to() {
     fi
 
     local haproxy_raw="" haproxy_block=""
-    if command -v haproxy >/dev/null 2>&1 || [[ "${XRAY_REALITY_SNI_MUX_ENABLED:-0}" == "1" ]]; then
+    if edge_routing_mode_is_haproxy; then
         haproxy_raw=$(haproxy_stats_text 2>/dev/null | head -n 18 || true)
         if [[ -n "$haproxy_raw" ]]; then
             haproxy_block=$'\n\n🔀 <b>HAProxy SNI mux</b>\n<pre>'"$(html_escape_text "$haproxy_raw")"$'</pre>'
@@ -13564,6 +15779,15 @@ tg_send_stats_to() {
 # ══════════════════════════════════════════════════════════════
 
 DNS_CONF="/etc/unbound/unbound.conf.d/yurich-dns.conf"
+DNS_BLOCKLIST_CONF="/etc/unbound/unbound.conf.d/yurich-dns-blocklist.conf"
+DNS_ALLOWLIST_FILE="/etc/naiveproxy/dns-allowlist.txt"
+DNS_FILTER_STATE_FILE="/etc/naiveproxy/dns-filter.state"
+DNS_FILTER_CRON="/etc/cron.d/yurich-dns-filter"
+DNS_FILTER_MONITOR_CRON="/etc/cron.d/yurich-dns-monitor"
+DNS_FILTER_LOG="/var/log/yurich-dns-filter.log"
+DNS_FILTER_MONITOR_LOG="/var/log/yurich-dns-monitor.log"
+DNS_FILTER_URLS_DEFAULT="https://urlhaus.abuse.ch/downloads/hostfile/ https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/tif.mini.txt"
+DNS_FILTER_MAX_DOMAINS_DEFAULT="200000"
 DNS_LEGACY_OLD_DNS_CONF="/etc/unbound/unbound.conf.d/aurum-vpn.conf"
 DNS_LEGACY_CONF="/etc/unbound/unbound.conf.d/naiveproxy-dns.conf"
 DNS_LEGACY_BLOCKLIST="/etc/unbound/blocklist.conf"
@@ -13759,6 +15983,432 @@ cleanup_legacy_dns_files() {
     done
 }
 
+ensure_dns_allowlist_file() {
+    mkdir -p "$(dirname "$DNS_ALLOWLIST_FILE")"
+    if [[ ! -f "$DNS_ALLOWLIST_FILE" ]]; then
+        cat > "$DNS_ALLOWLIST_FILE" <<'EOF'
+# Yurich DNS allowlist.
+# Один домен на строку. Пример:
+# example.com
+EOF
+        chmod 600 "$DNS_ALLOWLIST_FILE" 2>/dev/null || true
+    fi
+}
+
+write_dns_blocklist_disabled() {
+    mkdir -p "$(dirname "$DNS_BLOCKLIST_CONF")"
+    cat > "$DNS_BLOCKLIST_CONF" <<'EOF'
+# Yurich DNS filtering disabled.
+server:
+EOF
+    chmod 644 "$DNS_BLOCKLIST_CONF" 2>/dev/null || true
+}
+
+dns_filter_state_set() {
+    local status="$1" count="${2:-0}" message="${3:-}"
+    mkdir -p "$(dirname "$DNS_FILTER_STATE_FILE")"
+    {
+        printf 'STATUS=%q\n' "$status"
+        printf 'COUNT=%q\n' "$count"
+        printf 'UPDATED_AT=%q\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+        printf 'MESSAGE=%q\n' "$message"
+    } > "$DNS_FILTER_STATE_FILE"
+    chmod 600 "$DNS_FILTER_STATE_FILE" 2>/dev/null || true
+}
+
+dns_filter_state_value() {
+    local key="$1"
+    [[ -f "$DNS_FILTER_STATE_FILE" ]] || return 1
+    awk -F= -v k="$key" '$1 == k {print substr($0, index($0, "=") + 1); exit}' "$DNS_FILTER_STATE_FILE" \
+        | sed "s/^'//; s/'$//"
+}
+
+generate_dns_blocklist_conf() {
+    local out_file="$1" max_domains="${UNBOUND_FILTER_MAX_DOMAINS:-$DNS_FILTER_MAX_DOMAINS_DEFAULT}" urls="${UNBOUND_FILTER_URLS:-$DNS_FILTER_URLS_DEFAULT}"
+    local workdir source_file idx=0 url
+    [[ "$max_domains" =~ ^[0-9]+$ ]] || max_domains="$DNS_FILTER_MAX_DOMAINS_DEFAULT"
+    (( max_domains < 1000 )) && max_domains=1000
+    (( max_domains > 500000 )) && max_domains=500000
+    workdir=$(mktemp -d /tmp/yurich-dns-filter-XXXXXX)
+    ensure_dns_allowlist_file
+    for url in $urls; do
+        idx=$((idx + 1))
+        source_file="${workdir}/source-${idx}.txt"
+        if ! curl -fsSL --connect-timeout 10 --max-time 45 "$url" -o "$source_file"; then
+            warn "DNS filter source недоступен: $url"
+            rm -f "$source_file"
+        fi
+    done
+    if ! ls "${workdir}"/source-*.txt >/dev/null 2>&1; then
+        rm -rf "$workdir"
+        err "Не удалось скачать ни один DNS blocklist source"
+        return 1
+    fi
+    if ! command -v python3 >/dev/null 2>&1; then
+        rm -rf "$workdir"
+        err "python3 не найден, не могу безопасно собрать DNS blocklist"
+        return 1
+    fi
+    python3 - "$out_file" "$DNS_ALLOWLIST_FILE" "$max_domains" "${workdir}"/source-*.txt <<'PY'
+import ipaddress
+import re
+import sys
+from pathlib import Path
+
+out_path = Path(sys.argv[1])
+allow_path = Path(sys.argv[2])
+limit = int(sys.argv[3])
+sources = [Path(p) for p in sys.argv[4:]]
+
+domain_re = re.compile(r"^(?=.{1,253}$)([a-z0-9_](?:[a-z0-9_-]{0,61}[a-z0-9_])?\.)+[a-z0-9_](?:[a-z0-9_-]{0,61}[a-z0-9_])?$")
+
+def clean_token(token: str) -> str:
+    token = token.strip().lower()
+    if not token:
+        return ""
+    token = token.split("#", 1)[0].strip()
+    token = token.strip('"').strip("'").strip()
+    token = token.removeprefix("address=/").split("/", 1)[0] if token.startswith("address=/") else token
+    token = token.removeprefix("server=/").split("/", 1)[0] if token.startswith("server=/") else token
+    token = token.removeprefix("||")
+    token = token.removeprefix("|")
+    token = token.removeprefix("*.")
+    token = token.removeprefix(".")
+    token = token.replace("\\.", ".")
+    token = token.split("^", 1)[0]
+    token = token.split("/", 1)[0]
+    token = token.rstrip(".")
+    if token.startswith("www."):
+        token = token[4:]
+    return token
+
+def is_ip(token: str) -> bool:
+    try:
+        ipaddress.ip_address(token)
+        return True
+    except ValueError:
+        return False
+
+def valid_domain(token: str) -> bool:
+    if not token or " " in token or ":" in token or token in {"localhost", "local", "broadcasthost"}:
+        return False
+    if is_ip(token):
+        return False
+    if not domain_re.match(token):
+        return False
+    tld = token.rsplit(".", 1)[-1]
+    return not tld.isdigit()
+
+def extract_domains(line: str):
+    original = line.strip()
+    if not original or original.startswith(("#", "!", ";")):
+        return []
+    if "local-zone:" in original:
+        match = re.search(r'local-zone:\s*"([^"]+)"', original)
+        return [clean_token(match.group(1))] if match else []
+    line = original.replace("\t", " ")
+    parts = [p for p in line.split(" ") if p]
+    if len(parts) >= 2:
+        first = clean_token(parts[0])
+        second = clean_token(parts[1])
+        if is_ip(first):
+            return [second]
+        if is_ip(second):
+            return [first]
+    return [clean_token(parts[0])]
+
+allow = set()
+if allow_path.exists():
+    for line in allow_path.read_text(encoding="utf-8", errors="ignore").splitlines():
+        value = clean_token(line)
+        if valid_domain(value):
+            allow.add(value)
+
+def allowed(domain: str) -> bool:
+    return any(domain == item or domain.endswith("." + item) for item in allow)
+
+domains = set()
+for source in sources:
+    try:
+        lines = source.read_text(encoding="utf-8", errors="ignore").splitlines()
+    except OSError:
+        continue
+    for line in lines:
+        for domain in extract_domains(line):
+            if valid_domain(domain) and not allowed(domain):
+                domains.add(domain)
+                if len(domains) >= limit:
+                    break
+        if len(domains) >= limit:
+            break
+    if len(domains) >= limit:
+        break
+
+if len(domains) < 100:
+    raise SystemExit(f"too few domains parsed: {len(domains)}")
+
+with out_path.open("w", encoding="utf-8") as out:
+    out.write("# Yurich DNS security blocklist. Generated automatically.\n")
+    out.write("# Sources are configured in UNBOUND_FILTER_URLS.\n")
+    out.write("server:\n")
+    for domain in sorted(domains):
+        out.write(f'    local-zone: "{domain}" always_nxdomain\n')
+print(len(domains))
+PY
+    local rc=$?
+    rm -rf "$workdir"
+    return "$rc"
+}
+
+cmd_dns_update() {
+    load_config
+    hr
+    echo -e "${BOLD}  [DNS] Обновление DNS security filter${RESET}"
+    hr
+    if [[ "${UNBOUND_FILTER_ENABLED:-1}" != "1" ]]; then
+        write_dns_blocklist_disabled
+        dns_filter_state_set "disabled" "0" "filter disabled"
+        restart_unbound_checked || return 1
+        ok "DNS filter выключен"
+        return 0
+    fi
+    if ! command -v unbound >/dev/null 2>&1; then
+        err "unbound не установлен"
+        return 1
+    fi
+    mkdir -p "$(dirname "$DNS_BLOCKLIST_CONF")"
+    local tmp_conf backup_conf count old_count
+    tmp_conf=$(mktemp /tmp/yurich-dns-blocklist-XXXXXX.conf)
+    if ! count=$(generate_dns_blocklist_conf "$tmp_conf"); then
+        rm -f "$tmp_conf"
+        dns_filter_state_set "failed" "0" "download or parse failed"
+        return 1
+    fi
+    backup_conf=""
+    if [[ -f "$DNS_BLOCKLIST_CONF" ]]; then
+        backup_conf="${DNS_BLOCKLIST_CONF}.bak.$(date '+%Y%m%d-%H%M%S')"
+        cp -a "$DNS_BLOCKLIST_CONF" "$backup_conf" 2>/dev/null || true
+    fi
+    install -m 644 "$tmp_conf" "$DNS_BLOCKLIST_CONF"
+    rm -f "$tmp_conf"
+    if ! unbound-checkconf >/tmp/yurich-dns-filter-check.out 2>&1; then
+        [[ -n "$backup_conf" && -f "$backup_conf" ]] && cp -a "$backup_conf" "$DNS_BLOCKLIST_CONF"
+        err "Новый DNS blocklist не прошёл unbound-checkconf, откатил"
+        cat /tmp/yurich-dns-filter-check.out 2>/dev/null || true
+        rm -f /tmp/yurich-dns-filter-check.out
+        dns_filter_state_set "failed" "$count" "unbound-checkconf failed"
+        return 1
+    fi
+    rm -f /tmp/yurich-dns-filter-check.out
+    restart_unbound_checked || {
+        [[ -n "$backup_conf" && -f "$backup_conf" ]] && cp -a "$backup_conf" "$DNS_BLOCKLIST_CONF" && systemctl restart unbound 2>/dev/null || true
+        dns_filter_state_set "failed" "$count" "unbound restart failed"
+        return 1
+    }
+    old_count=$(dns_filter_state_value COUNT 2>/dev/null || true)
+    dns_filter_state_set "ok" "$count" "security filter updated"
+    UNBOUND_FILTER_ENABLED="1"
+    UNBOUND_ADBLOCK="0"
+    save_config
+    ok "DNS security filter обновлён: ${count} доменов"
+    [[ -n "$old_count" && "$old_count" != "$count" ]] && info "Предыдущий размер: ${old_count}"
+    return 0
+}
+
+cmd_dns_filter_install() {
+    load_config
+    UNBOUND_FILTER_ENABLED="1"
+    UNBOUND_FILTER_URLS="${UNBOUND_FILTER_URLS:-$DNS_FILTER_URLS_DEFAULT}"
+    UNBOUND_FILTER_MAX_DOMAINS="${UNBOUND_FILTER_MAX_DOMAINS:-$DNS_FILTER_MAX_DOMAINS_DEFAULT}"
+    save_config
+    cmd_dns_update || return 1
+    cat > "$DNS_FILTER_CRON" <<EOF
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+17 4 * * * root /bin/bash ${SCRIPT_PATH} dns-update >> ${DNS_FILTER_LOG} 2>&1
+EOF
+    chmod 644 "$DNS_FILTER_CRON"
+    touch "$DNS_FILTER_LOG"
+    chmod 600 "$DNS_FILTER_LOG"
+    ok "DNS filter cron включён: $DNS_FILTER_CRON"
+}
+
+dns_monitor_resolve_ok() {
+    local domain="${1:-cloudflare.com}" server="${2:-127.0.0.1}" attempt
+    for attempt in 1 2 3; do
+        dig @"$server" "$domain" A +time=3 +tries=1 >/dev/null 2>&1 && return 0
+        sleep 2
+    done
+    return 1
+}
+
+dns_monitor_resolve_tcp_ok() {
+    local domain="${1:-cloudflare.com}" server="${2:-127.0.0.1}" attempt
+    for attempt in 1 2 3; do
+        dig @"$server" "$domain" A +tcp +time=3 +tries=1 >/dev/null 2>&1 && return 0
+        sleep 2
+    done
+    return 1
+}
+
+dns_monitor_query_time_ms() {
+    local domain="${1:-cloudflare.com}" server="${2:-127.0.0.1}" out
+    out=$(dig @"$server" "$domain" A +stats +time=3 +tries=1 2>/dev/null) || return 1
+    awk '/Query time:/ {print $4; exit}' <<<"$out"
+}
+
+dns_monitor_block_ok() {
+    local domain="$1" attempt
+    [[ -n "$domain" ]] || return 1
+    for attempt in 1 2 3; do
+        if dig @127.0.0.1 "$domain" A +time=3 +tries=1 2>/dev/null | grep -q "status: NXDOMAIN"; then
+            return 0
+        fi
+        sleep 2
+    done
+    return 1
+}
+
+cmd_dns_monitor() {
+    load_config
+    local failed=0 status count updated_at message public_53 first_blocked gateway_ip gateway_re fail_details=""
+    local domain ms latency_warn=0 latency_warn_details="" dns_latency_warn_ms="${DNS_MONITOR_LATENCY_WARN_MS:-250}" dns_latency_fail_ms="${DNS_MONITOR_LATENCY_FAIL_MS:-1500}"
+    [[ "$dns_latency_warn_ms" =~ ^[0-9]+$ ]] || dns_latency_warn_ms=250
+    [[ "$dns_latency_fail_ms" =~ ^[0-9]+$ ]] || dns_latency_fail_ms=1500
+    if systemctl is-active --quiet unbound 2>/dev/null; then
+        ok "Unbound active"
+    else
+        err "Unbound не active"
+        failed=$((failed + 1))
+        fail_details+=$'- Unbound service is not active\n'
+    fi
+    if dns_monitor_resolve_ok cloudflare.com; then
+        ok "DNS resolve OK"
+    else
+        err "DNS resolve failed"
+        failed=$((failed + 1))
+        fail_details+=$'- Local DNS resolve failed on 127.0.0.1\n'
+    fi
+    for domain in cloudflare.com google.com telegram.org github.com; do
+        if ms=$(dns_monitor_query_time_ms "$domain"); then
+            if [[ "$ms" =~ ^[0-9]+$ ]]; then
+                if (( ms >= dns_latency_fail_ms )); then
+                    err "DNS latency failed: ${domain} ${ms}ms"
+                    failed=$((failed + 1))
+                    fail_details+="- Local DNS latency is critical: ${domain} ${ms}ms"$'\n'
+                elif (( ms >= dns_latency_warn_ms )); then
+                    warn "DNS latency slow: ${domain} ${ms}ms"
+                    latency_warn=1
+                    latency_warn_details+="- ${domain}: ${ms}ms"$'\n'
+                else
+                    ok "DNS latency OK: ${domain} ${ms}ms"
+                fi
+            else
+                warn "DNS latency unknown: ${domain}"
+                latency_warn=1
+                latency_warn_details+="- ${domain}: unknown"$'\n'
+            fi
+        else
+            err "DNS latency query failed: ${domain}"
+            failed=$((failed + 1))
+            fail_details+="- Local DNS latency query failed: ${domain}"$'\n'
+        fi
+    done
+    public_53=$(ss -H -lntup 2>/dev/null | awk -v gw="${UNBOUND_GATEWAY_IP:-${DNS_DEFAULT_GATEWAY_IP:-10.0.0.1}}" '
+        $5 ~ /:53$/ {
+            endpoint=$5
+            if (endpoint ~ /127\.0\.0\.1:53$/) next
+            if (gw != "" && endpoint == (gw ":53")) next
+            print
+        }' || true)
+    if [[ -n "$public_53" ]]; then
+        err "Порт 53 слушает не только loopback/VPN gateway:"
+        echo "$public_53"
+        failed=$((failed + 1))
+        fail_details+=$'- Port 53 has unexpected public listener\n'
+    else
+        ok "DNS не выглядит публично открытым"
+    fi
+    if [[ "${UNBOUND_VPN_ENABLED:-0}" == "1" ]]; then
+        gateway_ip="${UNBOUND_GATEWAY_IP:-}"
+        if [[ -z "$gateway_ip" ]]; then
+            err "VPN DNS включён, но UNBOUND_GATEWAY_IP не задан"
+            failed=$((failed + 1))
+            fail_details+=$'- VPN DNS is enabled but UNBOUND_GATEWAY_IP is empty\n'
+        else
+            gateway_re=${gateway_ip//./\\.}
+            if ip -br addr 2>/dev/null | grep -Eq "(^|[[:space:]])${gateway_re}/"; then
+                ok "VPN DNS gateway IP есть на интерфейсе: $gateway_ip"
+            else
+                warn "VPN DNS gateway IP не найден на интерфейсах: $gateway_ip"
+            fi
+            if dns_monitor_resolve_ok cloudflare.com "$gateway_ip"; then
+                ok "VPN DNS gateway UDP resolve OK: $gateway_ip"
+            else
+                err "VPN DNS gateway UDP resolve failed: $gateway_ip"
+                failed=$((failed + 1))
+                fail_details+="- VPN DNS gateway UDP resolve failed: ${gateway_ip}"$'\n'
+            fi
+            if dns_monitor_resolve_tcp_ok cloudflare.com "$gateway_ip"; then
+                ok "VPN DNS gateway TCP resolve OK: $gateway_ip"
+            else
+                err "VPN DNS gateway TCP resolve failed: $gateway_ip"
+                failed=$((failed + 1))
+                fail_details+="- VPN DNS gateway TCP resolve failed: ${gateway_ip}"$'\n'
+            fi
+        fi
+    fi
+    if [[ -f "$DNS_FILTER_STATE_FILE" ]]; then
+        status=$(dns_filter_state_value STATUS 2>/dev/null || true)
+        count=$(dns_filter_state_value COUNT 2>/dev/null || true)
+        updated_at=$(dns_filter_state_value UPDATED_AT 2>/dev/null || true)
+        message=$(dns_filter_state_value MESSAGE 2>/dev/null || true)
+        [[ "$status" == "ok" ]] && ok "DNS filter OK: ${count:-0} доменов, ${updated_at:-unknown}" || { warn "DNS filter state: ${status:-unknown} ${message:-}"; failed=$((failed + 1)); fail_details+="- DNS filter state is ${status:-unknown}: ${message:-empty message}"$'\n'; }
+    else
+        warn "DNS filter state отсутствует"
+        failed=$((failed + 1))
+        fail_details+=$'- DNS filter state file is missing\n'
+    fi
+    first_blocked=$(awk -F'"' '/local-zone:/ {print $2; exit}' "$DNS_BLOCKLIST_CONF" 2>/dev/null || true)
+    if [[ -n "$first_blocked" ]]; then
+        if dns_monitor_block_ok "$first_blocked"; then
+            ok "Blocklist test OK: $first_blocked"
+        else
+            warn "Blocklist test не подтвердил NXDOMAIN: $first_blocked"
+            failed=$((failed + 1))
+            fail_details+="- Blocklist NXDOMAIN test failed: ${first_blocked}"$'\n'
+        fi
+    fi
+    if [[ "$latency_warn" -ne 0 && "$failed" -eq 0 ]]; then
+        warn "DNS latency warning threshold=${dns_latency_warn_ms}ms"
+        printf '%s' "$latency_warn_details"
+    fi
+    if [[ "$failed" -ne 0 ]]; then
+        tg_send "⚠️ <b>Yurich DNS monitor</b>
+📡 Сервер: <code>$(hostname)</code>
+🌐 Домен: <code>${DOMAIN:-unknown}</code>
+🕐 $(date '+%Y-%m-%d %H:%M:%S')
+
+<pre>DNS monitor failed=${failed}
+${fail_details:-details unavailable}
+filter=${status:-unknown} count=${count:-0} updated=${updated_at:-unknown}
+${message:-}</pre>"
+        return 1
+    fi
+}
+
+cmd_dns_monitor_install() {
+    cat > "$DNS_FILTER_MONITOR_CRON" <<EOF
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+*/15 * * * * root /bin/bash ${SCRIPT_PATH} dns-monitor >> ${DNS_FILTER_MONITOR_LOG} 2>&1
+EOF
+    chmod 644 "$DNS_FILTER_MONITOR_CRON"
+    touch "$DNS_FILTER_MONITOR_LOG"
+    chmod 600 "$DNS_FILTER_MONITOR_LOG"
+    ok "DNS monitor cron включён: $DNS_FILTER_MONITOR_CRON"
+}
+
 write_unbound_config() {
     mkdir -p "$(dirname "$DNS_CONF")" /var/lib/unbound
     dns_config_backup "$DNS_CONF"
@@ -13924,7 +16574,8 @@ cmd_dns_install() {
     unbound-anchor -a /var/lib/unbound/root.key >/dev/null 2>&1 || true
 
     echo
-    echo -e "${CYAN}DNS (Unbound) работает как recursive Unbound без рекламных blocklists.${RESET}"
+    echo -e "${CYAN}DNS (Unbound) работает как recursive DNSSEC resolver.${RESET}"
+    echo -e "${DIM}Security-фильтр malware/phishing/scam включается отдельным безопасным include-файлом.${RESET}"
     echo -e "${DIM}Если нужен DNS для VPN-клиентов, укажи IP gateway на VPN-интерфейсе, например 10.0.0.1.${RESET}"
     local detected_gateway gateway_input vpn_cidrs
     detected_gateway=$(detect_private_dns_gateway || true)
@@ -13971,22 +16622,13 @@ cmd_dns_install() {
     echo "0" > "${DNS_STATS_FILE}"
     UNBOUND_ENABLED="1"
     save_config
+    cmd_dns_filter_install || warn "DNS security filter не включился, базовый Unbound продолжает работать"
 
     ok "Yurich DNS (Unbound) установлен!"
     tg_send "🛡️ <b>Yurich DNS (Unbound) установлен</b>
 🖥 Сервер: <code>$(hostname)</code>
 🔒 Режим: recursive DNSSEC, gateway=${UNBOUND_GATEWAY_IP:-127.0.0.1}, VPN=${UNBOUND_VPN_ENABLED:-0}
 🕐 $(date '+%Y-%m-%d %H:%M:%S')"
-}
-
-# Старый adblock/blocklists режим удалён: DNS (Unbound) теперь только безопасный resolver.
-cmd_dns_update() {
-    hr
-    echo -e "${BOLD}  [DNS] DNS (Unbound)${RESET}"
-    hr
-    warn "Блокировка рекламы временно удалена из скрипта."
-    info "DNS (Unbound) не скачивает blocklists и не логирует DNS-запросы."
-    info "Для проверки используй: меню 17 → 3 или команду unbound-test"
 }
 
 cmd_dns_restart() {
@@ -14032,6 +16674,15 @@ cmd_dns_status() {
     else
         echo -e "  VPN DNS: ${YELLOW}выключен${RESET}"
     fi
+    if [[ "${UNBOUND_FILTER_ENABLED:-1}" == "1" ]]; then
+        local filter_status filter_count filter_updated
+        filter_status=$(dns_filter_state_value STATUS 2>/dev/null || echo "unknown")
+        filter_count=$(dns_filter_state_value COUNT 2>/dev/null || echo "0")
+        filter_updated=$(dns_filter_state_value UPDATED_AT 2>/dev/null || echo "unknown")
+        echo -e "  Security filter: ${CYAN}${filter_status}${RESET}, доменов: ${CYAN}${filter_count}${RESET}, обновлено: ${CYAN}${filter_updated}${RESET}"
+    else
+        echo -e "  Security filter: ${YELLOW}выключен${RESET}"
+    fi
     [[ -f "$DNS_CONF" ]] && unbound-checkconf "$DNS_CONF" >/dev/null 2>&1 && ok "Конфиг Unbound валиден" || warn "Конфиг Unbound не прошёл проверку"
 
     echo
@@ -14074,7 +16725,7 @@ cmd_dns_set_mode() {
     hr
     echo -e "${BOLD}  [DNS] DNS (Unbound) mode${RESET}"
     hr
-    warn "Forward/adblock режимы удалены. DNS (Unbound) работает только как безопасный recursive resolver."
+    warn "Forward/adblock режимы не используются. DNS работает как recursive resolver, security-фильтр включается отдельно."
     UNBOUND_MODE="recursive"
     UNBOUND_ADBLOCK="0"
     UNBOUND_ENABLED="1"
@@ -14154,10 +16805,12 @@ cmd_dns_vpn_access() {
 # Совместимость со старым пунктом whitelist.
 cmd_dns_whitelist() {
     hr
-    echo -e "${BOLD}  [DNS] DNS (Unbound)${RESET}"
+    echo -e "${BOLD}  [DNS] Allowlist security filter${RESET}"
     hr
-    warn "Whitelist больше не нужен: блокировка рекламы удалена."
-    info "DNS (Unbound) только резолвит DNS для сервера/VPN и не блокирует домены."
+    ensure_dns_allowlist_file
+    echo -e "Файл allowlist: ${CYAN}${DNS_ALLOWLIST_FILE}${RESET}"
+    echo -e "${DIM}Добавь домен по одному на строку, затем запусти: sudo yurich-panel.sh dns-update${RESET}"
+    sed -n '1,80p' "$DNS_ALLOWLIST_FILE" 2>/dev/null || true
 }
 
 # Удалить DNS (Unbound)
@@ -14172,7 +16825,9 @@ cmd_dns_remove() {
     [[ "${UNBOUND_MANAGED_GATEWAY:-0}" == "1" || -f "$DNS_GATEWAY_SERVICE" ]] && remove_managed_dns_gateway
     cleanup_legacy_dns_files
     dns_config_backup "$DNS_CONF"
-    rm -f "$DNS_CONF" "$DNS_LEGACY_OLD_DNS_CONF"
+    dns_config_backup "$DNS_BLOCKLIST_CONF"
+    rm -f "$DNS_CONF" "$DNS_BLOCKLIST_CONF" "$DNS_LEGACY_OLD_DNS_CONF"
+    rm -f "$DNS_FILTER_CRON" "$DNS_FILTER_MONITOR_CRON" "$DNS_FILTER_STATE_FILE" 2>/dev/null || true
     rm -f /usr/local/bin/yurich-dns-status /usr/local/bin/yurich-dns-test /usr/local/bin/yurich-dns-restart 2>/dev/null || true
     rm -f /usr/local/bin/aurum-dns-status /usr/local/bin/aurum-dns-test /usr/local/bin/aurum-dns-restart 2>/dev/null || true
     if [[ -f "$DNS_RESOLVED_NO_STUB" ]]; then
@@ -14185,6 +16840,7 @@ cmd_dns_remove() {
     UNBOUND_MANAGED_GATEWAY="0"
     UNBOUND_VPN_ENABLED="0"
     UNBOUND_ADBLOCK="0"
+    UNBOUND_FILTER_ENABLED="0"
     save_config
     systemctl daemon-reload 2>/dev/null || true
 
@@ -14256,13 +16912,17 @@ cmd_dns_menu() {
         echo -e "  Статус: ${dns_status}"
         echo -e "  Режим: ${CYAN}$(unbound_mode_label)${RESET}"
         echo -e "  VPN DNS: ${CYAN}${UNBOUND_VPN_ENABLED:-0}${RESET} | Gateway: ${CYAN}${UNBOUND_GATEWAY_IP:-нет}${RESET} | CIDR: ${CYAN}${UNBOUND_VPN_CIDRS:-$DNS_DEFAULT_VPN_CIDRS}${RESET}"
+        echo -e "  Security filter: ${CYAN}${UNBOUND_FILTER_ENABLED:-1}${RESET} | Domains: ${CYAN}$(dns_filter_state_value COUNT 2>/dev/null || echo 0)${RESET}"
         [[ "${UNBOUND_MANAGED_GATEWAY:-0}" == "1" ]] && echo -e "  Gateway mode: ${CYAN}auto lo /32${RESET}"
         echo
         echo -e "  ${BOLD}1)${RESET} Установить / переустановить DNS (Unbound)"
         echo -e "  ${BOLD}2)${RESET} Настроить DNS для VPN-клиентов"
         echo -e "  ${BOLD}3)${RESET} Статус, порт 53, DNSSEC и тесты"
         echo -e "  ${BOLD}4)${RESET} Перезапустить DNS (Unbound)"
-        echo -e "  ${BOLD}5)${RESET} Удалить DNS (Unbound)"
+        echo -e "  ${BOLD}5)${RESET} Обновить security-фильтр"
+        echo -e "  ${BOLD}6)${RESET} Allowlist security-фильтра"
+        echo -e "  ${BOLD}7)${RESET} Включить DNS monitor"
+        echo -e "  ${BOLD}8)${RESET} Удалить DNS (Unbound)"
         echo -e "  ${BOLD}0)${RESET} Назад"
         hr
         echo -ne "${CYAN}Выбор: ${RESET}"
@@ -14273,7 +16933,10 @@ cmd_dns_menu() {
             2) cmd_dns_vpn_access ;;
             3) cmd_dns_status ;;
             4) cmd_dns_restart ;;
-            5) cmd_dns_remove ;;
+            5) cmd_dns_filter_install ;;
+            6) cmd_dns_whitelist ;;
+            7) cmd_dns_monitor_install ;;
+            8) cmd_dns_remove ;;
             0) break ;;
             *) warn "Неверный выбор" ;;
         esac
@@ -14533,6 +17196,7 @@ show_menu() {
         nodes_str="${GREEN}$(nodes_count)${RESET}"
     fi
     echo -e "   Multi-server nodes: ${nodes_str}"
+    echo -e "   Режим 443: ${GREEN}$(edge_routing_mode_label)${RESET}"
     hr
     echo -e "   ${BOLD}1)${RESET}  $(t "Установить Yurich Panel" "Install Yurich Panel")"
     echo -e "   ${BOLD}2)${RESET}  $(t "Статус" "Status")"
@@ -14564,7 +17228,7 @@ show_menu() {
     echo -e "   ${BOLD}27)${RESET} [PROD] Production tools / Bridge"
     echo -e "   ${BOLD}28)${RESET} [LANG] $(t "Язык панели RU/EN" "Panel language RU/EN")"
     echo -e "   ${BOLD}29)${RESET} [NODES] Multi-server management"
-    echo -e "   ${BOLD}30)${RESET} [HAPROXY] SNI mux stats/logs"
+    echo -e "   ${BOLD}30)${RESET} [EDGE] Routing mode / HAProxy"
     echo -e "   ${BOLD}31)${RESET} [SALES] VPN sales Telegram bot"
     echo -e "   ${BOLD}0)${RESET}  $(t "Выход" "Exit")"
     hr
@@ -14585,7 +17249,7 @@ main() {
             help|--help|-h)
                 echo "Yurich Panel v${VERSION}"
                 echo "Usage: sudo bash yurich-panel.sh [command]"
-                echo "Commands: install status config [user] reload restart update remove logs monitor haproxy-status haproxy-apply haproxy-logs haproxy-tg users hysteria hy2 hysteria-sync hysteria-port hysteria-warp-enable hysteria-warp-disable hysteria-hop-enable hysteria-hop-disable warp warp-proxy warp-full warp-health warp-protocol warp-ssh-allow xray xray-target xray-add-user [user] xray-rebuild xray-zapret devices subscription subscription-clean private-page protocol-health protocol-validate protocol-benchmark protocol-benchmark-monitor protocol-benchmark-install protocol-benchmark-history protocol-monitor protocol-monitor-install security-audit notify-expiry-list notify-bind-tg notify-expiry-run notify-news notify-news-test expiry-enforce notify-expiry-install tg-stats bot-menu health safe-apply backup export import bridge nodes fail2ban language ssh-hardening ssh-rescue sysupdate cert domains dns unbound yurich-dns yurich-dns-status yurich-dns-restart self-update version camouflage"
+                echo "Commands: install status config [user] reload restart update remove logs monitor routing-mode haproxy-status haproxy-apply haproxy-logs haproxy-tg users hysteria hy2 hysteria-sync hysteria-port hysteria-warp-enable hysteria-warp-disable hysteria-hop-enable hysteria-hop-disable warp warp-proxy warp-full warp-health warp-protocol warp-ssh-allow xray xray-target xray-add-user [user] xray-rebuild vless-tune egress-ipv4 egress-dualstack pingtunnel-install pingtunnel-status pingtunnel-config pingtunnel-rotate pingtunnel-remove xray-zapret devices subscription subscription-clean private-page protocol-health protocol-validate protocol-benchmark protocol-benchmark-monitor protocol-benchmark-install protocol-benchmark-history protocol-monitor protocol-monitor-install security-audit notify-expiry-list notify-bind-tg notify-expiry-run notify-news notify-news-test expiry-enforce notify-expiry-install tg-stats bot-menu health safe-apply backup export import bridge nodes fail2ban language ssh-hardening ssh-rescue sysupdate cert domains dns unbound yurich-dns yurich-dns-status yurich-dns-restart self-update version camouflage"
                 return 0
                 ;;
         esac
@@ -14606,6 +17270,7 @@ main() {
             remove)    cmd_remove ;;
             logs)      cmd_logs ;;
             monitor)   cmd_monitor ;;
+            routing-mode|edge-mode|frontend-mode) cmd_edge_routing_mode "${2:-}" ;;
             haproxy-status|haproxy) cmd_haproxy_status ;;
             haproxy-apply|haproxy-sni-apply) cmd_haproxy_apply ;;
             haproxy-logs|sni-logs) cmd_haproxy_logs ;;
@@ -14642,6 +17307,14 @@ main() {
             xray-add-user|xray-user) cmd_xray_add_user "${2:-}" "${3:-}" ;;
             xray-compat-user|xray-reality-compat) cmd_xray_add_compat_user "${2:-}" ;;
             xray-rebuild) cmd_xray_rebuild ;;
+            vless-tune|xray-tune|reality-tune) cmd_vless_tune ;;
+            egress-ipv4|egress-prefer-ipv4|location-ipv4) cmd_egress_prefer_ipv4 ;;
+            egress-dualstack|egress-ipv6-restore|location-dualstack) cmd_egress_dualstack ;;
+            pingtunnel-install|icmp-install) cmd_pingtunnel_install ;;
+            pingtunnel-status|icmp-status) cmd_pingtunnel_status ;;
+            pingtunnel-config|icmp-config) cmd_pingtunnel_config "${2:-}" ;;
+            pingtunnel-rotate|icmp-rotate) cmd_pingtunnel_rotate ;;
+            pingtunnel-remove|icmp-remove) cmd_pingtunnel_remove ;;
             xray-zapret) cmd_xray_zapret "${2:-enable}" ;;
             xray-config) print_xray_client_config "${2:-}" ;;
             xray-status) cmd_xray_status ;;
@@ -14690,6 +17363,10 @@ main() {
             dns-mode|unbound-mode)                         cmd_dns_set_mode ;;
             dns-vpn|unbound-vpn|yurich-dns-vpn|aurum-dns-vpn)             cmd_dns_vpn_access ;;
             dns-update|unbound-update)                     cmd_dns_update ;;
+            dns-filter-install|unbound-filter-install)      cmd_dns_filter_install ;;
+            dns-monitor|unbound-monitor)                   cmd_dns_monitor ;;
+            dns-monitor-install|unbound-monitor-install)    cmd_dns_monitor_install ;;
+            dns-allowlist|unbound-allowlist|dns-whitelist|unbound-whitelist) cmd_dns_whitelist ;;
             dns-status|unbound-status|unbound-test|yurich-dns-status|yurich-dns-test|aurum-dns-status|aurum-dns-test) cmd_dns_status ;;
             dns-restart|unbound-restart|yurich-dns-restart|aurum-dns-restart) cmd_dns_restart ;;
             dns-remove|unbound-remove|yurich-dns-remove|aurum-dns-remove)     cmd_dns_remove ;;
@@ -14728,7 +17405,7 @@ main() {
                 echo "GitHub:   ${PROJECT_GITHUB_SHORT}"
                 ;;
             *) err "Неизвестная команда: $1"
-               echo "Доступные: install status config [user] reload restart update remove logs monitor haproxy-status haproxy-apply haproxy-logs haproxy-tg users hysteria hy2 hysteria-sync hysteria-port hysteria-warp-enable hysteria-warp-disable hysteria-hop-enable hysteria-hop-disable warp warp-proxy warp-full warp-health warp-protocol warp-ssh-allow xray xray-target xray-add-user [user] xray-compat-user [user] xray-rebuild xray-zapret devices subscription subscription-clean private-page protocol-health protocol-validate protocol-benchmark protocol-benchmark-monitor protocol-benchmark-install protocol-benchmark-history protocol-monitor protocol-monitor-install security-audit notify-expiry-list notify-bind-tg notify-expiry-run notify-news notify-news-test expiry-enforce notify-expiry-install tg-stats bot-menu health safe-apply backup export import bridge nodes fail2ban language ssh-hardening ssh-rescue sysupdate cert domains dns unbound yurich-dns yurich-dns-status yurich-dns-restart self-update version camouflage"
+               echo "Доступные: install status config [user] reload restart update remove logs monitor routing-mode haproxy-status haproxy-apply haproxy-logs haproxy-tg users hysteria hy2 hysteria-sync hysteria-port hysteria-warp-enable hysteria-warp-disable hysteria-hop-enable hysteria-hop-disable warp warp-proxy warp-full warp-health warp-protocol warp-ssh-allow xray xray-target xray-add-user [user] xray-compat-user [user] xray-rebuild vless-tune egress-ipv4 egress-dualstack pingtunnel-install pingtunnel-status pingtunnel-config pingtunnel-rotate pingtunnel-remove xray-zapret devices subscription subscription-clean private-page protocol-health protocol-validate protocol-benchmark protocol-benchmark-monitor protocol-benchmark-install protocol-benchmark-history protocol-monitor protocol-monitor-install security-audit notify-expiry-list notify-bind-tg notify-expiry-run notify-news notify-news-test expiry-enforce notify-expiry-install tg-stats bot-menu health safe-apply backup export import bridge nodes fail2ban language ssh-hardening ssh-rescue sysupdate cert domains dns unbound yurich-dns yurich-dns-status yurich-dns-restart self-update version camouflage"
                exit 1 ;;
         esac
         exit 0
